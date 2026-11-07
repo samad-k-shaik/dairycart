@@ -1,4 +1,6 @@
-# Milk Delivery POC
+# DairyCart – Milk Delivery POC
+
+An MVP/POC for learning the full software development lifecycle, built by a group of friends learning to build production-level AI applications.
 
 A **learning-first** full-stack web application for a local dairy business. Customers browse milk products, add them to a cart, place orders and view their order history. An administrator views orders and updates their status.
 
