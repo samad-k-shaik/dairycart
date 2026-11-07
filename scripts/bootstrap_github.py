@@ -196,8 +196,12 @@ def ensure_project(owner: str, repo: str, issues: list[dict]) -> str:
             for s, c in zip(BOARD_STATUSES, ["GRAY", "BLUE", "YELLOW", "ORANGE", "PURPLE", "GREEN"])
         )
         q = 'mutation{updateProjectV2Field(input:{fieldId:"%s",singleSelectOptions:[%s]}){projectV2Field{... on ProjectV2SingleSelectField{id}}}}' % (status["id"], opts)
-        gh("api", "graphql", "-f", f"query={q}")
-        print(f"  status options set {BOARD_STATUSES}")
+        r = gh("api", "graphql", "-f", f"query={q}", check=False)
+        if r.returncode == 0:
+            print(f"  status options set {BOARD_STATUSES}")
+        else:
+            print("  WARNING: could not set Status options automatically; set them in the project UI:", BOARD_STATUSES)
+            print("  ", (r.stderr or r.stdout).strip()[:300])
 
     for i in issues:
         gh("project", "item-add", num, "--owner", owner, "--url", i["url"], check=False)
@@ -218,7 +222,9 @@ def main() -> None:
     print("Milestones:");  ms = ensure_milestones(repo)
     print("Issues:");      issues = ensure_issues(repo, ms)
     print("Branches:");    ensure_branch(repo, "develop")
-    api("PATCH", f"repos/{repo}", {"delete_branch_on_merge": True, "allow_squash_merge": True})
+    # develop is the default branch so new PRs target it automatically.
+    api("PATCH", f"repos/{repo}", {"default_branch": "develop", "delete_branch_on_merge": True, "allow_squash_merge": True})
+    print("  default branch set to develop; auto-delete merged branches enabled")
 
     protection = {}
     if not skip_protection:

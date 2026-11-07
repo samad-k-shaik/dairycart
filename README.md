@@ -61,6 +61,15 @@ milk-delivery-poc/
 | M6 – GCP Deployment | Cloud Run, Cloud SQL, secrets, logging |
 | M7 – Final Demonstration | Demo, retrospective, learning review |
 
+## One-time GitHub setup (maintainer)
+
+```bash
+gh auth login --scopes repo,project
+./scripts/setup_github.sh            # or --public
+```
+
+Creates the repo, labels, milestones M0–M7, the eight M0 issues, the `develop` branch, branch protection (where the plan allows) and the "Milk Delivery POC" Project board. It is idempotent and never deletes anything.
+
 ## How to start
 
 1. Read [`docs/01-project-overview.md`](docs/01-project-overview.md) and [`docs/02-project-scope.md`](docs/02-project-scope.md).
