@@ -1,0 +1,245 @@
+# API Contracts – v1
+
+- **Base URL (local):** `http://localhost:8000/api/v1`
+- **Format:** JSON, UTF-8. Field names in `snake_case`.
+- **Money:** decimal strings with 2 places (e.g. `"60.00"`) so no precision is lost. Frontend formats them as ₹.
+- **Dates:** ISO 8601 UTC (e.g. `"2026-11-07T04:30:00Z"`).
+- **Auth:** none in the POC (see ADR-003). Admin endpoints live under `/admin` so they can be protected later.
+- **Interactive docs:** FastAPI generates OpenAPI at `/docs` and `/openapi.json`. This document is the agreed contract; the OpenAPI output must match it.
+
+> **Key rule:** the backend calculates `unit_price`, `subtotal` and `total_amount` from database prices. Clients send only `product_id` and `quantity`. Any price or total fields sent by a client are rejected (unknown fields → 422).
+
+## Endpoint summary
+
+| Method | Path | Purpose | Success |
+|---|---|---|---|
+| GET | `/health` | Liveness + DB connectivity | 200 |
+| GET | `/products` | List products | 200 |
+| GET | `/products/{id}` | Product details | 200 |
+| POST | `/orders` | Place an order | 201 |
+| GET | `/orders/{id}` | Order details | 200 |
+| GET | `/orders?phone=` | Customer order history *(proposed, ADR-005)* | 200 |
+| GET | `/admin/orders` | All orders (filter, paginate) | 200 |
+| PATCH | `/admin/orders/{id}/status` | Update order status | 200 |
+
+---
+
+## GET /api/v1/health
+
+Checks that the API is running and can reach the database.
+
+**200 OK**
+```json
+{ "status": "ok", "database": "ok", "version": "0.1.0" }
+```
+
+**503 Service Unavailable** (database unreachable)
+```json
+{ "status": "degraded", "database": "unavailable", "version": "0.1.0" }
+```
+
+---
+
+## GET /api/v1/products
+
+| Query param | Type | Default | Description |
+|---|---|---|---|
+| `include_unavailable` | boolean | `false` | Admin view: include products where `is_available = false` *(proposed, ADR-006)* |
+
+**200 OK**
+```json
+[
+  { "product_id": 1, "name": "Cow Milk", "size": "500 ml", "price": "30.00", "is_available": true },
+  { "product_id": 2, "name": "Cow Milk", "size": "1 Litre", "price": "60.00", "is_available": true },
+  { "product_id": 3, "name": "Buffalo Milk", "size": "500 ml", "price": "35.00", "is_available": true },
+  { "product_id": 4, "name": "Buffalo Milk", "size": "1 Litre", "price": "70.00", "is_available": true }
+]
+```
+
+Returns `[]` (not 404) if there are no products.
+
+---
+
+## GET /api/v1/products/{id}
+
+**200 OK**
+```json
+{ "product_id": 2, "name": "Cow Milk", "size": "1 Litre", "price": "60.00", "is_available": true }
+```
+
+| Status | When |
+|---|---|
+| 404 `NOT_FOUND` | No product with this id |
+| 422 `VALIDATION_ERROR` | `id` is not a positive integer |
+
+---
+
+## POST /api/v1/orders
+
+**Request**
+```json
+{
+  "customer": { "name": "Ravi Kumar", "phone": "9876543210" },
+  "items": [
+    { "product_id": 2, "quantity": 2 },
+    { "product_id": 3, "quantity": 1 }
+  ]
+}
+```
+
+**Validation**
+
+| Field | Rule |
+|---|---|
+| `customer.name` | required, trimmed, 2–100 chars |
+| `customer.phone` | required, 10-digit Indian mobile, regex `^[6-9]\d{9}$` |
+| `items` | required, 1–10 entries |
+| `items[].product_id` | required, positive integer, unique within the request |
+| `items[].quantity` | required, integer 1–20 |
+| unknown fields (e.g. `total_amount`, `price`) | rejected |
+
+**201 Created** – header `Location: /api/v1/orders/101`
+```json
+{
+  "order_id": 101,
+  "customer": { "customer_id": 7, "name": "Ravi Kumar", "phone": "9876543210" },
+  "order_date": "2026-11-07T04:30:00Z",
+  "status": "PLACED",
+  "items": [
+    { "order_item_id": 501, "product_id": 2, "product_name": "Cow Milk", "size": "1 Litre",
+      "quantity": 2, "unit_price": "60.00", "subtotal": "120.00" },
+    { "order_item_id": 502, "product_id": 3, "product_name": "Buffalo Milk", "size": "500 ml",
+      "quantity": 1, "unit_price": "35.00", "subtotal": "35.00" }
+  ],
+  "total_amount": "155.00"
+}
+```
+
+| Status | Code | When |
+|---|---|---|
+| 400 | `DUPLICATE_PRODUCT` | Same `product_id` appears twice |
+| 404 | `NOT_FOUND` | A `product_id` does not exist |
+| 409 | `PRODUCT_UNAVAILABLE` | A product has `is_available = false` |
+| 422 | `VALIDATION_ERROR` | Body fails schema validation |
+
+The whole order is rejected if any item fails. Nothing is saved.
+
+---
+
+## GET /api/v1/orders/{id}
+
+**200 OK** – same shape as the `POST /orders` response.
+
+| Status | When |
+|---|---|
+| 404 `NOT_FOUND` | No such order |
+
+---
+
+## GET /api/v1/orders?phone={phone} *(proposed – ADR-005)*
+
+Customer order history, newest first.
+
+**200 OK**
+```json
+[
+  { "order_id": 101, "order_date": "2026-11-07T04:30:00Z", "status": "PLACED", "total_amount": "155.00", "item_count": 2 },
+  { "order_id": 88,  "order_date": "2026-11-05T03:10:00Z", "status": "DELIVERED", "total_amount": "60.00", "item_count": 1 }
+]
+```
+
+Unknown phone → `200 []`. Missing/invalid phone → `422`.
+
+---
+
+## GET /api/v1/admin/orders
+
+| Query param | Type | Default | Description |
+|---|---|---|---|
+| `status` | enum | – | Filter by one status |
+| `page` | int ≥ 1 | 1 | Page number |
+| `page_size` | int 1–100 | 20 | Items per page |
+
+**200 OK**
+```json
+{
+  "items": [
+    { "order_id": 101, "customer_name": "Ravi Kumar", "customer_phone": "9876543210",
+      "order_date": "2026-11-07T04:30:00Z", "status": "PLACED", "total_amount": "155.00", "item_count": 2 }
+  ],
+  "page": 1,
+  "page_size": 20,
+  "total": 1,
+  "status_counts": { "PLACED": 1, "CONFIRMED": 0, "OUT_FOR_DELIVERY": 0, "DELIVERED": 0, "CANCELLED": 0 }
+}
+```
+
+`status_counts` (counts across all orders, ignoring filters) feeds the admin dashboard.
+
+---
+
+## PATCH /api/v1/admin/orders/{id}/status
+
+**Request**
+```json
+{ "status": "CONFIRMED" }
+```
+
+**200 OK** – full order (same shape as `GET /orders/{id}`) with the new status.
+
+| Status | Code | When |
+|---|---|---|
+| 404 | `NOT_FOUND` | No such order |
+| 409 | `INVALID_STATUS_TRANSITION` | e.g. `DELIVERED → PLACED` |
+| 422 | `VALIDATION_ERROR` | `status` not one of the enum values |
+
+Allowed transitions: see [functional requirements](../03-requirements/functional-requirements.md#order-status-lifecycle).
+
+---
+
+## Error format
+
+Every non-2xx response uses one shape:
+
+```json
+{
+  "error": {
+    "code": "PRODUCT_UNAVAILABLE",
+    "message": "Product 'Buffalo Milk 1 Litre' is currently unavailable.",
+    "details": [ { "field": "items[1].product_id", "issue": "unavailable" } ],
+    "request_id": "8f1c2a7e-4b3d-4a8e-9b2f-1d0c3e5f6a7b"
+  }
+}
+```
+
+Validation example (422):
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Request validation failed.",
+    "details": [
+      { "field": "customer.phone", "issue": "must be a 10-digit Indian mobile number" },
+      { "field": "items[0].quantity", "issue": "must be between 1 and 20" }
+    ],
+    "request_id": "..."
+  }
+}
+```
+
+## Status code reference
+
+| Code | Meaning in this API |
+|---|---|
+| 200 | Success |
+| 201 | Order created |
+| 400 | Request is well-formed but breaks a simple rule (duplicate product) |
+| 404 | Resource not found |
+| 409 | Conflicts with current state (unavailable product, illegal transition) |
+| 422 | Schema validation failed |
+| 500 | Unexpected server error (details only in logs) |
+| 503 | Dependency (database) unavailable |
+
+## Versioning
+
+Breaking changes require `/api/v2`. Adding optional fields or new endpoints is non-breaking and stays in v1.

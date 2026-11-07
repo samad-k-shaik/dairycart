@@ -1,0 +1,55 @@
+name: Bug
+description: Something is not working as documented
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is wrong, in one sentence?
+    validations: { required: true }
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      description: Link the requirement or API contract section if possible.
+    validations: { required: true }
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: Include error messages, screenshots, log lines (with request_id).
+    validations: { required: true }
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [Frontend – customer, Frontend – admin, Backend API, Database, CI/CD, Deployment, Documentation]
+    validations: { required: true }
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options: [Local, Docker Compose, Cloud Run]
+    validations: { required: true }
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options: [Critical – app unusable, High – feature broken, Medium – workaround exists, Low – cosmetic]
+    validations: { required: true }
+  - type: textarea
+    id: learning
+    attributes:
+      label: Learning notes
+      description: Root cause (once known) and what we learned. Every fix needs a test that fails before the fix.

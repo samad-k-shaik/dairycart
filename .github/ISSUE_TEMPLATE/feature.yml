@@ -1,0 +1,78 @@
+name: Feature
+description: A new user-facing capability (break large features into Task issues)
+title: "[Feature] "
+labels: ["feature"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Every issue must be understandable by a beginner. Fill in every section.
+        Process: Understand → Research → Plan → Implement → Test → Pull Request → Code Review → Merge.
+  - type: textarea
+    id: objective
+    attributes:
+      label: 1. Objective
+      description: What are we building, in one or two sentences?
+    validations: { required: true }
+  - type: textarea
+    id: background
+    attributes:
+      label: 2. Background
+      description: Why are we building it? Link requirement IDs (e.g. FR-C5).
+    validations: { required: true }
+  - type: textarea
+    id: learning
+    attributes:
+      label: 3. Learning objectives
+      description: Which technologies and concepts must the participant understand?
+    validations: { required: true }
+  - type: textarea
+    id: prerequisites
+    attributes:
+      label: 4. Prerequisites
+      description: Issues that must be done first, tools, docs to read.
+  - type: textarea
+    id: tasks
+    attributes:
+      label: 5. Tasks
+      value: |
+        - [ ]
+    validations: { required: true }
+  - type: textarea
+    id: guidance
+    attributes:
+      label: 6. Technical guidance
+      description: Files to touch, patterns to follow, how it interacts with other components.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 7. Acceptance criteria
+      value: |
+        - [ ]
+    validations: { required: true }
+  - type: textarea
+    id: testing
+    attributes:
+      label: 8. Testing requirements
+    validations: { required: true }
+  - type: textarea
+    id: deliverables
+    attributes:
+      label: 9. Expected deliverables
+  - type: textarea
+    id: dod
+    attributes:
+      label: 10. Definition of Done
+      value: |
+        - [ ] Acceptance criteria met
+        - [ ] Tests written and passing
+        - [ ] Documentation updated
+        - [ ] PR reviewed and approved
+        - [ ] CI passing
+        - [ ] Merged into develop
+        - [ ] Card moved to Done
+  - type: textarea
+    id: review
+    attributes:
+      label: Review questions
+      description: What should the participant be able to explain during review?

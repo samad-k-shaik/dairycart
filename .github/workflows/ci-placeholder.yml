@@ -1,0 +1,42 @@
+# M0 placeholder workflow.
+# Proves GitHub Actions runs and checks the foundation documents exist.
+# Replaced by the real CI pipeline (ci.yml) in M5 – Docker and CI.
+name: Foundation checks
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    name: Required documents exist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check required files
+        run: |
+          set -e
+          for f in README.md AGENTS.md CONTRIBUTING.md .gitignore docker-compose.yml \
+                   docs/01-project-overview.md docs/02-project-scope.md \
+                   docs/03-requirements/functional-requirements.md \
+                   docs/03-requirements/non-functional-requirements.md \
+                   docs/04-architecture/high-level-design.md \
+                   docs/04-architecture/low-level-design.md \
+                   docs/04-architecture/system-context.md \
+                   docs/04-architecture/database-erd.md \
+                   docs/05-api/api-contracts.md \
+                   docs/06-ui-ux/design-system.md \
+                   docs/07-testing/test-strategy.md \
+                   docs/08-devops/git-workflow.md \
+                   docs/08-devops/ci-cd-strategy.md \
+                   docs/08-devops/deployment-guide.md \
+                   docs/09-team/roles-and-responsibilities.md \
+                   docs/09-team/learning-roadmap.md; do
+            test -s "$f" || { echo "Missing or empty: $f"; exit 1; }
+            echo "ok  $f"
+          done

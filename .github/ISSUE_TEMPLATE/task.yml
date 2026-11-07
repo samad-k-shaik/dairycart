@@ -1,0 +1,65 @@
+name: Task
+description: A small, reviewable and testable unit of work (one PR)
+title: "[Task] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A task should be completable in one PR (ideally < 400 changed lines). Add area labels (backend, frontend, database, devops, testing, documentation).
+  - type: textarea
+    id: objective
+    attributes:
+      label: 1. Objective
+    validations: { required: true }
+  - type: textarea
+    id: background
+    attributes:
+      label: 2. Background
+    validations: { required: true }
+  - type: textarea
+    id: learning
+    attributes:
+      label: 3. Learning objectives
+    validations: { required: true }
+  - type: textarea
+    id: prerequisites
+    attributes:
+      label: 4. Prerequisites
+  - type: textarea
+    id: tasks
+    attributes:
+      label: 5. Tasks
+      value: |
+        - [ ]
+    validations: { required: true }
+  - type: textarea
+    id: guidance
+    attributes:
+      label: 6. Technical guidance
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 7. Acceptance criteria
+      value: |
+        - [ ]
+    validations: { required: true }
+  - type: textarea
+    id: testing
+    attributes:
+      label: 8. Testing requirements
+    validations: { required: true }
+  - type: textarea
+    id: deliverables
+    attributes:
+      label: 9. Expected deliverables
+  - type: textarea
+    id: dod
+    attributes:
+      label: 10. Definition of Done
+      value: |
+        - [ ] Acceptance criteria met
+        - [ ] Tests written and passing (where applicable)
+        - [ ] Documentation updated
+        - [ ] PR reviewed and approved
+        - [ ] Merged into develop
+        - [ ] Card moved to Done

@@ -1,0 +1,33 @@
+# Milk Delivery POC – local development stack
+#
+# PLACEHOLDER (M0). Only the database service is defined so the target
+# architecture is visible. The backend and frontend services are added in
+# milestone M5 – Docker and CI, once the Dockerfiles exist.
+#
+# Do not use these credentials outside local development.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: milk-delivery-db
+    environment:
+      POSTGRES_DB: milk_delivery
+      POSTGRES_USER: milk_user
+      POSTGRES_PASSWORD: milk_password_local_only
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Schema is created by Alembic migrations (M1), not by init.sql.
+      # database/init.sql is a reference DDL for learning; see database/README.md.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U milk_user -d milk_delivery"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # backend:   -> added in M5 (FastAPI, port 8000)
+  # frontend:  -> added in M5 (Vite, port 5173)
+
+volumes:
+  postgres-data:

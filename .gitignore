@@ -1,0 +1,42 @@
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*service-account*.json
+credentials.json
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/coverage/
+*.log
+npm-debug.log*
+.vite/
+
+# Python / backend
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Docker / local data
+postgres-data/
+*.sqlite3
+
+# Bootstrap script output
+scripts/bootstrap-result.json
