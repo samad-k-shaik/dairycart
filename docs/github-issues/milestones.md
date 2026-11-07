@@ -1,6 +1,6 @@
 # Milestones
 
-Descriptions below are also used as the GitHub milestone descriptions. Implementation issues for M1–M7 are written after M0 is approved; the candidate issue lists are indicative only.
+Descriptions below are also used as the GitHub milestone descriptions. Implementation issues for every milestone are in this folder (`1xx` = M1 … `7xx` = M7) and on GitHub. The candidate lists below are the original summaries.
 
 ## M0 – Project Foundation
 Repository, documentation, architecture, API contract, ERD, GitHub board, labels, Git and AI-assistant standards. No application code.

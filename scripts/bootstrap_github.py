@@ -21,6 +21,7 @@ import json
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -138,6 +139,7 @@ def ensure_issues(repo: str, milestones: dict[str, int]) -> list[dict]:
                 "milestone": milestones[spec["milestone"]],
             })
             print(f"  issue created  #{i['number']} {spec['title']}")
+            time.sleep(1.5)  # stay well under GitHub's content-creation rate limit
         created.append({"number": i["number"], "title": spec["title"], "url": i["html_url"], "node_id": i["node_id"], "spec": spec_path.name})
     return created
 
