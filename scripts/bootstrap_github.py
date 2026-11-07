@@ -10,7 +10,10 @@ Requires: GitHub CLI (`gh`) authenticated with `repo` and `project` scopes.
     gh auth login --scopes repo,project
 
 Usage:
-    python scripts/bootstrap_github.py OWNER/milk-delivery-poc [--skip-project] [--skip-protection]
+    python scripts/bootstrap_github.py OWNER/REPO [--project-number N] [--skip-project] [--skip-protection]
+
+    --project-number N   use your existing GitHub Project number N (from its URL,
+                         e.g. github.com/users/OWNER/projects/5 -> 5)
 """
 from __future__ import annotations
 
@@ -170,14 +173,20 @@ def protect(repo: str, branch: str) -> str:
     return "FAILED: " + (r.stdout or r.stderr).strip().replace("\n", " ")[:300]
 
 
-def ensure_project(owner: str, repo: str, issues: list[dict]) -> str:
-    """Projects v2 need the GraphQL API (via `gh project`)."""
+def ensure_project(owner: str, repo: str, issues: list[dict], number: str | None = None) -> str:
+    """Projects v2 need the GraphQL API (via `gh project`).
+    With `number`, the existing project with that number is used instead of creating one."""
     title = "Milk Delivery POC"
-    r = gh("project", "list", "--owner", owner, "--format", "json", check=False)
+    r = gh("project", "list", "--owner", owner, "--format", "json", "--limit", "100", check=False)
     if r.returncode != 0:
         return "FAILED: " + r.stderr.strip()[:300]
     projects = json.loads(r.stdout).get("projects", [])
-    proj = next((p for p in projects if p["title"] == title), None)
+    if number:
+        proj = next((p for p in projects if str(p["number"]) == number), None)
+        if not proj:
+            return f"FAILED: project #{number} not found for {owner}"
+    else:
+        proj = next((p for p in projects if p["title"] == title), None)
     if not proj:
         proj = json.loads(gh("project", "create", "--owner", owner, "--title", title, "--format", "json").stdout)
         print(f"  project created  {proj['url']}")
@@ -236,7 +245,8 @@ def main() -> None:
     project_url = "skipped"
     if not skip_project:
         print("Project board:")
-        project_url = ensure_project(owner, repo, issues)
+        num = sys.argv[sys.argv.index("--project-number") + 1] if "--project-number" in sys.argv else None
+        project_url = ensure_project(owner, repo, issues, num)
 
     summary = {"repo": repo, "issues": issues, "protection": protection, "project": project_url}
     out = ROOT / "scripts" / "bootstrap-result.json"
