@@ -73,11 +73,13 @@ function OrderConfirmationPage() {
         </p>
       </section>
 
+      {/* Stacked on phones, side by side from 640px. `sm:flex-1` (not flex-1): in a vertical
+          stack flex-1 would shrink the buttons' HEIGHT (found in the M2-14 review). */}
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Button asChild size="lg" className="h-12 flex-1">
+        <Button asChild size="lg" className="h-12 sm:flex-1">
           <Link to={`/orders?phone=${order.customer.phone}`}>View my orders</Link>
         </Button>
-        <Button asChild size="lg" variant="outline" className="h-12 flex-1">
+        <Button asChild size="lg" variant="outline" className="h-12 sm:flex-1">
           <Link to="/">Continue shopping</Link>
         </Button>
       </div>
