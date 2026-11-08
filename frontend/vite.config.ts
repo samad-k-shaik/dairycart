@@ -5,13 +5,19 @@
  * - `npm run build` → Vite bundles and minifies everything into `dist/` for deployment.
  */
 import { fileURLToPath, URL } from 'node:url'
+import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  // Compiles JSX/TSX and enables "fast refresh" (keeps component state on save).
-  plugins: [react()],
+  plugins: [
+    // Compiles JSX/TSX and enables "fast refresh" (keeps component state on save).
+    react(),
+    // Tailwind CSS v4: scans our files for class names like `bg-primary`
+    // and generates only the CSS we actually use.
+    tailwindcss(),
+  ],
   resolve: {
     alias: {
       // `@/lib/format` → `src/lib/format`. Must match "paths" in tsconfig.app.json.

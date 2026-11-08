@@ -26,11 +26,11 @@ We are **recreating its design language** (clean, premium grocery UI) with our o
 | `border` | `#E2E8F0` | `border-border` | Dividers, input borders |
 | `text` | `#0F172A` | `text-foreground` | Primary text |
 | `text-muted` | `#64748B` | `text-muted-foreground` | Secondary text |
-| `success` | `#16A34A` | | DELIVERED, success toasts |
-| `warning` | `#D97706` | | OUT_FOR_DELIVERY |
-| `danger` | `#DC2626` | | CANCELLED, errors |
+| `success` | `#16A34A` | `text-success`, `bg-success` | DELIVERED, success toasts |
+| `warning` | `#D97706` | `text-warning`, `bg-warning` | OUT_FOR_DELIVERY |
+| `danger` | `#DC2626` | `text-danger`, `bg-danger` | CANCELLED, errors |
 
-These map to shadcn/ui CSS variables (`--primary`, `--background`, …) in `src/index.css` (set up in M2).
+These map to shadcn/ui CSS variables (`--primary`, `--background`, …) in `frontend/src/index.css` (set up in M2-02). Live preview of every token: `http://localhost:5173/design` (temporary, until the M2 design approval).
 
 ### Status badge colours
 
@@ -44,24 +44,24 @@ These map to shadcn/ui CSS variables (`--primary`, `--background`, …) in `src/
 
 ## Typography
 
-Font: **Manrope** (Google Fonts or `@fontsource/manrope`), fallback `system-ui, sans-serif`.
+Font: **Manrope**, self-hosted via `@fontsource-variable/manrope` (all weights in one file), fallback `system-ui, sans-serif`.
 
-| Style | Size / line-height | Weight | Use |
-|---|---|---|---|
-| Display | 28 / 36 px | 800 | Home hero |
-| H1 | 24 / 32 px | 700 | Page titles |
-| H2 | 20 / 28 px | 700 | Section titles |
-| H3 | 16 / 24 px | 600 | Card titles |
-| Body | 14 / 22 px | 500 | Default text |
-| Small | 12 / 16 px | 500 | Labels, metadata |
-| Price | 18 / 24 px | 800 | Product prices |
+| Style | Size / line-height | Weight | Tailwind usage | Use |
+|---|---|---|---|---|
+| Display | 28 / 36 px | 800 | `text-display font-extrabold` | Home hero |
+| H1 | 24 / 32 px | 700 | `text-h1 font-bold` | Page titles |
+| H2 | 20 / 28 px | 700 | `text-h2 font-bold` | Section titles |
+| H3 | 16 / 24 px | 600 | `text-h3 font-semibold` | Card titles |
+| Body | 14 / 22 px | 500 | `text-body font-medium` (body default) | Default text |
+| Small | 12 / 16 px | 500 | `text-small font-medium` | Labels, metadata |
+| Price | 18 / 24 px | 800 | `text-price font-extrabold` | Product prices |
 
 ## Spacing, radius, shadow
 
 - **Spacing scale:** 4 px base (Tailwind default): 4, 8, 12, 16, 24, 32, 48.
 - **Page gutter:** 16 px mobile, 24 px tablet, 32 px desktop. Max content width 1200 px.
 - **Radius:** cards `rounded-2xl` (16 px), buttons/inputs `rounded-xl` (12 px), chips `rounded-full`.
-- **Shadow:** cards `shadow-[0_2px_12px_rgba(15,23,42,0.06)]`; elevated sheets `shadow-lg`. Keep shadows subtle.
+- **Shadow:** cards `shadow-card` (= `0 2px 12px rgba(15,23,42,0.06)`); elevated sheets `shadow-lg`. Keep shadows subtle.
 
 ## Breakpoints
 
