@@ -28,3 +28,40 @@ export function formatCurrency(amount: string): string {
   // The cast tells TypeScript this string is numeric (we just checked it with the pattern).
   return rupeeFormatter.format(amount as `${number}`)
 }
+
+// ---- Dates: the API sends UTC ("2026-11-07T04:30:00Z"); customers and admins see IST ----
+
+const IST = "Asia/Kolkata"
+
+const dateTimeFormatter = new Intl.DateTimeFormat("en-IN", {
+  timeZone: IST,
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+})
+
+const dateFormatter = new Intl.DateTimeFormat("en-IN", {
+  timeZone: IST,
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+})
+
+/** "2026-11-07T04:30:00Z" → "7 Nov 2026, 10:00 am" (IST). */
+export function formatDateTime(iso: string): string {
+  return dateTimeFormatter.format(new Date(iso))
+}
+
+/** "2026-11-07T04:30:00Z" → "7 Nov 2026" (IST). */
+export function formatDate(iso: string): string {
+  return dateFormatter.format(new Date(iso))
+}
+
+/** Calendar day in IST as "YYYY-MM-DD" (en-CA formats dates that way). Used for "today". */
+const istDayFormatter = new Intl.DateTimeFormat("en-CA", { timeZone: IST })
+
+export function istDateKey(date: Date | string): string {
+  return istDayFormatter.format(typeof date === "string" ? new Date(date) : date)
+}

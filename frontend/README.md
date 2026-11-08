@@ -98,6 +98,15 @@ The cart lives in the browser (ADR-004): React context + `useReducer`, saved to 
 - **Safe storage:** missing, corrupt or tampered data restores as an empty cart or only its valid lines; if `localStorage` is blocked or full, the cart still works for the current visit.
 - **Cart page (M2-08, #27):** `components/cart/CartItem` (image, name, size, unit price, `QuantitySelector`, line subtotal, remove) and `components/cart/CartSummary` (item count, estimated total, "Final total confirmed at checkout", Checkout). Subtotals and the total are derived from the lines on every render, never stored. Removing shows an Undo toast that restores the line at its old position. The empty state links to products, and Checkout is disabled while the cart is empty. No discounts, delivery fees or tax lines (out of scope).
 
+## Checkout and confirmation (M2-09, #28)
+
+- `/checkout`: name + mobile form with inline errors (`lib/validation.ts`: name 2–100 chars, phone `^[6-9]\d{9}$`; the phone field keeps digits only). The order summary shows the cart estimate. An empty cart cannot be checked out.
+- **Request body:** built by `lib/orderRequest.ts` from the cart, containing only `{ customer: { name, phone }, items: [{ product_id, quantity }] }`. Prices and totals are never sent. In dev mode the payload is logged to the browser console (`[checkout] POST /api/v1/orders payload`).
+- `useCreateOrder()` (TanStack Query `useMutation`) sends it; the button is disabled while sending. On success the returned order is cached, order lists are invalidated, the user goes to `/orders/:id/confirmation` and the cart is cleared.
+- **Confirmation** shows the order returned by the service (id, items, backend total, status badge). If that total differs from the cart estimate, a notice says so (FR-C8). Payment is cash on delivery: no address, shipping or payment fields.
+- **M2 mock limitation:** mock orders live in memory, so reloading a confirmation page for an order placed in this visit shows "Order not found". This disappears when the real API is connected in M3.
+- Dates are shown in IST (`formatDateTime`, `formatDate` in `lib/format.ts`); the API sends UTC.
+
 ## Styling and design tokens
 
 - **Tailwind CSS v4** via the `@tailwindcss/vite` plugin. There is no `tailwind.config.js`: configuration lives in `src/index.css`.
