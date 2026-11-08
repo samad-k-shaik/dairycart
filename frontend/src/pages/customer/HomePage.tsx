@@ -3,28 +3,21 @@
  * Hero banner, category chips and a responsive grid of available products.
  */
 import { useState } from "react"
-import { toast } from "sonner"
 
 import { CategoryChips } from "@/components/products/CategoryChips"
 import { HeroBanner } from "@/components/products/HeroBanner"
 import { ProductCard } from "@/components/products/ProductCard"
 import { ProductGridSkeleton } from "@/components/products/ProductGridSkeleton"
 import { Button } from "@/components/ui/button"
+import { useAddToCart } from "@/hooks/useAddToCart"
 import { useProducts } from "@/hooks/useProducts"
 import { matchesCategory, type CategoryId } from "@/lib/productDisplay"
-import type { Product } from "@/types/product"
-
-/** Temporary until the cart exists (M2-07, #26). */
-function handleAdd(product: Product) {
-  toast.info(`${product.name} ${product.size}`, {
-    description: "Adding to the cart arrives in the next update.",
-  })
-}
 
 function HomePage() {
   // isPending / isError / data all come from useQuery inside useProducts.
   const { data: products, isPending, isError, refetch } = useProducts()
   const [category, setCategory] = useState<CategoryId>("all")
+  const addToCart = useAddToCart()
 
   const visible = products?.filter((product) => matchesCategory(product, category)) ?? []
 
@@ -62,7 +55,11 @@ function HomePage() {
           // 2 columns on phones, 3 from 768px (md), 4 from 1024px (lg): design system breakpoints.
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
             {visible.map((product) => (
-              <ProductCard key={product.product_id} product={product} onAdd={handleAdd} />
+              <ProductCard
+                key={product.product_id}
+                product={product}
+                onAdd={(p) => addToCart(p, 1)}
+              />
             ))}
           </div>
         )}

@@ -5,10 +5,10 @@
 import { useState } from "react"
 import { Link, useParams } from "react-router"
 import { ArrowLeft, PackageSearch, ShoppingCart } from "lucide-react"
-import { toast } from "sonner"
 
 import { QuantitySelector } from "@/components/common/QuantitySelector"
 import { Button } from "@/components/ui/button"
+import { useAddToCart } from "@/hooks/useAddToCart"
 import { useProduct } from "@/hooks/useProduct"
 import { formatCurrency } from "@/lib/format"
 import { multiplyMoney } from "@/lib/money"
@@ -59,12 +59,10 @@ function ProductDetails({ product }: { product: Product }) {
   const [quantity, setQuantity] = useState(1)
   const label = `${product.name} ${product.size}`
   const estimate = formatCurrency(multiplyMoney(product.price, quantity))
+  const addToCart = useAddToCart()
 
-  // Temporary until the cart exists (M2-07, #26).
   function handleAddToCart() {
-    toast.info(`${quantity} × ${label}`, {
-      description: "Adding to the cart arrives in the next update.",
-    })
+    addToCart(product, quantity)
   }
 
   return (

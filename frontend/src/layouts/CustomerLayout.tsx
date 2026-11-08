@@ -6,10 +6,8 @@ import { NavLink, Outlet } from "react-router"
 import { House, ReceiptText, ShoppingCart } from "lucide-react"
 
 import { Logo } from "@/components/common/Logo"
+import { useCart } from "@/hooks/useCart"
 import { cn } from "@/lib/utils"
-
-/** Placeholder until cart state exists (M2-07, #26). */
-const CART_ITEM_COUNT = 0
 
 /**
  * Style for header links. NavLink passes `isActive`, so the link for the current page is blue.
@@ -22,6 +20,9 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   )
 
 function CustomerLayout() {
+  // Re-renders whenever the cart changes, so the badge updates immediately.
+  const { itemCount } = useCart()
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 border-b bg-surface/95 backdrop-blur">
@@ -41,13 +42,18 @@ function CustomerLayout() {
             <NavLink
               to="/cart"
               className={navLinkClass}
-              aria-label={`Cart, ${CART_ITEM_COUNT} items`}
+              aria-label={`Cart, ${itemCount} ${itemCount === 1 ? "item" : "items"}`}
             >
               <span className="relative">
                 <ShoppingCart className="size-5" aria-hidden="true" />
-                <span className="absolute -top-2 -right-2.5 flex size-4.5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                  {CART_ITEM_COUNT}
-                </span>
+                {itemCount > 0 && (
+                  <span
+                    data-testid="cart-count"
+                    className="absolute -top-2 -right-3 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground"
+                  >
+                    {itemCount > 99 ? "99+" : itemCount}
+                  </span>
+                )}
               </span>
             </NavLink>
           </nav>

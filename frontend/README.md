@@ -87,6 +87,16 @@ React Router (`react-router`, ADR-011) maps URLs to pages in `src/routes/router.
 - **Money estimates** for display (e.g. "Add to cart · ₹120.00") use `src/lib/money.ts`, which calculates in whole paise. Real totals always come from the backend.
 - **Product images and descriptions are frontend-only.** The API contract has no `image` or `description` field, so `src/lib/productDisplay.ts` maps them (and the Cow/Buffalo category) from the product name. Image sources are recorded in `public/images/README.md`.
 
+## Cart (M2-07, #26)
+
+The cart lives in the browser (ADR-004): React context + `useReducer`, saved to `localStorage` under the key `milk-cart-v1`.
+
+- **Use it:** `const { lines, itemCount, estimatedTotal, add, setQuantity, remove, clear } = useCart()` anywhere inside `<CartProvider>` (wrapped in `App.tsx`). `useAddToCart()` adds and shows the toast used by the home and details pages.
+- **Rules** (`src/hooks/cart/cartReducer.ts`, unit-tested): adding a product already in the cart merges into one line; quantity is always 1–20 (extra is not added, and the toast says so).
+- **Stored per line:** `product_id`, `quantity` and a display snapshot (`name`, `size`, `price`). Nothing else.
+- **Estimated total only.** Sums are calculated in whole paise; the real total comes from the backend at checkout.
+- **Safe storage:** missing, corrupt or tampered data restores as an empty cart or only its valid lines; if `localStorage` is blocked or full, the cart still works for the current visit.
+
 ## Styling and design tokens
 
 - **Tailwind CSS v4** via the `@tailwindcss/vite` plugin. There is no `tailwind.config.js`: configuration lives in `src/index.css`.
