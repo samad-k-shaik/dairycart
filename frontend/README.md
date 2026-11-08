@@ -131,6 +131,22 @@ The cart lives in the browser (ADR-004): React context + `useReducer`, saved to 
 - `/admin/products`: read-only table of all products including unavailable ones (`useAdminProducts()`, `include_unavailable`, ADR-006) with an availability badge.
 - Order lists sort newest first, ties broken by the higher order id (the backend should use `ORDER BY order_date DESC, order_id DESC`).
 
+## Loading, empty and error states (M2-13, #32)
+
+Every data screen uses the same three building blocks:
+
+| State | Component | Meaning |
+|---|---|---|
+| Loading | `components/ui/skeleton` (shadcn `Skeleton`) | Data is on its way; grey shapes in the real layout |
+| Empty | `components/common/EmptyState` | Loaded fine, nothing to show; explain why and offer a next step |
+| Error | `components/common/ErrorState` | Loading failed; plain-language message and **Retry** (calls `refetch()`) |
+
+- Error text comes from the API error's `message` (`userFacingMessage()`); anything else shows a generic message. Raw technical errors are never shown to customers.
+- A 404 for a single order/product is shown as an empty state ("not found"), not an error.
+- **Crashes (bugs):** React Router's `errorElement` (`RouteErrorFallback`) and a top-level `ErrorBoundary` (in `main.tsx`) show `AppErrorFallback` ("Something went wrong", Reload / Go to the shop) instead of a blank page. Technical details are shown only in development.
+- **Dev-only mock switch:** a "Mock: …" button at the bottom-left (development only) sets the mock services to *Normal*, *Slow (3 s)*, *Fail every call (500)* or *Empty lists*, and can crash the current page to test the fallback. The mode is stored in `localStorage` (`dairycart-mock-mode-v1`). It is not included in production builds.
+- With "Fail every call", the error state appears after about 4–7 s because queries retry 5xx errors twice (see `lib/queryClient.ts`).
+
 ## Styling and design tokens
 
 - **Tailwind CSS v4** via the `@tailwindcss/vite` plugin. There is no `tailwind.config.js`: configuration lives in `src/index.css`.

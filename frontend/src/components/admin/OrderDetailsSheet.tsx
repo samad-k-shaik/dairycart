@@ -2,7 +2,9 @@
  * OrderDetailsSheet: side panel with one order's customer, items, totals and the
  * status update control. Opened from the admin orders table/cards.
  */
+import { ErrorState } from "@/components/common/ErrorState"
 import { StatusBadge } from "@/components/common/StatusBadge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { StatusUpdateControl } from "@/components/admin/StatusUpdateControl"
 import { OrderItemsList } from "@/components/orders/OrderItemsList"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -25,7 +27,7 @@ export function OrderDetailsSheet({ orderId, onClose }: OrderDetailsSheetProps) 
 }
 
 function SheetBody({ orderId }: { orderId: number }) {
-  const { data: order, isPending, isError } = useOrder(orderId)
+  const { data: order, isPending, isError, error, refetch, isFetching } = useOrder(orderId)
 
   return (
     <>
@@ -36,11 +38,19 @@ function SheetBody({ orderId }: { orderId: number }) {
 
       <div className="space-y-5 px-4 pb-6">
         {isPending ? (
-          <div className="h-48 animate-pulse rounded-2xl bg-muted" aria-hidden="true" />
+          <div className="space-y-3" aria-hidden="true">
+            <Skeleton className="h-6 w-24" />
+            <Skeleton className="h-11" />
+            <Skeleton className="h-32" />
+          </div>
         ) : isError ? (
-          <p role="alert" className="text-danger">
-            Could not load this order.
-          </p>
+          <ErrorState
+            title="We could not load this order"
+            error={error}
+            onRetry={() => refetch()}
+            retrying={isFetching}
+            className="shadow-none"
+          />
         ) : (
           <>
             <div className="space-y-1">

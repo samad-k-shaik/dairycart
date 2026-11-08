@@ -2,15 +2,19 @@
  * Route: `/admin/products` (FR-A5). Read-only table of ALL products,
  * including unavailable ones, with price and availability.
  */
+import { Package } from "lucide-react"
+
+import { EmptyState } from "@/components/common/EmptyState"
+import { ErrorState } from "@/components/common/ErrorState"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useAdminProducts } from "@/hooks/useProducts"
 import { formatCurrency } from "@/lib/format"
 import { getProductImage } from "@/lib/productDisplay"
 
 function ProductsPage() {
-  const { data: products, isPending, isError, refetch } = useAdminProducts()
+  const { data: products, isPending, isError, error, refetch, isFetching } = useAdminProducts()
 
   return (
     <div className="space-y-5">
@@ -20,16 +24,19 @@ function ProductsPage() {
       </div>
 
       {isPending ? (
-        <div className="h-64 animate-pulse rounded-2xl bg-surface shadow-card" aria-hidden="true" />
-      ) : isError ? (
-        <div role="alert" className="space-y-3 rounded-2xl bg-surface p-6 text-center shadow-card">
-          <p className="font-semibold">We could not load the products.</p>
-          <Button variant="outline" onClick={() => refetch()}>
-            Try again
-          </Button>
+        <div className="space-y-2 rounded-2xl bg-surface p-4 shadow-card" aria-hidden="true">
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <Skeleton className="size-10 rounded-lg" />
+              <Skeleton className="h-5 flex-1" />
+              <Skeleton className="h-5 w-16" />
+            </div>
+          ))}
         </div>
+      ) : isError ? (
+        <ErrorState title="We could not load the products" error={error} onRetry={() => refetch()} retrying={isFetching} />
       ) : products.length === 0 ? (
-        <p className="rounded-2xl bg-surface p-6 text-center text-muted-foreground shadow-card">No products yet.</p>
+        <EmptyState icon={Package} title="No products yet" description="Products are added to the database by the team." />
       ) : (
         <div className="rounded-2xl bg-surface p-2 shadow-card">
           <Table>

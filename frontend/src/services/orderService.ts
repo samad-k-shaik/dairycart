@@ -28,6 +28,7 @@ import {
   fail,
   fromPaise,
   ids,
+  readDb,
   respond,
   toPaise,
 } from "@/services/mock/mockServer"
@@ -141,7 +142,7 @@ export function getOrdersByPhone(phone: string): Promise<OrderSummary[]> {
       { field: "phone", issue: "must be a 10-digit Indian mobile number" },
     ])
   }
-  const summaries: OrderSummary[] = db.orders
+  const summaries: OrderSummary[] = readDb().orders
     .filter((o) => o.customer.phone === phone)
     .sort(newestFirst)
     .map((o) => ({
@@ -169,7 +170,8 @@ export function getAdminOrders(query: AdminOrderQuery = {}): Promise<AdminOrderP
     ])
   }
 
-  const filtered = db.orders
+  const allOrders = readDb().orders // empty in the dev "empty" mock mode
+  const filtered = allOrders
     .filter((o) => query.status === undefined || o.status === query.status)
     .sort(newestFirst)
   const start = (page - 1) * pageSize
@@ -188,7 +190,7 @@ export function getAdminOrders(query: AdminOrderQuery = {}): Promise<AdminOrderP
     OrderStatus,
     number
   >
-  for (const order of db.orders) statusCounts[order.status] += 1
+  for (const order of allOrders) statusCounts[order.status] += 1
 
   return respond({
     items,

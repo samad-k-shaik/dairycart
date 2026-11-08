@@ -11,11 +11,13 @@ import type { Order } from "@/types/order"
 import type { Money, Product } from "@/types/product"
 import { ServiceError } from "@/services/serviceError"
 
+import { getMockMode } from "./mockSettings"
 import ordersJson from "./orders.json"
 import productsJson from "./products.json"
 
-/** Simulated network latency for every mock call. */
+/** Simulated network latency for every mock call ("slow" dev mode: 3 s). */
 export const MOCK_LATENCY_MS = 300
+const SLOW_LATENCY_MS = 3000
 
 // ---- In-memory "database" ----
 // structuredClone makes a deep copy, so changes (new orders, status updates)
@@ -33,13 +35,33 @@ export const ids = {
   customer: Math.max(...db.orders.map((o) => o.customer.customer_id)) + 1,
 }
 
+/**
+ * Data for LIST reads. In the dev "empty" mode the lists are empty, to show empty states;
+ * otherwise it is the normal in-memory data.
+ */
+export function readDb(): { products: Product[]; orders: Order[] } {
+  return getMockMode() === "empty" ? { products: [], orders: [] } : db
+}
+
 // ---- Simulated responses ----
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
+const latency = () => (getMockMode() === "slow" ? SLOW_LATENCY_MS : MOCK_LATENCY_MS)
+
+function serviceError(status: number, code: ApiErrorCode, message: string, details?: ApiErrorDetail[]) {
+  return new ServiceError(status, {
+    error: { code, message, details, request_id: crypto.randomUUID() },
+  })
+}
+
 /** Simulates a successful response: waits, then returns a copy of the data. */
 export async function respond<T>(data: T): Promise<T> {
-  await wait(MOCK_LATENCY_MS)
+  await wait(latency())
+  if (getMockMode() === "error") {
+    // Dev "error" mode: every call fails like a broken server would.
+    throw serviceError(500, "INTERNAL_ERROR", "Something went wrong on our side. Please try again.")
+  }
   return structuredClone(data)
 }
 
@@ -50,10 +72,8 @@ export async function fail(
   message: string,
   details?: ApiErrorDetail[],
 ): Promise<never> {
-  await wait(MOCK_LATENCY_MS)
-  throw new ServiceError(status, {
-    error: { code, message, details, request_id: crypto.randomUUID() },
-  })
+  await wait(latency())
+  throw serviceError(status, code, message, details)
 }
 
 // ---- Money maths (mock only; the real backend calculates totals) ----

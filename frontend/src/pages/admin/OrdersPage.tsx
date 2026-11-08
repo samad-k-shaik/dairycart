@@ -6,11 +6,14 @@
  *   ?status=PLACED   filter      ?page=2   pagination      ?order=101   open details sheet
  */
 import { useSearchParams } from "react-router"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, ClipboardList } from "lucide-react"
 
 import { OrderDetailsSheet } from "@/components/admin/OrderDetailsSheet"
+import { EmptyState } from "@/components/common/EmptyState"
+import { ErrorState } from "@/components/common/ErrorState"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useAdminOrders } from "@/hooks/useAdminOrders"
 import { totalFromStatusCounts } from "@/lib/dashboard"
@@ -36,7 +39,11 @@ function OrdersPage() {
   const page = readPositiveInt(searchParams.get("page")) ?? 1
   const openOrderId = readPositiveInt(searchParams.get("order"))
 
-  const { data, isPending, isError, refetch } = useAdminOrders({ status, page, page_size: ADMIN_PAGE_SIZE })
+  const { data, isPending, isError, error, refetch, isFetching } = useAdminOrders({
+    status,
+    page,
+    page_size: ADMIN_PAGE_SIZE,
+  })
 
   /** Change some URL parameters, keeping the others. `null` removes one. */
   function updateParams(changes: Record<string, string | null>) {
@@ -84,18 +91,32 @@ function OrdersPage() {
       </div>
 
       {isPending ? (
-        <div className="h-64 animate-pulse rounded-2xl bg-surface shadow-card" aria-hidden="true" />
-      ) : isError ? (
-        <div role="alert" className="space-y-3 rounded-2xl bg-surface p-6 text-center shadow-card">
-          <p className="font-semibold">We could not load the orders.</p>
-          <Button variant="outline" onClick={() => refetch()}>
-            Try again
-          </Button>
+        <div className="space-y-2 rounded-2xl bg-surface p-4 shadow-card" aria-hidden="true">
+          {Array.from({ length: 6 }, (_, i) => (
+            <Skeleton key={i} className="h-10" />
+          ))}
         </div>
+      ) : isError ? (
+        <ErrorState title="We could not load the orders" error={error} onRetry={() => refetch()} retrying={isFetching} />
       ) : data.items.length === 0 ? (
-        <p className="rounded-2xl bg-surface p-6 text-center text-muted-foreground shadow-card">
-          No {status ? STATUS_LABELS[status].toLowerCase() : ""} orders{page > 1 ? " on this page" : ""}.
-        </p>
+        <EmptyState
+          icon={ClipboardList}
+          title={status ? `No ${STATUS_LABELS[status].toLowerCase()} orders` : "No orders yet"}
+          description={
+            page > 1
+              ? "There are no orders on this page."
+              : status
+                ? "Try another status filter."
+                : "New orders will appear here as soon as customers place them."
+          }
+          action={
+            status || page > 1 ? (
+              <Button variant="outline" onClick={() => updateParams({ status: null, page: null })}>
+                Show all orders
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
         <>
           <OrdersTable orders={data.items} onOpen={openOrder} />

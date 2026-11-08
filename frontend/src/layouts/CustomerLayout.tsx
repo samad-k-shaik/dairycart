@@ -5,6 +5,7 @@
 import { NavLink, Outlet } from "react-router"
 import { House, ReceiptText, ShoppingCart } from "lucide-react"
 
+import { DevCrashProbe } from "@/components/common/DevMockSwitch"
 import { Logo } from "@/components/common/Logo"
 import { useCart } from "@/hooks/useCart"
 import { cn } from "@/lib/utils"
@@ -63,6 +64,7 @@ function CustomerLayout() {
       {/* Page gutter: 16px mobile, 24px tablet, 32px desktop; max content width 1200px. */}
       <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 py-6 md:px-6 lg:px-8">
         <Outlet />
+        {import.meta.env.DEV && <DevCrashProbe />}
       </main>
 
       <footer className="border-t bg-surface">

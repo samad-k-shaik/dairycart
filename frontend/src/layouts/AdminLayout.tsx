@@ -6,6 +6,7 @@
 import { NavLink, Outlet } from "react-router"
 import { ClipboardList, LayoutDashboard, Package, Store } from "lucide-react"
 
+import { DevCrashProbe } from "@/components/common/DevMockSwitch"
 import { Logo } from "@/components/common/Logo"
 import { cn } from "@/lib/utils"
 
@@ -82,6 +83,7 @@ function AdminLayout() {
 
       <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 py-6 md:px-6 lg:px-8">
         <Outlet />
+        {import.meta.env.DEV && <DevCrashProbe />}
       </main>
     </div>
   )

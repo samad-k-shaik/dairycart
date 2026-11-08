@@ -3,7 +3,10 @@
  * Hero banner, category chips and a responsive grid of available products.
  */
 import { useState } from "react"
+import { Milk } from "lucide-react"
 
+import { EmptyState } from "@/components/common/EmptyState"
+import { ErrorState } from "@/components/common/ErrorState"
 import { CategoryChips } from "@/components/products/CategoryChips"
 import { HeroBanner } from "@/components/products/HeroBanner"
 import { ProductCard } from "@/components/products/ProductCard"
@@ -15,7 +18,7 @@ import { matchesCategory, type CategoryId } from "@/lib/productDisplay"
 
 function HomePage() {
   // isPending / isError / data all come from useQuery inside useProducts.
-  const { data: products, isPending, isError, refetch } = useProducts()
+  const { data: products, isPending, isError, error, refetch, isFetching } = useProducts()
   const [category, setCategory] = useState<CategoryId>("all")
   const addToCart = useAddToCart()
 
@@ -41,16 +44,29 @@ function HomePage() {
             <ProductGridSkeleton />
           </>
         ) : isError ? (
-          <div className="space-y-3 rounded-2xl bg-surface p-6 text-center shadow-card" role="alert">
-            <p className="font-semibold">We could not load the products.</p>
-            <Button variant="outline" onClick={() => refetch()}>
-              Try again
-            </Button>
-          </div>
+          <ErrorState
+            title="We could not load the products"
+            error={error}
+            onRetry={() => refetch()}
+            retrying={isFetching}
+          />
         ) : visible.length === 0 ? (
-          <p className="rounded-2xl bg-surface p-6 text-center text-muted-foreground shadow-card">
-            No products in this category right now.
-          </p>
+          <EmptyState
+            icon={Milk}
+            title={products.length === 0 ? "No milk available right now" : "Nothing in this category"}
+            description={
+              products.length === 0
+                ? "All products are sold out at the moment. Please check again later."
+                : "Try another category to see more products."
+            }
+            action={
+              category !== "all" && products.length > 0 ? (
+                <Button variant="outline" onClick={() => setCategory("all")}>
+                  Show all products
+                </Button>
+              ) : undefined
+            }
+          />
         ) : (
           // 2 columns on phones, 3 from 768px (md), 4 from 1024px (lg): design system breakpoints.
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">

@@ -7,6 +7,7 @@
  */
 import { createBrowserRouter } from "react-router"
 
+import { RouteErrorFallback } from "@/components/common/RouteErrorFallback"
 import AdminLayout from "@/layouts/AdminLayout"
 import CustomerLayout from "@/layouts/CustomerLayout"
 import DashboardPage from "@/pages/admin/DashboardPage"
@@ -27,6 +28,8 @@ export const router = createBrowserRouter([
     // Customer route tree.
     path: "/",
     element: <CustomerLayout />,
+    // If a page crashes, show our friendly fallback instead of React Router's technical screen.
+    errorElement: <RouteErrorFallback />,
     children: [
       { index: true, element: <HomePage /> }, // "index" = the parent's own URL, "/"
       { path: "products/:id", element: <ProductDetailsPage /> }, // ":id" is a URL parameter
@@ -42,6 +45,7 @@ export const router = createBrowserRouter([
     // Admin route tree (ADR-002: same app, separate tree and layout).
     path: "/admin",
     element: <AdminLayout />,
+    errorElement: <RouteErrorFallback />,
     children: [
       { index: true, element: <DashboardPage /> },
       { path: "orders", element: <OrdersPage /> },
@@ -50,5 +54,5 @@ export const router = createBrowserRouter([
     ],
   },
   // TEMPORARY design review page (M2-02); no layout. Remove after M2-14 approval.
-  { path: "/design", element: <DesignPage /> },
+  { path: "/design", element: <DesignPage />, errorElement: <RouteErrorFallback /> },
 ])

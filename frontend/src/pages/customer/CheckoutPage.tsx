@@ -8,6 +8,8 @@ import { useRef, useState, type FormEvent } from "react"
 import { Link, useNavigate } from "react-router"
 import { AlertCircle, Banknote, Loader2, ShoppingCart } from "lucide-react"
 
+import { EmptyState } from "@/components/common/EmptyState"
+import { userFacingMessage } from "@/components/common/ErrorState"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -195,7 +197,7 @@ function SubmitError({ error }: { error: Error }) {
       <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
       <div>
         <p className="font-semibold">We could not place your order.</p>
-        <p>{error instanceof ServiceError ? error.message : "Please check your connection and try again."}</p>
+        <p>{userFacingMessage(error)}</p>
         {details.length > 0 && (
           <ul className="mt-1 list-disc pl-4">
             {details.map((d) => (
@@ -212,16 +214,17 @@ function SubmitError({ error }: { error: Error }) {
 
 function EmptyCheckout() {
   return (
-    <section className="flex flex-col items-center gap-4 rounded-2xl bg-surface px-4 py-12 text-center shadow-card">
-      <span className="flex size-16 items-center justify-center rounded-full bg-primary-soft text-primary">
-        <ShoppingCart className="size-8" aria-hidden="true" />
-      </span>
-      <h1 className="text-h1 font-bold">Your cart is empty</h1>
-      <p className="max-w-sm text-muted-foreground">Add some milk to your cart before checking out.</p>
-      <Button asChild>
-        <Link to="/">Browse products</Link>
-      </Button>
-    </section>
+    <EmptyState
+      icon={ShoppingCart}
+      headingLevel="h1"
+      title="Your cart is empty"
+      description="Add some milk to your cart before checking out."
+      action={
+        <Button asChild>
+          <Link to="/">Browse products</Link>
+        </Button>
+      }
+    />
   )
 }
 

@@ -12,9 +12,11 @@
 import { Link } from "react-router"
 import { CalendarDays, CheckCircle2, ChevronRight, ClipboardList, PackageCheck, ShoppingBag, Truck, XCircle, type LucideIcon } from "lucide-react"
 
+import { EmptyState } from "@/components/common/EmptyState"
+import { ErrorState } from "@/components/common/ErrorState"
 import { StatCard } from "@/components/common/StatCard"
 import { StatusBadge } from "@/components/common/StatusBadge"
-import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useAdminOrders } from "@/hooks/useAdminOrders"
 import { countOrdersOnIstDay, totalFromStatusCounts } from "@/lib/dashboard"
 import { formatCurrency, formatDateTime } from "@/lib/format"
@@ -32,7 +34,7 @@ const STATUS_ICONS: Record<OrderStatus, { icon: LucideIcon; className: string }>
 const RECENT_COUNT = 5
 
 function DashboardPage() {
-  const { data, isPending, isError, refetch } = useAdminOrders({ page_size: 100 })
+  const { data, isPending, isError, error, refetch, isFetching } = useAdminOrders({ page_size: 100 })
 
   return (
     <div className="space-y-6">
@@ -42,18 +44,14 @@ function DashboardPage() {
       </div>
 
       {isPending ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-hidden="true">
-          {Array.from({ length: 7 }, (_, i) => (
-            <div key={i} className="h-24 animate-pulse rounded-2xl bg-surface shadow-card" />
-          ))}
-        </div>
+        <DashboardSkeleton />
       ) : isError ? (
-        <div role="alert" className="space-y-3 rounded-2xl bg-surface p-6 text-center shadow-card">
-          <p className="font-semibold">We could not load the dashboard.</p>
-          <Button variant="outline" onClick={() => refetch()}>
-            Try again
-          </Button>
-        </div>
+        <ErrorState
+          title="We could not load the dashboard"
+          error={error}
+          onRetry={() => refetch()}
+          retrying={isFetching}
+        />
       ) : (
         <>
           <section aria-label="Overview" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -94,7 +92,11 @@ function DashboardPage() {
               </Link>
             </div>
             {data.items.length === 0 ? (
-              <p className="rounded-2xl bg-surface p-6 text-center text-muted-foreground shadow-card">No orders yet.</p>
+              <EmptyState
+                icon={ClipboardList}
+                title="No orders yet"
+                description="New orders will appear here as soon as customers place them."
+              />
             ) : (
               <ul className="divide-y overflow-hidden rounded-2xl bg-surface shadow-card">
                 {/* items arrive newest first from the API */}
@@ -125,6 +127,26 @@ function DashboardPage() {
           </section>
         </>
       )}
+    </div>
+  )
+}
+
+/** Same shapes as the real dashboard: 2 overview cards, 5 status cards, a list. */
+function DashboardSkeleton() {
+  const card = (key: number) => (
+    <div key={key} className="flex items-center gap-4 rounded-2xl bg-surface p-4 shadow-card">
+      <Skeleton className="size-11 rounded-xl" />
+      <div className="flex-1 space-y-2">
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-7 w-12" />
+      </div>
+    </div>
+  )
+  return (
+    <div className="space-y-6" aria-hidden="true">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{[0, 1].map(card)}</div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">{[2, 3, 4, 5, 6].map(card)}</div>
+      <Skeleton className="h-64 rounded-2xl" />
     </div>
   )
 }

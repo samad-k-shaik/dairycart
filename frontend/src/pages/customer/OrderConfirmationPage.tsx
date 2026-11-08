@@ -4,48 +4,38 @@
  * never the cart estimate. If the two differ, a notice explains it (FR-C8).
  */
 import { Link, useLocation, useParams } from "react-router"
-import { CheckCircle2, Info, PackageSearch } from "lucide-react"
+import { CheckCircle2, Info } from "lucide-react"
 
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { OrderItemsList } from "@/components/orders/OrderItemsList"
+import { OrderLoadProblem } from "@/components/orders/OrderLoadProblem"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useOrder } from "@/hooks/useOrder"
 import { formatCurrency, formatDateTime } from "@/lib/format"
 import type { ConfirmationState } from "@/pages/customer/CheckoutPage"
-import { ServiceError } from "@/services/serviceError"
 
 function OrderConfirmationPage() {
   const { id } = useParams()
-  const { data: order, isPending, isError, error, refetch } = useOrder(Number(id))
+  const { data: order, isPending, isError, error, refetch, isFetching } = useOrder(Number(id))
   // Set by the checkout page right after placing the order (missing if the page is reloaded).
   const estimatedTotal = (useLocation().state as ConfirmationState | null)?.estimatedTotal
 
   if (isPending) {
     return (
-      <div className="mx-auto max-w-2xl animate-pulse space-y-4 rounded-2xl bg-surface p-6 shadow-card" aria-hidden="true">
-        <div className="mx-auto size-16 rounded-full bg-muted" />
-        <div className="mx-auto h-8 w-1/2 rounded bg-muted" />
-        <div className="h-32 rounded bg-muted" />
+      <div className="mx-auto max-w-2xl space-y-4 rounded-2xl bg-surface p-6 shadow-card" aria-hidden="true">
+        <Skeleton className="mx-auto size-16 rounded-full" />
+        <Skeleton className="mx-auto h-8 w-1/2" />
+        <Skeleton className="h-32" />
       </div>
     )
   }
 
   if (isError) {
-    const notFound = error instanceof ServiceError && error.status === 404
     return (
-      <section className="mx-auto flex max-w-2xl flex-col items-center gap-4 rounded-2xl bg-surface py-12 text-center shadow-card">
-        <PackageSearch className="size-12 text-muted-foreground" aria-hidden="true" />
-        <h1 className="text-h1 font-bold">{notFound ? "Order not found" : "Could not load the order"}</h1>
-        {notFound ? (
-          <Button asChild>
-            <Link to="/orders">Find my orders</Link>
-          </Button>
-        ) : (
-          <Button variant="outline" onClick={() => refetch()}>
-            Try again
-          </Button>
-        )}
-      </section>
+      <div className="mx-auto max-w-2xl">
+        <OrderLoadProblem error={error} onRetry={() => refetch()} retrying={isFetching} />
+      </div>
     )
   }
 

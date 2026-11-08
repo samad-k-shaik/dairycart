@@ -8,10 +8,13 @@ import { useEffect, useState, type FormEvent } from "react"
 import { Link, useSearchParams } from "react-router"
 import { PackageOpen, Search } from "lucide-react"
 
+import { EmptyState } from "@/components/common/EmptyState"
+import { ErrorState } from "@/components/common/ErrorState"
 import { OrderCard } from "@/components/orders/OrderCard"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useOrdersByPhone } from "@/hooks/useOrdersByPhone"
 import { PHONE_PATTERN, validatePhone } from "@/lib/validation"
 
@@ -132,33 +135,39 @@ function Results({ phone, query }: { phone: string; query: ReturnType<typeof use
     return (
       <div className="space-y-3" aria-hidden="true">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="h-20 animate-pulse rounded-2xl bg-surface shadow-card" />
+          <div key={i} className="flex items-center gap-3 rounded-2xl bg-surface p-4 shadow-card">
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-4 w-56" />
+            </div>
+            <Skeleton className="h-6 w-20" />
+          </div>
         ))}
       </div>
     )
   }
   if (query.isError) {
     return (
-      <div role="alert" className="space-y-3 rounded-2xl bg-surface p-6 text-center shadow-card">
-        <p className="font-semibold">We could not load your orders.</p>
-        <Button variant="outline" onClick={() => query.refetch()}>
-          Try again
-        </Button>
-      </div>
+      <ErrorState
+        title="We could not load your orders"
+        error={query.error}
+        onRetry={() => query.refetch()}
+        retrying={query.isFetching}
+      />
     )
   }
   if (query.data.length === 0) {
     return (
-      <section className="flex flex-col items-center gap-3 rounded-2xl bg-surface px-4 py-10 text-center shadow-card">
-        <PackageOpen className="size-12 text-muted-foreground" aria-hidden="true" />
-        <h2 className="text-h2 font-bold">No orders found</h2>
-        <p className="max-w-sm text-muted-foreground">
-          We have no orders for {phone}. Check the number, or place your first order.
-        </p>
-        <Button asChild>
-          <Link to="/">Browse products</Link>
-        </Button>
-      </section>
+      <EmptyState
+        icon={PackageOpen}
+        title="No orders found"
+        description={`We have no orders for ${phone}. Check the number, or place your first order.`}
+        action={
+          <Button asChild>
+            <Link to="/">Browse products</Link>
+          </Button>
+        }
+      />
     )
   }
   return (

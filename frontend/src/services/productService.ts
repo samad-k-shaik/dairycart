@@ -6,7 +6,7 @@
  *     and return types stay the same, so pages do not change.
  */
 import type { Product } from "@/types/product"
-import { db, fail, respond } from "@/services/mock/mockServer"
+import { db, fail, readDb, respond } from "@/services/mock/mockServer"
 
 /**
  * GET /api/v1/products
@@ -14,9 +14,8 @@ import { db, fail, respond } from "@/services/mock/mockServer"
  * `includeUnavailable: true` (proposed query param, ADR-006).
  */
 export function getProducts(options: { includeUnavailable?: boolean } = {}): Promise<Product[]> {
-  const products = options.includeUnavailable
-    ? db.products
-    : db.products.filter((product) => product.is_available)
+  const all = readDb().products // empty in the dev "empty" mock mode
+  const products = options.includeUnavailable ? all : all.filter((product) => product.is_available)
   return respond(products)
 }
 

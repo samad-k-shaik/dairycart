@@ -3,19 +3,19 @@
  * Order header, status timeline and items with the backend-calculated total.
  */
 import { Link, useParams } from "react-router"
-import { ArrowLeft, PackageSearch } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { OrderItemsList } from "@/components/orders/OrderItemsList"
+import { OrderLoadProblem } from "@/components/orders/OrderLoadProblem"
 import { OrderStatusTimeline } from "@/components/orders/OrderStatusTimeline"
-import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useOrder } from "@/hooks/useOrder"
 import { formatDateTime } from "@/lib/format"
-import { ServiceError } from "@/services/serviceError"
 
 function OrderDetailsPage() {
   const { id } = useParams()
-  const { data: order, isPending, isError, error, refetch } = useOrder(Number(id))
+  const { data: order, isPending, isError, error, refetch, isFetching } = useOrder(Number(id))
 
   const backTo = order ? `/orders?phone=${order.customer.phone}` : "/orders"
 
@@ -30,23 +30,15 @@ function OrderDetailsPage() {
       </Link>
 
       {isPending ? (
-        <div className="h-64 animate-pulse rounded-2xl bg-surface shadow-card" aria-hidden="true" />
+        <div className="space-y-4" aria-hidden="true">
+          <Skeleton className="h-9 w-48" />
+          <div className="grid gap-4 md:grid-cols-[240px_1fr]">
+            <Skeleton className="h-56 rounded-2xl" />
+            <Skeleton className="h-56 rounded-2xl" />
+          </div>
+        </div>
       ) : isError ? (
-        <section className="flex flex-col items-center gap-4 rounded-2xl bg-surface py-12 text-center shadow-card">
-          <PackageSearch className="size-12 text-muted-foreground" aria-hidden="true" />
-          <h1 className="text-h1 font-bold">
-            {error instanceof ServiceError && error.status === 404 ? "Order not found" : "Could not load the order"}
-          </h1>
-          {error instanceof ServiceError && error.status === 404 ? (
-            <Button asChild>
-              <Link to="/orders">Find my orders</Link>
-            </Button>
-          ) : (
-            <Button variant="outline" onClick={() => refetch()}>
-              Try again
-            </Button>
-          )}
-        </section>
+        <OrderLoadProblem error={error} onRetry={() => refetch()} retrying={isFetching} />
       ) : (
         <>
           <header className="flex flex-wrap items-center justify-between gap-3">

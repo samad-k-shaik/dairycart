@@ -5,6 +5,7 @@
  */
 import { RouterProvider } from "react-router/dom"
 
+import { DevMockSwitch } from "@/components/common/DevMockSwitch"
 import { Toaster } from "@/components/ui/sonner"
 import { CartProvider } from "@/hooks/cart/CartProvider"
 import { router } from "@/routes/router"
@@ -15,6 +16,8 @@ function App() {
       <RouterProvider router={router} />
       {/* One Toaster for the whole app: toast("...") calls appear here. */}
       <Toaster />
+      {/* Dev-only mock controls; removed from production builds (import.meta.env.DEV is false). */}
+      {import.meta.env.DEV && <DevMockSwitch />}
     </CartProvider>
   )
 }

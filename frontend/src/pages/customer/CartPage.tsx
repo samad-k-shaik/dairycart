@@ -9,6 +9,7 @@ import { toast } from "sonner"
 
 import { CartItem } from "@/components/cart/CartItem"
 import { CartSummary } from "@/components/cart/CartSummary"
+import { EmptyState } from "@/components/common/EmptyState"
 import { Button } from "@/components/ui/button"
 import type { CartLine } from "@/hooks/cart/cartReducer"
 import { useCart } from "@/hooks/useCart"
@@ -61,20 +62,19 @@ function CartPage() {
   )
 }
 
+/** The cart lives in the browser, so it has no loading or error state — only empty. */
 function EmptyCart() {
   return (
-    <section className="flex flex-col items-center gap-4 rounded-2xl bg-surface px-4 py-12 text-center shadow-card">
-      <span className="flex size-16 items-center justify-center rounded-full bg-primary-soft text-primary">
-        <ShoppingCart className="size-8" aria-hidden="true" />
-      </span>
-      <h2 className="text-h2 font-bold">Your cart is empty</h2>
-      <p className="max-w-sm text-muted-foreground">
-        Add some fresh cow or buffalo milk and it will show up here.
-      </p>
-      <Button asChild>
-        <Link to="/">Browse products</Link>
-      </Button>
-    </section>
+    <EmptyState
+      icon={ShoppingCart}
+      title="Your cart is empty"
+      description="Add some fresh cow or buffalo milk and it will show up here."
+      action={
+        <Button asChild>
+          <Link to="/">Browse products</Link>
+        </Button>
+      }
+    />
   )
 }
 

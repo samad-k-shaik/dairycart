@@ -6,8 +6,11 @@ import { useState } from "react"
 import { Link, useParams } from "react-router"
 import { ArrowLeft, PackageSearch, ShoppingCart } from "lucide-react"
 
+import { EmptyState } from "@/components/common/EmptyState"
+import { ErrorState } from "@/components/common/ErrorState"
 import { QuantitySelector } from "@/components/common/QuantitySelector"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useAddToCart } from "@/hooks/useAddToCart"
 import { useProduct } from "@/hooks/useProduct"
 import { formatCurrency } from "@/lib/format"
@@ -21,7 +24,7 @@ function ProductDetailsPage() {
   // which the service rejects (422) and we show as "not found".
   const { id } = useParams()
   const productId = Number(id)
-  const { data: product, isPending, isError, error, refetch } = useProduct(productId)
+  const { data: product, isPending, isError, error, refetch, isFetching } = useProduct(productId)
 
   return (
     <div className="space-y-4">
@@ -39,12 +42,12 @@ function ProductDetailsPage() {
         error instanceof ServiceError && (error.status === 404 || error.status === 422) ? (
           <ProductNotFound />
         ) : (
-          <div className="space-y-3 rounded-2xl bg-surface p-6 text-center shadow-card" role="alert">
-            <p className="font-semibold">We could not load this product.</p>
-            <Button variant="outline" onClick={() => refetch()}>
-              Try again
-            </Button>
-          </div>
+          <ErrorState
+            title="We could not load this product"
+            error={error}
+            onRetry={() => refetch()}
+            retrying={isFetching}
+          />
         )
       ) : (
         // key: a fresh component (quantity back to 1) when moving to another product.
@@ -128,29 +131,30 @@ function ProductDetails({ product }: { product: Product }) {
 
 function ProductNotFound() {
   return (
-    <section className="flex flex-col items-center gap-4 rounded-2xl bg-surface py-12 text-center shadow-card">
-      <PackageSearch className="size-12 text-muted-foreground" aria-hidden="true" />
-      <h1 className="text-h1 font-bold">Product not found</h1>
-      <p className="max-w-sm text-muted-foreground">
-        We could not find this product. It may have been removed, or the link may be wrong.
-      </p>
-      <Button asChild>
-        <Link to="/">Browse all products</Link>
-      </Button>
-    </section>
+    <EmptyState
+      icon={PackageSearch}
+      headingLevel="h1"
+      title="Product not found"
+      description="We could not find this product. It may have been removed, or the link may be wrong."
+      action={
+        <Button asChild>
+          <Link to="/">Browse all products</Link>
+        </Button>
+      }
+    />
   )
 }
 
 function DetailsSkeleton() {
   return (
-    <div className="grid animate-pulse gap-6 md:grid-cols-2 md:gap-10" aria-hidden="true">
-      <div className="aspect-square rounded-2xl bg-muted" />
+    <div className="grid gap-6 md:grid-cols-2 md:gap-10" aria-hidden="true">
+      <Skeleton className="aspect-square rounded-2xl" />
       <div className="space-y-4">
-        <div className="h-8 w-2/3 rounded bg-muted" />
-        <div className="h-5 w-1/4 rounded bg-muted" />
-        <div className="h-6 w-1/3 rounded bg-muted" />
-        <div className="h-16 rounded bg-muted" />
-        <div className="h-11 w-36 rounded-xl bg-muted" />
+        <Skeleton className="h-8 w-2/3" />
+        <Skeleton className="h-5 w-1/4" />
+        <Skeleton className="h-6 w-1/3" />
+        <Skeleton className="h-16" />
+        <Skeleton className="h-11 w-36 rounded-xl" />
       </div>
     </div>
   )
