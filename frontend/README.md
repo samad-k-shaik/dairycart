@@ -78,6 +78,12 @@ React Router (`react-router`, ADR-011) maps URLs to pages in `src/routes/router.
 - **Mock behaviour (M2):** every call waits 300 ms (`MOCK_LATENCY_MS`) and follows the contract's validation and error codes (400, 404, 409, 422). Data lives in memory: new orders and status changes last until the page is reloaded. `src/services/mock/mockData.test.ts` checks the JSON against the contract and business rules (statuses, maths, unique ids).
 - **Formatting:** `formatCurrency("155.00")` → `"₹155.00"` (`src/lib/format.ts`), Indian digit grouping.
 
+## Server state with TanStack Query (M2-05, #24)
+
+- `QueryClientProvider` wraps the app in `main.tsx`; the client is configured in `src/lib/queryClient.ts` (data fresh for 30 s; 4xx errors such as 404 are never retried, other failures at most twice).
+- Pages read server data through hooks in `src/hooks/` (e.g. `useProducts()`), which call the services. `useQuery` provides `isPending`, `isError`, `data` and `refetch` for loading, error and success states.
+- **Product images and descriptions are frontend-only.** The API contract has no `image` or `description` field, so `src/lib/productDisplay.ts` maps them (and the Cow/Buffalo category) from the product name. Image sources are recorded in `public/images/README.md`.
+
 ## Styling and design tokens
 
 - **Tailwind CSS v4** via the `@tailwindcss/vite` plugin. There is no `tailwind.config.js`: configuration lives in `src/index.css`.
