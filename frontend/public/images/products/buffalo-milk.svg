@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-labelledby="t">
+  <title id="t">Buffalo milk bottle</title>
+  <!-- Original illustration created for the DairyCart POC. See public/images/README.md. -->
+  <rect width="400" height="400" fill="#F8FAFC"/>
+  <circle cx="200" cy="215" r="150" fill="#FFF7ED"/>
+  <ellipse cx="200" cy="362" rx="92" ry="10" fill="#0F172A" opacity="0.08"/>
+  <rect x="162" y="74" width="76" height="34" rx="10" fill="#B45309"/>
+  <rect x="162" y="96" width="76" height="8" fill="#0F172A" opacity="0.12"/>
+  <path d="M170 106 H230 V138 C230 152 272 160 272 192 V330 C272 346 259 358 243 358 H157 C141 358 128 346 128 330 V192 C128 160 170 152 170 138 Z" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="4"/>
+  <rect x="146" y="186" width="12" height="128" rx="6" fill="#F1F5F9"/>
+  <rect x="128" y="226" width="144" height="76" fill="#B45309"/>
+  <path d="M200 240 C200 240 182 262 182 274 A18 18 0 0 0 218 274 C218 262 200 240 200 240 Z" fill="#FFFFFF"/>
+</svg>

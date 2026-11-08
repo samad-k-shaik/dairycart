@@ -1,0 +1,107 @@
+/*
+ * Global styles and DESIGN TOKENS (M2-02, #21).
+ *
+ * A "design token" is a named design decision, e.g. `primary = #2563EB`.
+ * Components use the NAME (`bg-primary`), never the raw hex value. If the brand
+ * colour ever changes, we edit it here once and every screen updates.
+ *
+ * Source of truth for every value: docs/06-ui-ux/design-system.md.
+ * If you change a token here, update that document in the same PR.
+ */
+
+/* Tailwind CSS v4: generates utility classes (`p-4`, `text-sm`, …) from our usage. */
+@import "tailwindcss";
+/* Small animation utilities used by shadcn/ui (e.g. the Sheet sliding in). */
+@import "tw-animate-css";
+/* shadcn/ui helper variants such as `data-open:` used by its components. */
+@import "shadcn/tailwind.css";
+/* Manrope font, bundled locally (no request to Google at runtime). */
+@import "@fontsource-variable/manrope";
+
+/*
+ * @theme inline: tells Tailwind to create utility classes from these variables.
+ * e.g. `--color-primary` → `bg-primary`, `text-primary`, `border-primary`.
+ */
+@theme inline {
+  --font-sans: "Manrope Variable", system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+
+  /* shadcn/ui expects these names. Values come from :root below. */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Extra project tokens from the design system. */
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-surface: var(--surface);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  /* Card shadow from the design system → class `shadow-card`. Kept subtle on purpose. */
+  --shadow-card: 0 2px 12px rgba(15, 23, 42, 0.06);
+}
+
+/* The actual token values (design-system.md → "Colour tokens"). */
+:root {
+  --primary: #2563eb;          /* buttons, links, active states */
+  --primary-hover: #1d4ed8;    /* hover / pressed */
+  --primary-soft: #eff6ff;     /* selected chips, soft badges */
+  --primary-foreground: #ffffff;
+
+  --background: #f8fafc;       /* page background (light grey) */
+  --surface: #ffffff;          /* cards, sheets, header */
+  --foreground: #0f172a;       /* primary text */
+  --muted-foreground: #64748b; /* secondary text */
+  --border: #e2e8f0;           /* dividers, input borders */
+
+  --success: #16a34a;          /* DELIVERED, success toasts */
+  --warning: #d97706;          /* OUT_FOR_DELIVERY */
+  --danger: #dc2626;           /* CANCELLED, errors */
+
+  /* shadcn/ui aliases mapped onto the tokens above. */
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+  --secondary: var(--primary-soft);
+  --secondary-foreground: var(--primary);
+  --muted: #f1f5f9;
+  --accent: var(--primary-soft);
+  --accent-foreground: var(--primary);
+  --destructive: var(--danger);
+  --input: var(--border);
+  --ring: var(--primary);
+
+  /* Base radius used by toasts. Components use Tailwind's rounded-xl (12px) / rounded-2xl (16px). */
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    /* Body text style from the design system: 14px / 22px, weight 500. */
+    @apply bg-background text-foreground text-sm/[22px] font-medium antialiased;
+  }
+}

@@ -149,3 +149,4 @@ Any addition to the approved stack needs an entry here (a lightweight Architectu
 | ADR-008 | nginx to serve the built frontend on Cloud Run | Proposed – confirm in M6 | Cloud Run needs an HTTP server for static files; nginx is the standard minimal choice |
 | ADR-009 | Test tooling: pytest + httpx (backend), Vitest + React Testing Library (frontend) | Proposed – confirm in M4 | Standard tools for FastAPI and Vite |
 | ADR-010 | Lint/format: Ruff (Python), ESLint + Prettier (TypeScript) | Proposed – confirm in M4 | Fast, widely used, CI-friendly |
+| ADR-011 | React Router for client-side routing | Accepted (M2) | Needed for customer and admin route trees with shared layouts (`<Outlet />`); the standard React router |
