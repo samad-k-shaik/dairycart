@@ -82,6 +82,9 @@ React Router (`react-router`, ADR-011) maps URLs to pages in `src/routes/router.
 
 - `QueryClientProvider` wraps the app in `main.tsx`; the client is configured in `src/lib/queryClient.ts` (data fresh for 30 s; 4xx errors such as 404 are never retried, other failures at most twice).
 - Pages read server data through hooks in `src/hooks/` (e.g. `useProducts()`), which call the services. `useQuery` provides `isPending`, `isError`, `data` and `refetch` for loading, error and success states.
+- Hooks: `useProducts()` (home grid) and `useProduct(id)` (details page; a 404/422 shows "Product not found").
+- **Quantity rules** (1–20) live in `src/lib/quantity.ts` and are enforced by `components/common/QuantitySelector` (controlled component, − disabled at 1 and + at 20, 44px buttons). The backend still validates quantity; the UI check is for usability only.
+- **Money estimates** for display (e.g. "Add to cart · ₹120.00") use `src/lib/money.ts`, which calculates in whole paise. Real totals always come from the backend.
 - **Product images and descriptions are frontend-only.** The API contract has no `image` or `description` field, so `src/lib/productDisplay.ts` maps them (and the Cow/Buffalo category) from the product name. Image sources are recorded in `public/images/README.md`.
 
 ## Styling and design tokens
