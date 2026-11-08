@@ -16,6 +16,7 @@ import CartPage from "@/pages/customer/CartPage"
 import CheckoutPage from "@/pages/customer/CheckoutPage"
 import HomePage from "@/pages/customer/HomePage"
 import OrderConfirmationPage from "@/pages/customer/OrderConfirmationPage"
+import OrderDetailsPage from "@/pages/customer/OrderDetailsPage"
 import OrderHistoryPage from "@/pages/customer/OrderHistoryPage"
 import ProductDetailsPage from "@/pages/customer/ProductDetailsPage"
 import DesignPage from "@/pages/DesignPage"
@@ -31,7 +32,8 @@ export const router = createBrowserRouter([
       { path: "products/:id", element: <ProductDetailsPage /> }, // ":id" is a URL parameter
       { path: "cart", element: <CartPage /> },
       { path: "checkout", element: <CheckoutPage /> },
-      { path: "orders", element: <OrderHistoryPage /> },
+      { path: "orders", element: <OrderHistoryPage /> }, // ?phone=... in the query string
+      { path: "orders/:id", element: <OrderDetailsPage /> }, // added in M2-10 (#29)
       { path: "orders/:id/confirmation", element: <OrderConfirmationPage /> },
       { path: "*", element: <NotFoundPage /> }, // "*" = any URL not matched above
     ],

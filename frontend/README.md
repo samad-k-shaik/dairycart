@@ -107,6 +107,14 @@ The cart lives in the browser (ADR-004): React context + `useReducer`, saved to 
 - **M2 mock limitation:** mock orders live in memory, so reloading a confirmation page for an order placed in this visit shows "Order not found". This disappears when the real API is connected in M3.
 - Dates are shown in IST (`formatDateTime`, `formatDate` in `lib/format.ts`); the API sends UTC.
 
+## Order history (M2-10, #29)
+
+- `/orders?phone=9876543210`: the phone is a URL query parameter (bookmarkable, Back button works; the confirmation page links straight to it). The last valid phone is remembered in `localStorage` (`milk-last-phone-v1`) and reused when `/orders` is opened without one.
+- `useOrdersByPhone(phone)` only fetches when the phone is valid (`enabled` in `useQuery`). Orders appear newest first as `OrderCard`s (IST date, item count, total, `StatusBadge`). Unknown phone → "No orders found"; invalid phone → error message.
+- `/orders/:id` (route added in this issue) shows the order with `OrderStatusTimeline`: Placed → Confirmed → Out for delivery → Delivered, or Placed → Cancelled. Timeline steps come from `getTimelineSteps()` in `lib/orderStatus.ts` (unit-tested for all five statuses).
+- **Privacy note (ADR-003):** there is no login in the POC, so anyone who knows a phone number can see its orders. Do not show more personal data here than the contract returns.
+- Do not pass custom font-size tokens (`text-body`, `text-small`, `text-h3` …) to components through `cn()` together with a text colour: the class merger treats them as colours and drops the colour. Use Tailwind's `text-sm`/`text-xs` there.
+
 ## Styling and design tokens
 
 - **Tailwind CSS v4** via the `@tailwindcss/vite` plugin. There is no `tailwind.config.js`: configuration lives in `src/index.css`.
