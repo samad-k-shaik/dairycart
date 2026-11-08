@@ -27,6 +27,8 @@ export type CartAction =
   | { type: "add"; product: Pick<Product, "product_id" | "name" | "size" | "price">; quantity: number }
   | { type: "setQuantity"; productId: number; quantity: number }
   | { type: "remove"; productId: number }
+  /** Undo a remove: put the line back at its old position. */
+  | { type: "restore"; line: CartLine; index: number }
   | { type: "clear" }
 
 export const emptyCart: CartState = { lines: [] }
@@ -64,6 +66,16 @@ export function cartReducer(state: CartState, action: CartAction): CartState {
       }
     case "remove":
       return { lines: state.lines.filter((line) => line.product_id !== action.productId) }
+    case "restore": {
+      // If the product was added again in the meantime, merge instead of duplicating.
+      if (state.lines.some((line) => line.product_id === action.line.product_id)) {
+        return cartReducer(state, { type: "add", product: action.line, quantity: action.line.quantity })
+      }
+      const lines = [...state.lines]
+      const index = Math.min(Math.max(0, action.index), lines.length)
+      lines.splice(index, 0, { ...action.line, quantity: clampQuantity(action.line.quantity) })
+      return { lines }
+    }
     case "clear":
       return emptyCart
   }

@@ -23,6 +23,8 @@ export type CartContextValue = {
   add: (product: Pick<Product, "product_id" | "name" | "size" | "price">, quantity?: number) => AddResult
   setQuantity: (productId: number, quantity: number) => void
   remove: (productId: number) => void
+  /** Undo a remove: put the line back at its old position. */
+  restore: (line: CartLine, index: number) => void
   clear: () => void
 }
 

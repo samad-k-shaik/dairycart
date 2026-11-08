@@ -96,6 +96,7 @@ The cart lives in the browser (ADR-004): React context + `useReducer`, saved to 
 - **Stored per line:** `product_id`, `quantity` and a display snapshot (`name`, `size`, `price`). Nothing else.
 - **Estimated total only.** Sums are calculated in whole paise; the real total comes from the backend at checkout.
 - **Safe storage:** missing, corrupt or tampered data restores as an empty cart or only its valid lines; if `localStorage` is blocked or full, the cart still works for the current visit.
+- **Cart page (M2-08, #27):** `components/cart/CartItem` (image, name, size, unit price, `QuantitySelector`, line subtotal, remove) and `components/cart/CartSummary` (item count, estimated total, "Final total confirmed at checkout", Checkout). Subtotals and the total are derived from the lines on every render, never stored. Removing shows an Undo toast that restores the line at its old position. The empty state links to products, and Checkout is disabled while the cart is empty. No discounts, delivery fees or tax lines (out of scope).
 
 ## Styling and design tokens
 

@@ -69,6 +69,21 @@ describe("remove and clear", () => {
     )
   })
 
+  it("restore (undo) puts a removed line back at its old position", () => {
+    const state = add(add(emptyCart, cow1L, 2), buffalo500, 1)
+    const removed = cartReducer(state, { type: "remove", productId: 2 })
+    const restored = cartReducer(removed, { type: "restore", line: state.lines[0], index: 0 })
+    assert.deepEqual(restored, state)
+  })
+
+  it("restore merges if the product was added again meanwhile (no duplicate line)", () => {
+    const state = add(emptyCart, cow1L, 2)
+    const removed = cartReducer(state, { type: "remove", productId: 2 })
+    const readded = add(removed, cow1L, 1)
+    const restored = cartReducer(readded, { type: "restore", line: state.lines[0], index: 0 })
+    assert.deepEqual(restored.lines, [{ ...cow1L, quantity: 3 }])
+  })
+
   it("clear empties the cart", () => {
     const state = add(add(emptyCart, cow1L, 1), buffalo500, 1)
     assert.deepEqual(cartReducer(state, { type: "clear" }), emptyCart)
