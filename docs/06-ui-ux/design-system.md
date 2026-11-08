@@ -109,3 +109,5 @@ Admin products list (read-only table) reuses the table component.
 ## Approval gate
 
 M2 screens use **mock JSON** only. The design is reviewed and approved (screenshots attached to the M2 review issue) **before** M3 connects real APIs.
+
+The M2 review (screenshots of every screen, design-system measurements, scope check, keyboard and Lighthouse results, follow-ups) is in [`design-review-m2.md`](design-review-m2.md); screenshots are in [`screens/`](screens/).
