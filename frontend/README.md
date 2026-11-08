@@ -123,6 +123,14 @@ The cart lives in the browser (ADR-004): React context + `useReducer`, saved to 
 - `components/common/StatCard` (icon, label, number). Cards stack on phones and form a grid on wider screens. Recent 5 orders link to order management (`/admin/orders`). No charts (out of scope).
 - New orders placed in the same session appear immediately: `useCreateOrder` invalidates all order queries.
 
+## Admin orders and products (M2-12, #31)
+
+- `/admin/orders`: status filter chips (with counts), 20 orders per page, and a details sheet. View state is in the URL: `?status=PLACED&page=2&order=101` (refresh, Back and shared links keep it; the dashboard's recent orders open `?order=<id>`). Desktop shows a table; below 768px orders are cards.
+- **Status changes:** `StatusUpdateControl` offers only the allowed next statuses from **`ALLOWED_TRANSITIONS` in `src/lib/orderStatus.ts`** — the single shared constant also used by the mock order service. `DELIVERED` and `CANCELLED` are final and show no options. The backend enforces the same rules; the UI restriction is for usability.
+- `useUpdateOrderStatus()` (mutation) shows a toast and refreshes every order query (table, dashboard, history).
+- `/admin/products`: read-only table of all products including unavailable ones (`useAdminProducts()`, `include_unavailable`, ADR-006) with an availability badge.
+- Order lists sort newest first, ties broken by the higher order id (the backend should use `ORDER BY order_date DESC, order_id DESC`).
+
 ## Styling and design tokens
 
 - **Tailwind CSS v4** via the `@tailwindcss/vite` plugin. There is no `tailwind.config.js`: configuration lives in `src/index.css`.

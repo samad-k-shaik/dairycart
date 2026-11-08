@@ -22,8 +22,8 @@ import type {
   OrderSummary,
 } from "@/types/order"
 import { ORDER_STATUSES } from "@/types/order"
+import { canTransition } from "@/lib/orderStatus"
 import {
-  ALLOWED_TRANSITIONS,
   db,
   fail,
   fromPaise,
@@ -35,8 +35,12 @@ import {
 /** 10-digit Indian mobile number (contract: `^[6-9]\d{9}$`). */
 const PHONE_PATTERN = /^[6-9]\d{9}$/
 
-/** Newest first, by order date. */
-const newestFirst = (a: Order, b: Order) => b.order_date.localeCompare(a.order_date)
+/**
+ * Newest first, by order date; orders placed in the same second fall back to the
+ * higher order id first, so the order is stable (backend: ORDER BY order_date DESC, order_id DESC).
+ */
+const newestFirst = (a: Order, b: Order) =>
+  b.order_date.localeCompare(a.order_date) || b.order_id - a.order_id
 
 /** POST /api/v1/orders — place an order. Resolves with the created order (201). */
 export function createOrder(request: CreateOrderRequest): Promise<Order> {
@@ -206,7 +210,7 @@ export function updateOrderStatus(orderId: number, status: OrderStatus): Promise
   if (!order) {
     return fail(404, "NOT_FOUND", `Order ${orderId} was not found.`)
   }
-  if (!ALLOWED_TRANSITIONS[order.status].includes(status)) {
+  if (!canTransition(order.status, status)) {
     return fail(
       409,
       "INVALID_STATUS_TRANSITION",

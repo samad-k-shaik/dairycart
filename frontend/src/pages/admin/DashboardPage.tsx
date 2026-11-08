@@ -101,7 +101,7 @@ function DashboardPage() {
                 {data.items.slice(0, RECENT_COUNT).map((order) => (
                   <li key={order.order_id}>
                     <Link
-                      to="/admin/orders"
+                      to={`/admin/orders?order=${order.order_id}`}
                       className="flex items-center gap-3 p-4 transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
                     >
                       <div className="min-w-0 flex-1">

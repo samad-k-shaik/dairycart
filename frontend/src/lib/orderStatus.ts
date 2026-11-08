@@ -12,6 +12,36 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
   CANCELLED: "Cancelled",
 }
 
+/**
+ * THE single source of allowed status changes, copied from the "Order status lifecycle"
+ * table in docs/03-requirements/functional-requirements.md. DELIVERED and CANCELLED are final.
+ *
+ * Used by the admin status dropdown (only valid choices are offered) AND by the mock
+ * order service (rejects invalid changes with 409), so the two can never disagree.
+ * The real backend enforces the same rules (M3); the UI check is for usability only.
+ */
+export const ALLOWED_TRANSITIONS: Readonly<Record<OrderStatus, readonly OrderStatus[]>> = {
+  PLACED: ["CONFIRMED", "CANCELLED"],
+  CONFIRMED: ["OUT_FOR_DELIVERY", "CANCELLED"],
+  OUT_FOR_DELIVERY: ["DELIVERED"],
+  DELIVERED: [],
+  CANCELLED: [],
+}
+
+/** Statuses an order may move to next (empty for final statuses). */
+export function getNextStatuses(status: OrderStatus): readonly OrderStatus[] {
+  return ALLOWED_TRANSITIONS[status]
+}
+
+export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
+  return ALLOWED_TRANSITIONS[from].includes(to)
+}
+
+/** DELIVERED and CANCELLED: no further changes. */
+export function isFinalStatus(status: OrderStatus): boolean {
+  return ALLOWED_TRANSITIONS[status].length === 0
+}
+
 /** The normal delivery path, in order. CANCELLED is not on it. */
 const DELIVERY_PATH: OrderStatus[] = ["PLACED", "CONFIRMED", "OUT_FOR_DELIVERY", "DELIVERED"]
 

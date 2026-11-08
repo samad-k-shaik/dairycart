@@ -12,11 +12,20 @@ import { getProducts } from "@/services/productService"
 export const productKeys = {
   all: ["products"] as const,
   detail: (id: number) => ["products", id] as const,
+  admin: ["products", "include-unavailable"] as const,
 }
 
 export function useProducts() {
   return useQuery({
     queryKey: productKeys.all,
     queryFn: () => getProducts(), // available products only (FR-C1)
+  })
+}
+
+/** Admin products table: ALL products, including unavailable ones (FR-A5, ADR-006). */
+export function useAdminProducts() {
+  return useQuery({
+    queryKey: productKeys.admin,
+    queryFn: () => getProducts({ includeUnavailable: true }),
   })
 }

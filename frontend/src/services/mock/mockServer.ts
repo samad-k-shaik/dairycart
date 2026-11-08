@@ -7,7 +7,7 @@
  * In M3 the services call the real backend instead and this folder is no longer used.
  */
 import type { ApiErrorCode, ApiErrorDetail } from "@/types/api"
-import type { Order, OrderStatus } from "@/types/order"
+import type { Order } from "@/types/order"
 import type { Money, Product } from "@/types/product"
 import { ServiceError } from "@/services/serviceError"
 
@@ -31,18 +31,6 @@ export const ids = {
   order: Math.max(...db.orders.map((o) => o.order_id)) + 1,
   orderItem: Math.max(...db.orders.flatMap((o) => o.items.map((i) => i.order_item_id))) + 1,
   customer: Math.max(...db.orders.map((o) => o.customer.customer_id)) + 1,
-}
-
-/**
- * Allowed status changes, from the "Order status lifecycle" in
- * docs/03-requirements/functional-requirements.md. DELIVERED and CANCELLED are final.
- */
-export const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  PLACED: ["CONFIRMED", "CANCELLED"],
-  CONFIRMED: ["OUT_FOR_DELIVERY", "CANCELLED"],
-  OUT_FOR_DELIVERY: ["DELIVERED"],
-  DELIVERED: [],
-  CANCELLED: [],
 }
 
 // ---- Simulated responses ----
