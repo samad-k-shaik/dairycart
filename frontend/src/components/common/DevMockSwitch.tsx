@@ -5,8 +5,10 @@
  */
 import { useEffect, useState } from "react"
 import { FlaskConical } from "lucide-react"
+import { toast } from "sonner"
 
 import { queryClient } from "@/lib/queryClient"
+import { resetMockDb } from "@/services/mock/mockServer"
 import { MOCK_MODE_LABELS, MOCK_MODES, getMockMode, setMockMode, type MockMode } from "@/services/mock/mockSettings"
 import { cn } from "@/lib/utils"
 
@@ -37,6 +39,17 @@ export function DevMockSwitch() {
               </label>
             ))}
           </fieldset>
+          <button
+            type="button"
+            onClick={() => {
+              resetMockDb()
+              queryClient.resetQueries()
+              toast.success("Mock data reset to the original 8 orders")
+            }}
+            className="w-full rounded-lg border px-2 py-1.5 font-semibold hover:bg-muted"
+          >
+            Reset mock data
+          </button>
           <button
             type="button"
             onClick={() => window.dispatchEvent(new Event(CRASH_EVENT))}

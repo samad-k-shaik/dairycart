@@ -30,6 +30,7 @@ import {
   ids,
   readDb,
   respond,
+  saveDb,
   toPaise,
 } from "@/services/mock/mockServer"
 
@@ -123,6 +124,7 @@ export function createOrder(request: CreateOrderRequest): Promise<Order> {
     total_amount: fromPaise(totalPaise),
   }
   db.orders.push(order)
+  saveDb() // keep it after a reload and share it with other tabs (mock only)
   return respond(order)
 }
 
@@ -220,5 +222,6 @@ export function updateOrderStatus(orderId: number, status: OrderStatus): Promise
     )
   }
   order.status = status
+  saveDb()
   return respond(order)
 }

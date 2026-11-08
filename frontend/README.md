@@ -75,7 +75,7 @@ React Router (`react-router`, ADR-011) maps URLs to pages in `src/routes/router.
 
 - **Rule:** pages and components never import `src/services/mock/*` or the JSON files. In M3 only the service bodies change to HTTP calls; their names, parameters and return types stay the same.
 - **Errors:** failed calls reject with `ServiceError` (`status`, `code`, `body` in the contract's error format), for mock and real calls alike.
-- **Mock behaviour (M2):** every call waits 300 ms (`MOCK_LATENCY_MS`) and follows the contract's validation and error codes (400, 404, 409, 422). Data lives in memory: new orders and status changes last until the page is reloaded. `src/services/mock/mockData.test.ts` checks the JSON against the contract and business rules (statuses, maths, unique ids).
+- **Mock behaviour (M2):** every call waits 300 ms (`MOCK_LATENCY_MS`) and follows the contract's validation and error codes (400, 404, 409, 422). Mock data is kept in memory **and saved to `localStorage`** (`dairycart-mock-db-v1`), so new orders and status changes survive a page reload and appear in other tabs of the same browser (via the `storage` event). Damaged saved data falls back to the original JSON. The dev panel's **Reset mock data** button restores the original 8 orders. `src/services/mock/mockData.test.ts` checks the JSON against the contract and business rules (statuses, maths, unique ids).
 - **Formatting:** `formatCurrency("155.00")` → `"₹155.00"` (`src/lib/format.ts`), Indian digit grouping.
 
 ## Server state with TanStack Query (M2-05, #24)
@@ -104,7 +104,7 @@ The cart lives in the browser (ADR-004): React context + `useReducer`, saved to 
 - **Request body:** built by `lib/orderRequest.ts` from the cart, containing only `{ customer: { name, phone }, items: [{ product_id, quantity }] }`. Prices and totals are never sent. In dev mode the payload is logged to the browser console (`[checkout] POST /api/v1/orders payload`).
 - `useCreateOrder()` (TanStack Query `useMutation`) sends it; the button is disabled while sending. On success the returned order is cached, order lists are invalidated, the user goes to `/orders/:id/confirmation` and the cart is cleared.
 - **Confirmation** shows the order returned by the service (id, items, backend total, status badge). If that total differs from the cart estimate, a notice says so (FR-C8). Payment is cash on delivery: no address, shipping or payment fields.
-- **M2 mock limitation:** mock orders live in memory, so reloading a confirmation page for an order placed in this visit shows "Order not found". This disappears when the real API is connected in M3.
+- **M2 mock data** is saved per browser (`localStorage`), so orders are not shared between different browsers or devices. That becomes possible when the real API is connected in M3.
 - Dates are shown in IST (`formatDateTime`, `formatDate` in `lib/format.ts`); the API sends UTC.
 
 ## Order history (M2-10, #29)
