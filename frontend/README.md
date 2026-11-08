@@ -115,6 +115,14 @@ The cart lives in the browser (ADR-004): React context + `useReducer`, saved to 
 - **Privacy note (ADR-003):** there is no login in the POC, so anyone who knows a phone number can see its orders. Do not show more personal data here than the contract returns.
 - Do not pass custom font-size tokens (`text-body`, `text-small`, `text-h3` …) to components through `cn()` together with a text colour: the class merger treats them as colours and drops the colour. Use Tailwind's `text-sm`/`text-xs` there.
 
+## Admin dashboard (M2-11, #30)
+
+- `/admin` uses `useAdminOrders({ page_size: 100 })` (GET /admin/orders).
+- **Per-status cards** use `status_counts` from that response (counts across all orders, ignoring filters); **Total** is their sum (`lib/dashboard.ts`).
+- **Today's orders:** the API has no "today" field, so the page counts orders whose IST calendar day is today among the latest 100 orders (`countOrdersOnIstDay`). If the shop grows past 100 orders, add a backend field instead.
+- `components/common/StatCard` (icon, label, number). Cards stack on phones and form a grid on wider screens. Recent 5 orders link to order management (`/admin/orders`). No charts (out of scope).
+- New orders placed in the same session appear immediately: `useCreateOrder` invalidates all order queries.
+
 ## Styling and design tokens
 
 - **Tailwind CSS v4** via the `@tailwindcss/vite` plugin. There is no `tailwind.config.js`: configuration lives in `src/index.css`.
