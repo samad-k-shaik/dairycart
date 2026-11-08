@@ -14,12 +14,26 @@ import { formatDateTime } from "@/lib/format"
 type OrderDetailsSheetProps = {
   orderId: number | null
   onClose: () => void
+  /**
+   * The element that opened the sheet. The sheet is opened from the URL (?order=…), not a
+   * SheetTrigger, so it cannot know its opener: we give focus back to it on close, so a
+   * keyboard user continues where they were (found in the M2-14 keyboard review).
+   */
+  returnFocusTo?: HTMLElement | null
 }
 
-export function OrderDetailsSheet({ orderId, onClose }: OrderDetailsSheetProps) {
+export function OrderDetailsSheet({ orderId, onClose, returnFocusTo }: OrderDetailsSheetProps) {
   return (
     <Sheet open={orderId !== null} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-md">
+      <SheetContent
+        className="w-full overflow-y-auto sm:max-w-md"
+        onCloseAutoFocus={(event) => {
+          if (returnFocusTo?.isConnected) {
+            event.preventDefault() // replace Radix's default (no trigger to return to)
+            returnFocusTo.focus()
+          }
+        }}
+      >
         {orderId !== null && <SheetBody orderId={orderId} />}
       </SheetContent>
     </Sheet>

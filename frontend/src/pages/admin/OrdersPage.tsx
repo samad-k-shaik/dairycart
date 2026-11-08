@@ -5,6 +5,7 @@
  * All view state lives in the URL query string, so refresh, Back and shared links keep it:
  *   ?status=PLACED   filter      ?page=2   pagination      ?order=101   open details sheet
  */
+import { useState } from "react"
 import { useSearchParams } from "react-router"
 import { ChevronLeft, ChevronRight, ClipboardList } from "lucide-react"
 
@@ -56,7 +57,12 @@ function OrdersPage() {
   }
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / ADMIN_PAGE_SIZE)) : 1
-  const openOrder = (id: number) => updateParams({ order: String(id) })
+  // The button/card that opened the sheet, so focus can go back to it on close.
+  const [opener, setOpener] = useState<HTMLElement | null>(null)
+  const openOrder = (id: number) => {
+    setOpener(document.activeElement instanceof HTMLElement ? document.activeElement : null)
+    updateParams({ order: String(id) })
+  }
 
   return (
     <div className="space-y-5">
@@ -144,7 +150,11 @@ function OrdersPage() {
         </nav>
       )}
 
-      <OrderDetailsSheet orderId={openOrderId} onClose={() => updateParams({ order: null })} />
+      <OrderDetailsSheet
+        orderId={openOrderId}
+        onClose={() => updateParams({ order: null })}
+        returnFocusTo={opener}
+      />
     </div>
   )
 }
