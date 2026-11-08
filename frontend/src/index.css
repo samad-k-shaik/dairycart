@@ -1,0 +1,12 @@
+/*
+ * Minimal global styles for the scaffold only.
+ * Tailwind CSS, shadcn/ui and the Manrope design tokens replace this in M2-02.
+ */
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+}
+
+.app {
+  padding: 2rem;
+}
