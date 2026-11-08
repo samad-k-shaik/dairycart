@@ -35,6 +35,29 @@ Use `npm ci` (not `npm install`) for normal setup so everyone gets identical dep
 - TypeScript **strict mode** is on (`tsconfig.app.json`).
 - Import from `src/` with the `@/` alias, e.g. `import App from '@/App.tsx'`. The alias is defined in `tsconfig.json` and `tsconfig.app.json` (`paths`, the shadcn CLI reads the root one) and in `vite.config.ts` (`resolve.alias`); keep them in sync.
 
+## Routing and layouts (M2-04, #23)
+
+React Router (`react-router`, ADR-011) maps URLs to pages in `src/routes/router.tsx`. Each layout is a parent route; its pages are child routes rendered inside the layout's `<Outlet />`.
+
+| URL | Page | Layout |
+|---|---|---|
+| `/` | `pages/customer/HomePage` | CustomerLayout |
+| `/products/:id` | `pages/customer/ProductDetailsPage` | CustomerLayout |
+| `/cart` | `pages/customer/CartPage` | CustomerLayout |
+| `/checkout` | `pages/customer/CheckoutPage` | CustomerLayout |
+| `/orders` | `pages/customer/OrderHistoryPage` | CustomerLayout |
+| `/orders/:id/confirmation` | `pages/customer/OrderConfirmationPage` | CustomerLayout |
+| `/admin` | `pages/admin/DashboardPage` | AdminLayout |
+| `/admin/orders` | `pages/admin/OrdersPage` | AdminLayout |
+| `/admin/products` | `pages/admin/ProductsPage` | AdminLayout |
+| any other URL | `pages/NotFoundPage` (404) | the layout of its tree |
+| `/design` | `pages/DesignPage` (temporary) | none |
+
+- **CustomerLayout:** sticky header with logo, Home, My orders and a cart icon (count is a placeholder `0` until M2-07). Below 640px the link text is visually hidden (still read by screen readers) and only icons show.
+- **AdminLayout:** sidebar from 768px; below that a top bar with the three links sharing one row and a "Back to shop" icon.
+- Pages are placeholders (`components/common/PagePlaceholder`) naming the issue that builds them.
+- React Router 8 requires Node ≥ 22.22.
+
 ## Data: types, services and mock data (M2-03, #22)
 
 - **Types** in `src/types/` (`product.ts`, `order.ts`, `api.ts`) mirror `docs/05-api/api-contracts.md` field-for-field, in `snake_case`. Money is a string (`"60.00"`), dates are ISO 8601 UTC strings.
@@ -62,7 +85,7 @@ Use `npm ci` (not `npm install`) for normal setup so everyone gets identical dep
 - **Font:** Manrope, self-hosted from `@fontsource-variable/manrope` (one variable file covers weights 200–800).
 - **Light theme only.** `dark:` classes in shadcn components never activate (see the `@custom-variant dark` comment in `index.css`).
 - **Icons:** `lucide-react`, e.g. `import { ShoppingCart } from "lucide-react"`.
-- **Design review page:** http://localhost:5173/design shows every token and core component. It is temporary (remove after the M2-14 design approval); until routing exists (M2-04) `App.tsx` picks it by checking the URL.
+- **Design review page:** http://localhost:5173/design shows every token and core component. It is temporary (remove after the M2-14 design approval).
 
 ### shadcn/ui components
 
