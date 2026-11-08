@@ -15,6 +15,7 @@
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
+    "resolveJsonModule": true,
 
     /* Path alias: `@/...` → `src/...`. Must match `resolve.alias` in vite.config.ts. */
     "paths": {
@@ -28,5 +29,7 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  /* Tests run in Node and are type-checked by tsconfig.node.json. */
+  "exclude": ["src/**/*.test.ts"]
 }

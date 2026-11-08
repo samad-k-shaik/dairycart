@@ -24,6 +24,9 @@ Use `npm ci` (not `npm install`) for normal setup so everyone gets identical dep
 | `npm run build` | Type-checks, then builds optimised production files into `dist/` |
 | `npm run preview` | Serves the built `dist/` locally to check the production build |
 | `npm run typecheck` | Type-checks all code without building (`tsc -b`) |
+| `npm test` | Runs unit tests (`src/**/*.test.ts`) with Node's built-in test runner |
+
+`npm test` uses Node's built-in runner, which runs TypeScript directly (needs Node ≥ 22.18; verified on Node 26). It is a stop-gap until Vitest is set up in M4-04 (#49). Because tests run in plain Node, test files and the modules they import must use relative imports with a `.ts` extension, not `@/`. Test files are type-checked by `tsconfig.node.json` and excluded from `tsconfig.app.json`.
 
 `typecheck` uses `tsc -b` rather than `tsc --noEmit`: the root `tsconfig.json` only references `tsconfig.app.json` (app code) and `tsconfig.node.json` (`vite.config.ts`), so plain `tsc --noEmit` would check no files. Both referenced configs set `noEmit`, so nothing is written.
 
@@ -31,6 +34,26 @@ Use `npm ci` (not `npm install`) for normal setup so everyone gets identical dep
 
 - TypeScript **strict mode** is on (`tsconfig.app.json`).
 - Import from `src/` with the `@/` alias, e.g. `import App from '@/App.tsx'`. The alias is defined in `tsconfig.json` and `tsconfig.app.json` (`paths`, the shadcn CLI reads the root one) and in `vite.config.ts` (`resolve.alias`); keep them in sync.
+
+## Data: types, services and mock data (M2-03, #22)
+
+- **Types** in `src/types/` (`product.ts`, `order.ts`, `api.ts`) mirror `docs/05-api/api-contracts.md` field-for-field, in `snake_case`. Money is a string (`"60.00"`), dates are ISO 8601 UTC strings.
+- **Services** in `src/services/` are the only way pages get data:
+
+  | Function | Endpoint |
+  |---|---|
+  | `getProducts({ includeUnavailable? })` | `GET /products` |
+  | `getProduct(id)` | `GET /products/{id}` |
+  | `createOrder(request)` | `POST /orders` |
+  | `getOrder(id)` | `GET /orders/{id}` |
+  | `getOrdersByPhone(phone)` | `GET /orders?phone=` (proposed, ADR-005) |
+  | `getAdminOrders({ status?, page?, page_size? })` | `GET /admin/orders` |
+  | `updateOrderStatus(id, status)` | `PATCH /admin/orders/{id}/status` |
+
+- **Rule:** pages and components never import `src/services/mock/*` or the JSON files. In M3 only the service bodies change to HTTP calls; their names, parameters and return types stay the same.
+- **Errors:** failed calls reject with `ServiceError` (`status`, `code`, `body` in the contract's error format), for mock and real calls alike.
+- **Mock behaviour (M2):** every call waits 300 ms (`MOCK_LATENCY_MS`) and follows the contract's validation and error codes (400, 404, 409, 422). Data lives in memory: new orders and status changes last until the page is reloaded. `src/services/mock/mockData.test.ts` checks the JSON against the contract and business rules (statuses, maths, unique ids).
+- **Formatting:** `formatCurrency("155.00")` → `"₹155.00"` (`src/lib/format.ts`), Indian digit grouping.
 
 ## Styling and design tokens
 
