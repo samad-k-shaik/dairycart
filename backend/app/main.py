@@ -14,7 +14,7 @@ from app import __version__
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.core.logging import RequestIdMiddleware, configure_logging
-from app.routers import health
+from app.routers import health, products
 
 API_PREFIX = "/api/v1"
 
@@ -37,3 +37,4 @@ register_error_handlers(app)
 
 # Routers (HTTP only; they call services).
 app.include_router(health.router, prefix=API_PREFIX)
+app.include_router(products.router, prefix=API_PREFIX)
