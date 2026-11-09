@@ -4,21 +4,28 @@ Uvicorn (the ASGI server) imports this module and runs the ``app`` object:
 
     uvicorn app.main:app --reload --port 8000
 
-Later M1 issues add logging, error handlers and routers here.
+Later M1 issues add error handlers and routers here.
 No routers, database code or business logic belong in this file yet.
 """
 
 from fastapi import FastAPI
 
 from app.core.config import get_settings
+from app.core.logging import RequestIdMiddleware, configure_logging
 
 # Fail fast: read and validate the configuration while the app loads. If DATABASE_URL is
 # missing or invalid, Uvicorn stops here with a readable SettingsError instead of starting
 # a half-configured server that fails on the first database request.
 settings = get_settings()
 
+# JSON logs to stdout at LOG_LEVEL (M1-03).
+configure_logging(settings.log_level)
+
 # The FastAPI application. Title and version appear in the interactive docs at /docs.
 app = FastAPI(title="Milk Delivery POC API", version="0.1.0")
+
+# Runs around every request: request ID + X-Request-ID header + one JSON log line.
+app.add_middleware(RequestIdMiddleware)
 
 
 @app.get("/", tags=["meta"])
