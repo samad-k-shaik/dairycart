@@ -1,0 +1,6 @@
+# Extra tools only DEVELOPERS need (tests, coverage, linting). Not installed in production.
+# Install both files:  pip install -r requirements.txt -r requirements-dev.txt
+pytest==9.2.0
+httpx==0.28.1
+pytest-cov==7.1.0
+ruff==0.17.4
