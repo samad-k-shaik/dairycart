@@ -63,6 +63,31 @@ It listens on `localhost:5432` only. Tables are created by Alembic migrations (M
 - `postgresql://` URLs are switched to `postgresql+psycopg://` (psycopg 3, ADR-007).
 - Database tests are skipped with a clear message if PostgreSQL is not running.
 
+## Errors (M1-08)
+
+Every error response uses the format from `docs/05-api/api-contracts.md#error-format`:
+
+```json
+{"error": {"code": "NOT_FOUND", "message": "Product 99 was not found.", "details": [], "request_id": "e4df5fec-…"}}
+```
+
+- **Services raise domain exceptions** from `app/core/errors.py`; they never build HTTP responses:
+
+  | Exception | HTTP | `code` |
+  |---|---|---|
+  | `NotFoundError` | 404 | `NOT_FOUND` |
+  | `ProductUnavailableError` | 409 | `PRODUCT_UNAVAILABLE` |
+  | `InvalidStatusTransitionError` | 409 | `INVALID_STATUS_TRANSITION` |
+  | `DuplicateProductError` | 400 | `DUPLICATE_PRODUCT` |
+  | FastAPI `RequestValidationError` | 422 | `VALIDATION_ERROR` (`details` lists paths like `items[0].quantity`) |
+  | Unknown URL / wrong method | 404 / 405 | `NOT_FOUND` / `METHOD_NOT_ALLOWED` |
+  | Any other exception | 500 | `INTERNAL_ERROR` |
+
+  Example: `raise ProductUnavailableError("Product 'Buffalo Milk 1 Litre' is currently unavailable.", details=[ErrorDetail(field="items[1].product_id", issue="unavailable")])`.
+- `register_error_handlers(app)` in `main.py` installs the handlers. The response schema is `app/schemas/common.py` (`ErrorResponse`).
+- **500s** return only a generic message. The full traceback is logged (`logger.exception`) with the request ID, which is also in the response body and `X-Request-ID` header, so a reported error can be found in the logs.
+- Validation details never include the submitted value (it could be a phone number).
+
 ## Models (M1-05)
 
 `app/models/` holds one SQLAlchemy model per table, matching `docs/04-architecture/database-erd.md` exactly (and `database/init.sql`):
