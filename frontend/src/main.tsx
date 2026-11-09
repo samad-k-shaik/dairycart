@@ -9,6 +9,12 @@ import '@/index.css'
 import App from '@/App.tsx'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { queryClient } from '@/lib/queryClient'
+import { onOtherTabChange } from '@/services/mock/mockServer'
+
+// M2 mock only: when another tab changes the mock data (e.g. the admin adds a product),
+// mark every cached query as out of date so the pages on screen refetch it right away.
+// (In M3 the data lives on the server; this line goes away with the mock folder.)
+onOtherTabChange(() => queryClient.invalidateQueries())
 
 // The `!` tells TypeScript "this element definitely exists" (it is in index.html).
 // StrictMode runs extra development-only checks to catch common React mistakes.
