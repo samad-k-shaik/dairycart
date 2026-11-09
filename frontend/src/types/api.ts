@@ -10,6 +10,8 @@ export type ApiErrorCode =
   | "NOT_FOUND" // 404: product or order does not exist
   | "PRODUCT_UNAVAILABLE" // 409: product has is_available = false
   | "INVALID_STATUS_TRANSITION" // 409: e.g. DELIVERED -> PLACED
+  | "PRODUCT_ALREADY_EXISTS" // 409: admin add/edit, same name and size (#86)
+  | "PRODUCT_IN_USE" // 409: admin delete of a product that was already ordered (#86)
   | "INTERNAL_ERROR" // 500: unexpected server error
 
 export type ApiErrorDetail = {

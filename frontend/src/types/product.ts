@@ -18,3 +18,14 @@ export type Product = {
   price: Money
   is_available: boolean
 }
+
+/** POST /admin/products body (issue #86). The server gives the product_id. */
+export type ProductCreate = {
+  name: string
+  size: string
+  price: Money
+  is_available?: boolean // default true
+}
+
+/** PATCH /admin/products/{id} body: only the fields that change. */
+export type ProductUpdate = Partial<Omit<Product, "product_id">>

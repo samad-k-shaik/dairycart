@@ -98,6 +98,30 @@ routers/products.py          HTTP only: validate ?include_unavailable and /{prod
 - **Money is sent as a string with 2 decimals** (`"60.00"`) using the shared `Money` type in `app/schemas/common.py`: JSON numbers become floats in JavaScript and can lose precision.
 - Unavailable products are still returned by the details endpoint; refusing to *order* them is the order service's job (409, M3).
 
+## Admin product management (#86)
+
+| Endpoint | Does | Errors |
+|---|---|---|
+| `POST /api/v1/admin/products` | Add a product → `201` | `409 PRODUCT_ALREADY_EXISTS`, `422` |
+| `PATCH /api/v1/admin/products/{product_id}` | Change only the fields sent → `200` | `404`, `409 PRODUCT_ALREADY_EXISTS`, `422` |
+| `DELETE /api/v1/admin/products/{product_id}` | Delete → `204` (no body) | `404`, `409 PRODUCT_IN_USE` |
+
+Try it in `/docs`, or:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/admin/products \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Toned Milk", "size": "500 ml", "price": "28.50"}'
+```
+
+How the rules are split across the layers:
+
+- **Schemas** (`ProductCreate`, `ProductUpdate` in `app/schemas/product.py`) check the *shape*: name 2–100 and size 1–20 characters (spaces trimmed), price a **string** with up to 2 decimals and more than 0, no unknown fields. PATCH needs at least one field and refuses `null`.
+- **Service** (`app/services/product_service.py`) checks the *business rules*: name + size must be unique ignoring case (BR-8), and a product that was ever ordered cannot be deleted (BR-7). The service also **commits**: one admin action = one transaction.
+- **Repository** only runs queries (`find_by_name_and_size`, `is_ordered`, `add`, `delete`) and never commits.
+- The database constraints (`uq_products_name_size`, `ON DELETE RESTRICT`) are the last safety net: if two requests race past the service checks, the `IntegrityError` is turned into the same `409` instead of a `500`.
+- Editing a price never changes old orders, because each order item stores its own `unit_price` (BR-1).
+
 > **Windows note:** `uvicorn --reload` sometimes fails to restart its worker after a code change (the log shows "Reloading..." but the old code keeps answering, e.g. new endpoints return 404). Stop the server with Ctrl+C and start it again.
 
 ## Tests (M1-11)
