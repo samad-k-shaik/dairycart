@@ -63,6 +63,25 @@ It listens on `localhost:5432` only. Tables are created by Alembic migrations (M
 - `postgresql://` URLs are switched to `postgresql+psycopg://` (psycopg 3, ADR-007).
 - Database tests are skipped with a clear message if PostgreSQL is not running.
 
+## Tests (M1-11)
+
+```bash
+pytest                                # all tests
+pytest -q                             # short output
+pytest tests/api/test_products.py     # one file
+pytest -k products                    # tests whose name contains "products"
+pytest --cov=app                      # with coverage
+```
+
+- **Real PostgreSQL, never the dev database.** Tests use `TEST_DATABASE_URL` (default `postgresql+psycopg://milk_user:…@localhost:5432/milk_delivery_test`). It is forced into `DATABASE_URL` before the app loads, so your `.env` is ignored, and pytest refuses to start unless the database name ends in `_test`. Create the test database once (see *Local database*).
+- **Migrations once per run:** the `migrated_db` fixture runs `alembic upgrade head` at the start and `downgrade base` at the end.
+- **Isolation:** `db_session` wraps each test in a transaction that is always rolled back (even `commit()` inside a service only releases a savepoint), so tests never see each other's data and can run in any order.
+- **API tests:** the `client` fixture is a `TestClient` for the real app whose endpoints use the test's `db_session` (`app.dependency_overrides[get_db]`).
+- **Test data:** `tests/factories.py` has `make_product`, `make_customer` and `make_order` with sensible defaults and unique names/phones.
+- If PostgreSQL is not running, database tests are skipped with a message; the rest still run.
+- SQLAlchemy warnings fail the test run (`pyproject.toml`), because they usually point to a real mistake.
+- Layout: `tests/api/` calls HTTP endpoints; the other files test settings, database, models, migrations and the seed script.
+
 ## Errors (M1-08)
 
 Every error response uses the format from `docs/05-api/api-contracts.md#error-format`:

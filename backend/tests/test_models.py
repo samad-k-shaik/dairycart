@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.database.base import Base
 from app.models import Customer, Order, OrderItem, OrderStatus, Product
+from tests import factories
 
 # ---- relationships (no database needed) ----
 
@@ -221,21 +222,19 @@ def session(db_session: Session) -> Session:
 
 
 def make_order(db: Session, quantity: int = 2) -> Order:
-    product = Product(name="Cow Milk", size="1 Litre", price=Decimal("60.00"))
-    item = OrderItem(
-        product=product,
-        quantity=quantity,
-        unit_price=Decimal("60.00"),
-        subtotal=Decimal("60.00") * quantity,
+    """2 × Cow Milk 1 Litre for Ravi: fixed name/phone so the duplicate tests can clash."""
+    return factories.make_order(
+        db,
+        customer=factories.make_customer(db, name="Ravi Kumar", phone="9876543210"),
+        items=[
+            (
+                factories.make_product(
+                    db, name="Cow Milk", size="1 Litre", price="60.00"
+                ),
+                quantity,
+            )
+        ],
     )
-    order = Order(
-        customer=Customer(name="Ravi Kumar", phone="9876543210"),
-        total_amount=item.subtotal,
-        items=[item],
-    )
-    db.add(order)
-    db.flush()
-    return order
 
 
 def rejected(db: Session, change: Callable[[], object]) -> bool:
