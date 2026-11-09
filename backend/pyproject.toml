@@ -4,6 +4,8 @@
 # Run tests from backend/ with plain `pytest`: look in tests/ and make `import app` work.
 testpaths = ["tests"]
 pythonpath = ["."]
+# SQLAlchemy warnings usually mean a real mistake (e.g. objects skipped on flush): fail.
+filterwarnings = ["error::sqlalchemy.exc.SAWarning"]
 
 [tool.ruff.lint.isort]
 # Our migrations folder is named alembic/, which makes Ruff think `alembic` is our own
