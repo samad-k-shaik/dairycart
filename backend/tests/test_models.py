@@ -1,10 +1,10 @@
-"""Tests for the ORM models (M1-05): relationships, and the generated schema vs the ERD.
+"""Tests for the ORM models (M1-05): relationships, and the schema vs the ERD.
 
-The schema tests create the tables in the TEST database with `Base.metadata.create_all`
-(test-only: application code never does this; Alembic does in M1-06) and drop them again.
+The schema tests run against the TEST database migrated with Alembic (`migrated_db`
+in conftest.py, M1-06), so they check exactly the schema production gets.
 """
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from decimal import Decimal
 
 import pytest
@@ -72,13 +72,10 @@ def test_reprs_never_contain_the_phone_number() -> None:
 # ---- generated schema vs the ERD (needs PostgreSQL) ----
 
 
-@pytest.fixture(scope="module")
-def schema(db_engine: Engine) -> Iterator[Engine]:
-    """Creates the tables in the test database for this module, then drops them."""
-    Base.metadata.drop_all(db_engine)
-    Base.metadata.create_all(db_engine)
-    yield db_engine
-    Base.metadata.drop_all(db_engine)
+@pytest.fixture
+def schema(migrated_db: Engine) -> Engine:
+    """The test database with the schema created by the Alembic migrations."""
+    return migrated_db
 
 
 ERD_COLUMNS = {
@@ -218,13 +215,9 @@ def test_indexes_from_the_erd(schema: Engine) -> None:
 
 
 @pytest.fixture
-def session(schema: Engine) -> Iterator[Session]:
-    """A session inside a transaction that is rolled back, so tests never leave data."""
-    with schema.connect() as connection, connection.begin() as transaction:
-        db = Session(bind=connection, join_transaction_mode="create_savepoint")
-        yield db
-        db.close()
-        transaction.rollback()
+def session(db_session: Session) -> Session:
+    """A session whose changes are rolled back after each test (see conftest.py)."""
+    return db_session
 
 
 def make_order(db: Session, quantity: int = 2) -> Order:

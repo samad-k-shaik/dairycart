@@ -12,9 +12,9 @@ FastAPI application (Python 3.12). Scaffolded in M1-01 (#9): a runnable app with
 | 2 | `python3.12 -m venv .venv` | `py -3.12 -m venv .venv` |
 | 3 | `source .venv/bin/activate` | `.venv\Scripts\Activate.ps1` |
 | 4 | `pip install -r requirements.txt -r requirements-dev.txt` | same |
-| 5 | `cp .env.example .env` | `copy .env.example .env` |
-| 6 | `uvicorn app.main:app --reload --port 8000` | same |
-| 7 | Open http://localhost:8000/docs (interactive API docs) | same |
+| 5 | `cp .env.example .env`, start PostgreSQL (see *Local database*) | `copy .env.example .env`, same |
+| 6 | `alembic upgrade head` (create/update the tables) | same |
+| 7 | `uvicorn app.main:app --reload --port 8000`, then open http://localhost:8000/docs | same |
 | 8 | Run the tests: `pytest` | same |
 
 Check it works: `curl http://localhost:8000/` returns `{"name":"Milk Delivery POC API"}`.
