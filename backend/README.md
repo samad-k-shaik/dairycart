@@ -77,6 +77,29 @@ It listens on `localhost:5432` only. Tables are created by Alembic migrations (M
 - The engine gives up connecting after 5 s (`connect_timeout`). On Windows, `localhost` has two addresses (IPv6 and IPv4), so a stopped local database can take ~10 s to report 503; on Linux/Docker/Cloud Run a refused connection fails immediately.
 - The version comes from `app/__init__.py` (`__version__`). The temporary `GET /` from M1-01 was removed.
 
+## Products API and the layers (M1-10)
+
+| Endpoint | Returns |
+|---|---|
+| `GET /api/v1/products` | Available products ordered by `product_id`; `[]` if none |
+| `GET /api/v1/products?include_unavailable=true` | All products, including unavailable ones (admin view, ADR-006) |
+| `GET /api/v1/products/{product_id}` | One product; `404 NOT_FOUND` if unknown; `422` for `0`, negative or non-numeric ids |
+
+Every endpoint follows the same path through the layers:
+
+```text
+routers/products.py          HTTP only: validate ?include_unavailable and /{product_id}, return ProductRead
+  → services/product_service.py      business rules: missing product → NotFoundError (404)
+    → repositories/product_repository.py   the only place with SQLAlchemy queries
+      → models/product.py → PostgreSQL
+```
+
+- Response schemas live in `app/schemas/`. `ProductRead` has exactly the contract's fields and is built from the model with `from_attributes`.
+- **Money is sent as a string with 2 decimals** (`"60.00"`) using the shared `Money` type in `app/schemas/common.py`: JSON numbers become floats in JavaScript and can lose precision.
+- Unavailable products are still returned by the details endpoint; refusing to *order* them is the order service's job (409, M3).
+
+> **Windows note:** `uvicorn --reload` sometimes fails to restart its worker after a code change (the log shows "Reloading..." but the old code keeps answering, e.g. new endpoints return 404). Stop the server with Ctrl+C and start it again.
+
 ## Tests (M1-11)
 
 ```bash

@@ -1,11 +1,23 @@
-"""Shared API schemas: the single error response format (docs/05-api/api-contracts.md#error-format).
+"""Shared API schemas: the Money type and the single error response format
+(docs/05-api/api-contracts.md).
 
 Every non-2xx response has this shape:
 
     {"error": {"code": "NOT_FOUND", "message": "...", "details": [...], "request_id": "..."}}
 """
 
-from pydantic import BaseModel, Field
+from decimal import Decimal
+from typing import Annotated
+
+from pydantic import BaseModel, Field, PlainSerializer
+
+# Money in API responses: a decimal STRING with exactly 2 places, e.g. "60.00".
+# JSON numbers become floats in JavaScript (60.00 → 60, 0.1 + 0.2 → 0.30000000000000004),
+# so the contract sends money as text. In Python it stays an exact Decimal.
+Money = Annotated[
+    Decimal,
+    PlainSerializer(lambda value: f"{value:.2f}", return_type=str, when_used="json"),
+]
 
 
 class ErrorDetail(BaseModel):
