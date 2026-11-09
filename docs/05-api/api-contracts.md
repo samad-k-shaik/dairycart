@@ -227,6 +227,8 @@ Validation example (422):
 }
 ```
 
+Errors that do not come from a specific endpoint use the same shape: an unknown URL returns `404 NOT_FOUND`, a wrong HTTP method returns `405 METHOD_NOT_ALLOWED` (with an `Allow` header), and any unexpected server error returns `500 INTERNAL_ERROR` with a generic message (details only in the logs, never a stack trace). `details` is always a list (empty when there is nothing field-specific). Validation `details` never echo the submitted value.
+
 ## Status code reference
 
 | Code | Meaning in this API |
