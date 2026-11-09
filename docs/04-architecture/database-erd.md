@@ -117,4 +117,25 @@ Products and customers that appear in orders cannot be deleted, protecting order
 | `order_items(order_id)` | Loading items for an order |
 | `customers(phone)` (via UNIQUE) | Find customer by phone |
 
+## Constraint names
+
+Every constraint has an explicit, readable name (set by the naming convention in `backend/app/database/base.py`, M1-05) so migrations and error messages are easy to read. `database/init.sql` uses the same names.
+
+| Table | Constraint | Rule |
+|---|---|---|
+| customers | `uq_customers_phone` | phone is unique |
+| products | `ck_products_price_positive` | price > 0 |
+| products | `uq_products_name_size` | (name, size) is unique |
+| orders | `orders_customer_id_fkey` | → customers, ON DELETE RESTRICT |
+| orders | `ck_orders_total_amount_non_negative` | total_amount ≥ 0 |
+| orders | `ck_orders_status_allowed` | status in the five allowed values |
+| order_items | `order_items_order_id_fkey` | → orders, ON DELETE CASCADE |
+| order_items | `order_items_product_id_fkey` | → products, ON DELETE RESTRICT |
+| order_items | `ck_order_items_quantity_range` | quantity between 1 and 20 |
+| order_items | `ck_order_items_unit_price_positive` | unit_price > 0 |
+| order_items | `ck_order_items_subtotal_non_negative` | subtotal ≥ 0 |
+| order_items | `uq_order_items_order_product` | (order_id, product_id) is unique |
+
+Primary keys use PostgreSQL's default names (`customers_pkey`, …).
+
 Reference DDL: [`../../database/init.sql`](../../database/init.sql). Seed data: [`../../database/seed.sql`](../../database/seed.sql).

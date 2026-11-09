@@ -1,0 +1,4 @@
+Alembic migrations for the DairyCart backend (M1-06).
+
+Commands and the "changing the schema" workflow: see database/README.md.
+The database URL comes from DATABASE_URL (app settings), never from alembic.ini.
