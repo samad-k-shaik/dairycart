@@ -36,6 +36,9 @@ engine = create_engine(
     pool_pre_ping=True,
     # Never put query VALUES (e.g. phone numbers) into error messages or SQL logs.
     hide_parameters=True,
+    # Give up connecting after 5 s instead of hanging, so an unreachable database is
+    # reported quickly (e.g. by GET /api/v1/health → 503).
+    connect_args={"connect_timeout": 5},
 )
 
 # Factory for sessions. autoflush=False: changes are sent to the database when we flush or
