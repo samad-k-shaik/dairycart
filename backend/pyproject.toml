@@ -1,0 +1,6 @@
+# Tool settings for the backend. Dependencies live in requirements*.txt (pinned).
+
+[tool.pytest.ini_options]
+# Run tests from backend/ with plain `pytest`: look in tests/ and make `import app` work.
+testpaths = ["tests"]
+pythonpath = ["."]
