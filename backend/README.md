@@ -63,6 +63,23 @@ It listens on `localhost:5432` only. Tables are created by Alembic migrations (M
 - `postgresql://` URLs are switched to `postgresql+psycopg://` (psycopg 3, ADR-007).
 - Database tests are skipped with a clear message if PostgreSQL is not running.
 
+## Models (M1-05)
+
+`app/models/` holds one SQLAlchemy model per table, matching `docs/04-architecture/database-erd.md` exactly (and `database/init.sql`):
+
+| Model | Table | Relationships |
+|---|---|---|
+| `Customer` | `customers` | `orders` |
+| `Product` | `products` | `order_items` |
+| `Order` | `orders` | `customer`, `items` (deleting an order deletes its items) |
+| `OrderItem` | `order_items` | `order`, `product` |
+
+- SQLAlchemy 2.0 typed style: `Mapped[...]` + `mapped_column(...)`.
+- Money is `Numeric(10, 2)` in the database and `Decimal` in Python, never `float`.
+- `OrderStatus` is a `StrEnum` (`PLACED`, `CONFIRMED`, `OUT_FOR_DELIVERY`, `DELIVERED`, `CANCELLED`), stored as `VARCHAR(20)` with the CHECK constraint `ck_orders_status_allowed` rather than a native PostgreSQL enum.
+- All constraints are named (see the ERD's "Constraint names"). `app/models/__init__.py` imports every model so Alembic (M1-06) finds all tables.
+- Reprs never include phone numbers (they end up in logs).
+
 ## Configuration (environment variables)
 
 Settings are loaded by `app/core/config.py` (`Settings`, `pydantic-settings`) and read through `get_settings()`. Values come from, in order of priority:
