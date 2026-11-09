@@ -2,7 +2,7 @@
 
 FastAPI application (Python 3.12). Scaffolded in M1-01 (#9): a runnable app with pinned dependencies. Settings, logging, database and routers are added by the next M1 issues.
 
-## Setup and run (7 steps)
+## Setup and run (8 steps)
 
 **Prerequisite:** Python **3.12** (`python3 --version` on macOS/Linux, `py -3.12 --version` on Windows).
 
@@ -12,15 +12,36 @@ FastAPI application (Python 3.12). Scaffolded in M1-01 (#9): a runnable app with
 | 2 | `python3.12 -m venv .venv` | `py -3.12 -m venv .venv` |
 | 3 | `source .venv/bin/activate` | `.venv\Scripts\Activate.ps1` |
 | 4 | `pip install -r requirements.txt -r requirements-dev.txt` | same |
-| 5 | `uvicorn app.main:app --reload --port 8000` | same |
-| 6 | Open http://localhost:8000/docs (interactive API docs) | same |
-| 7 | Run the tests: `pytest` | same |
+| 5 | `cp .env.example .env` | `copy .env.example .env` |
+| 6 | `uvicorn app.main:app --reload --port 8000` | same |
+| 7 | Open http://localhost:8000/docs (interactive API docs) | same |
+| 8 | Run the tests: `pytest` | same |
 
 Check it works: `curl http://localhost:8000/` returns `{"name":"Milk Delivery POC API"}`.
 
 - `.venv/` is your private copy of the packages; it is git-ignored. Activate it (step 3) in every new terminal.
 - If PowerShell refuses to run `Activate.ps1`, run once: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
 - `--reload` restarts the server when you save a file. Use it only for development (it watches files and costs resources); production runs without it.
+
+## Configuration (environment variables)
+
+Settings are loaded by `app/core/config.py` (`Settings`, `pydantic-settings`) and read through `get_settings()`. Values come from, in order of priority:
+
+1. **Real environment variables** (your shell, Docker, CI, Cloud Run).
+2. **`backend/.env`**: a local file you create from `.env.example`. It is **git-ignored**; never commit it.
+3. **Defaults** (only for non-secret values).
+
+| Variable | Required | Default | Example (local) | Used for |
+|---|---|---|---|---|
+| `DATABASE_URL` | **yes** | – | `postgresql+psycopg://milk_user:milk_password_local_only@localhost:5432/milk_delivery` | SQLAlchemy connection (M1-04). Must start with `postgresql+psycopg://` (or `postgresql://`). Contains the password: stored as a secret and never printed. |
+| `CORS_ORIGINS` | no | `http://localhost:5173` | `http://localhost:5173,https://milk.example.com` | Frontend origins allowed to call the API (M3-08). Comma-separated. |
+| `LOG_LEVEL` | no | `INFO` | `DEBUG` | `DEBUG`, `INFO`, `WARNING`, `ERROR` or `CRITICAL` (any case). |
+| `APP_ENV` | no | `local` | `production` | `local`, `test` or `production`. |
+
+- **Fail fast:** `app/main.py` reads the settings on startup. If `DATABASE_URL` is missing or invalid, the server does not start and prints which variable is wrong (never its value), e.g. `- DATABASE_URL is not set`.
+- **Cached:** `get_settings()` reads and validates the settings once, then returns the same object (`functools.lru_cache`). Tests call `get_settings.cache_clear()` to start fresh.
+- `.env` is read from the folder you start the server in, so run commands from `backend/`.
+- The password in `.env.example` is the local Docker Compose one. Never use it outside local development; production values come from the environment (Cloud Run with Secret Manager, M6).
 
 ## Dependencies
 
