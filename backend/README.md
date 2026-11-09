@@ -13,7 +13,7 @@ FastAPI application (Python 3.12). Scaffolded in M1-01 (#9): a runnable app with
 | 3 | `source .venv/bin/activate` | `.venv\Scripts\Activate.ps1` |
 | 4 | `pip install -r requirements.txt -r requirements-dev.txt` | same |
 | 5 | `cp .env.example .env`, start PostgreSQL (see *Local database*) | `copy .env.example .env`, same |
-| 6 | `alembic upgrade head` (create/update the tables) | same |
+| 6 | `alembic upgrade head` (tables), then `python -m app.scripts.seed` (products) | same |
 | 7 | `uvicorn app.main:app --reload --port 8000`, then open http://localhost:8000/docs | same |
 | 8 | Run the tests: `pytest` | same |
 

@@ -3,9 +3,25 @@
 | File | Purpose |
 |---|---|
 | `init.sql` | Reference DDL that mirrors the ERD. For learning and review. **Not** executed automatically. |
-| `seed.sql` | Initial product catalogue and a demo customer (reference; loaded by the seed script below). |
+| `seed.sql` | Initial product catalogue and a demo customer (reference; the seed script below loads the same data). |
 
 From M1, **Alembic migrations in `backend/alembic/` are the only way the schema changes.** Keep `init.sql` and `docs/04-architecture/database-erd.md` in sync with the migrations.
+
+## Seed data (M1-07)
+
+After `alembic upgrade head`, load the product catalogue and the demo customer. From `backend/` with the virtual environment active:
+
+```bash
+python -m app.scripts.seed
+```
+
+```text
+Seed complete: 4 product(s) and 1 customer(s) added. Database now has 4 product(s) and 1 customer(s).
+```
+
+- **Idempotent:** run it as often as you like. Rows that already exist are skipped (`ON CONFLICT DO NOTHING`), so a second run adds nothing and never overwrites a price changed later.
+- **Data:** Cow Milk 500 ml ₹30, Cow Milk 1 Litre ₹60, Buffalo Milk 500 ml ₹35, Buffalo Milk 1 Litre ₹70, and the demo customer `9000000001`. The script (`backend/app/scripts/seed.py`) and `seed.sql` hold the same values; a test fails if they drift apart.
+- Seed data is **not** a migration: migrations create the structure every environment needs; seed data is starting content for development, tests and the demo.
 
 ## Migrations (Alembic, M1-06)
 
