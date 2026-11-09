@@ -8,15 +8,32 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.core.errors import register_error_handlers
 from app.core.logging import (
     REQUEST_ID_HEADER,
     JsonFormatter,
     RequestIdMiddleware,
     request_id_var,
 )
-from app.main import app
 
-client = TestClient(app)
+# A tiny app with the REAL middleware and error handlers: these tests check the middleware,
+# so they should not depend on the database or on which real endpoints exist.
+ping_app = FastAPI()
+ping_app.add_middleware(RequestIdMiddleware)
+register_error_handlers(ping_app)
+
+
+@ping_app.get("/")
+def ping() -> dict[str, bool]:
+    return {"ok": True}
+
+
+@ping_app.post("/")
+def submit() -> dict[str, bool]:
+    return {"ok": True}
+
+
+client = TestClient(ping_app)
 REQUEST_FIELDS = {"request_id", "method", "path", "status_code", "duration_ms"}
 
 

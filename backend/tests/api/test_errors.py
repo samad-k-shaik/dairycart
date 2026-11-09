@@ -130,7 +130,7 @@ def test_unknown_url_returns_standard_404() -> None:
 
 
 def test_wrong_method_returns_standard_405_and_keeps_allow_header() -> None:
-    response = TestClient(main_app).post("/")
+    response = TestClient(main_app).post("/api/v1/health")  # health is GET-only
 
     assert response.status_code == 405
     assert_error_shape(response.json(), "METHOD_NOT_ALLOWED")

@@ -63,6 +63,20 @@ It listens on `localhost:5432` only. Tables are created by Alembic migrations (M
 - `postgresql://` URLs are switched to `postgresql+psycopg://` (psycopg 3, ADR-007).
 - Database tests are skipped with a clear message if PostgreSQL is not running.
 
+## Health check (M1-09)
+
+`GET /api/v1/health` (all endpoints live under `/api/v1`; routers are in `app/routers/` and mounted in `main.py`):
+
+| Database | Status | Body |
+|---|---|---|
+| answers `SELECT 1` | 200 | `{"status": "ok", "database": "ok", "version": "0.1.0"}` |
+| unreachable | 503 | `{"status": "degraded", "database": "unavailable", "version": "0.1.0"}` |
+
+- It is a **readiness** check (can the app serve requests?), used by Docker, Cloud Run and smoke tests. It recovers automatically when the database comes back.
+- Only the error type is logged (`database health check failed: OperationalError`), never connection details. Responses are `Cache-Control: no-store`.
+- The engine gives up connecting after 5 s (`connect_timeout`). On Windows, `localhost` has two addresses (IPv6 and IPv4), so a stopped local database can take ~10 s to report 503; on Linux/Docker/Cloud Run a refused connection fails immediately.
+- The version comes from `app/__init__.py` (`__version__`). The temporary `GET /` from M1-01 was removed.
+
 ## Tests (M1-11)
 
 ```bash
