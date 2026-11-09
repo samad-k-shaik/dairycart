@@ -23,6 +23,46 @@ Check it works: `curl http://localhost:8000/` returns `{"name":"Milk Delivery PO
 - If PowerShell refuses to run `Activate.ps1`, run once: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
 - `--reload` restarts the server when you save a file. Use it only for development (it watches files and costs resources); production runs without it.
 
+## Local database (PostgreSQL 16)
+
+The backend needs PostgreSQL with user `milk_user`, password `milk_password_local_only` (local only) and database `milk_delivery`, matching `DATABASE_URL` in `.env.example`. Tests use a second database, `milk_delivery_test`.
+
+**Option A: Docker (project default).** From the repository root:
+
+```bash
+docker compose up -d db                                                     # start
+docker compose exec db createdb -U milk_user milk_delivery_test             # once: test database
+docker compose ps                                                           # "healthy" = ready
+docker compose down                                                         # stop (data is kept)
+```
+
+**Option B: portable PostgreSQL on Windows (no Docker, no admin rights).** Download the PostgreSQL 16 "binaries" zip for Windows from [EnterpriseDB](https://www.enterprisedb.com/download-postgresql-binaries) (linked from postgresql.org), unzip it, then in PowerShell:
+
+```powershell
+$pg = "$env:LOCALAPPDATA\dairycart-postgres"          # where you unzipped it (contains pgsql\bin)
+$bin = "$pg\pg16\pgsql\bin"
+# once: create the data folder and the milk_user login (enter milk_password_local_only twice)
+& "$bin\initdb.exe" -D "$pg\data" -U milk_user -W -E UTF8 --no-locale --auth=scram-sha-256
+# every time you work on the backend:
+& "$bin\pg_ctl.exe" -D "$pg\data" -l "$pg\postgres.log" -w start
+# once: create the two databases
+$env:PGPASSWORD = "milk_password_local_only"
+& "$bin\createdb.exe" -h localhost -U milk_user milk_delivery
+& "$bin\createdb.exe" -h localhost -U milk_user milk_delivery_test
+# when finished:
+& "$bin\pg_ctl.exe" -D "$pg\data" stop
+```
+
+It listens on `localhost:5432` only. Tables are created by Alembic migrations (M1-06), never by the application code.
+
+## Database access (M1-04)
+
+- `app/database/base.py`: `Base` for all models, with a naming convention so every constraint has a predictable name (`ck_order_items_quantity_range`, `uq_products_name_size`, …).
+- `app/database/session.py`: one `engine` per process (connection pool, `pool_pre_ping=True`, `hide_parameters=True` so query values such as phone numbers never appear in errors), `SessionLocal`, and the `get_db()` dependency.
+- Endpoints get a session with `db: Annotated[Session, Depends(get_db)]`. Each request gets its own session, and it is always closed afterwards, even when the endpoint raises.
+- `postgresql://` URLs are switched to `postgresql+psycopg://` (psycopg 3, ADR-007).
+- Database tests are skipped with a clear message if PostgreSQL is not running.
+
 ## Configuration (environment variables)
 
 Settings are loaded by `app/core/config.py` (`Settings`, `pydantic-settings`) and read through `get_settings()`. Values come from, in order of priority:
