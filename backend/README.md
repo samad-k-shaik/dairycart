@@ -124,6 +124,28 @@ How the rules are split across the layers:
 
 > **Windows note:** `uvicorn --reload` sometimes fails to restart its worker after a code change (the log shows "Reloading..." but the old code keeps answering, e.g. new endpoints return 404). Stop the server with Ctrl+C and start it again.
 
+## Orders API (M3-01 to M3-07)
+
+| Endpoint | Does | Errors |
+|---|---|---|
+| `POST /api/v1/orders` | Place an order → `201` + `Location: /api/v1/orders/{id}` | `400 DUPLICATE_PRODUCT`, `404`, `409 PRODUCT_UNAVAILABLE`, `422` |
+| `GET /api/v1/orders/{order_id}` | One order with items | `404` |
+| `GET /api/v1/orders?phone=9876543210` | Customer history, newest first; unknown phone → `[]` | `422` (missing/invalid phone) |
+| `GET /api/v1/admin/orders?status=&page=&page_size=` | One page (newest first, `page_size` ≤ 100) + `status_counts` for all orders | `422` |
+| `PATCH /api/v1/admin/orders/{order_id}/status` | Next status, only along the allowed transitions | `404`, `409 INVALID_STATUS_TRANSITION`, `422` |
+
+What makes the order code safe:
+
+- **Prices come from the database, never the request.** `OrderCreate` forbids unknown fields, so sending `price` or `total_amount` is a `422`. The service copies each product's current price into `unit_price` (a snapshot, BR-1) and calculates `subtotal` and `total_amount` with `Decimal`.
+- **One transaction.** Customer (found or created by phone), order and items are saved with one `commit()`. Any error rolls everything back: a failed order leaves no rows behind.
+- **Status rules** live in one dict, `ALLOWED_TRANSITIONS` in `app/services/order_service.py` (5 arrows: PLACED → CONFIRMED/CANCELLED, CONFIRMED → OUT_FOR_DELIVERY/CANCELLED, OUT_FOR_DELIVERY → DELIVERED). The order row is locked (`SELECT … FOR UPDATE`) while it is checked and saved, so two admins cannot both change it.
+- **No N+1 queries.** An order is loaded with its customer, items and products in 2 queries (`joinedload` + `selectinload`); a test counts them.
+- **POC risk (ADR-003):** there is no login. Anyone who knows a phone number can see that customer's orders, and admin routes (marked `TODO(auth)`) are open.
+
+## CORS (M3-08)
+
+The browser only lets the frontend (`http://localhost:5173`, another origin) call this API because `CORSMiddleware` allows the origins listed in **`CORS_ORIGINS`** (`backend/.env`, comma-separated). `*` is refused when the settings load. A page opened from any other origin, even `http://127.0.0.1:5173`, cannot read the responses. Add an origin there if you open the frontend from another address.
+
 ## Tests (M1-11)
 
 ```bash

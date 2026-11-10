@@ -13,6 +13,8 @@ export type ApiErrorCode =
   | "PRODUCT_ALREADY_EXISTS" // 409: admin add/edit, same name and size (#86)
   | "PRODUCT_IN_USE" // 409: admin delete of a product that was already ordered (#86)
   | "INTERNAL_ERROR" // 500: unexpected server error
+  | "METHOD_NOT_ALLOWED" // 405: wrong HTTP method
+  | "NETWORK_ERROR" // frontend only: no answer at all (server down, offline, CORS)
 
 export type ApiErrorDetail = {
   field: string

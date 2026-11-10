@@ -83,22 +83,8 @@ function recalculateIds() {
 }
 recalculateIds()
 
-/** Called after another tab changed the mock data (see onOtherTabChange). */
-const otherTabListeners = new Set<() => void>()
-
-/**
- * Run `listener` whenever ANOTHER tab saves new mock data. main.tsx uses it to refresh
- * TanStack Query's cache: updating `db` alone is not enough, because pages keep showing
- * their cached lists (fresh for 30 s) and would not ask again.
- * Returns a function that stops listening.
- */
-export function onOtherTabChange(listener: () => void): () => void {
-  otherTabListeners.add(listener)
-  return () => otherTabListeners.delete(listener)
-}
-
 // Another tab saved new data (e.g. an order placed in the customer tab, or a product added
-// in the admin tab): use it here too, then tell the listeners so the screens refetch.
+// in the admin tab): use it here too. The screens refetch via lib/crossTabSync.ts.
 // (The 'storage' event only fires in OTHER tabs, never the one that saved.)
 window.addEventListener("storage", (event) => {
   if (event.key !== MOCK_DB_STORAGE_KEY) return
@@ -106,7 +92,6 @@ window.addEventListener("storage", (event) => {
   db.products = saved.products
   db.orders = saved.orders
   recalculateIds()
-  otherTabListeners.forEach((listener) => listener())
 })
 
 /** Dev "Reset mock data": forget saved changes and go back to the original seed data. */
