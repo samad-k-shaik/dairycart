@@ -1,6 +1,6 @@
 """Queries for the products table (M1-10, admin writes: issue #86)."""
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 
 from sqlalchemy import exists, func, select
 from sqlalchemy.orm import Session
@@ -28,6 +28,11 @@ class ProductRepository:
     def get(self, product_id: int) -> Product | None:
         """One product by primary key, or None if it does not exist."""
         return self.db.get(Product, product_id)
+
+    def get_many(self, product_ids: Iterable[int]) -> dict[int, Product]:
+        """Several products in ONE query, keyed by id. Missing ids are simply absent."""
+        query = select(Product).where(Product.product_id.in_(list(product_ids)))
+        return {product.product_id: product for product in self.db.scalars(query)}
 
     def find_by_name_and_size(
         self, name: str, size: str, *, exclude_id: int | None = None

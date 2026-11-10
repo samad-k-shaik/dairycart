@@ -6,6 +6,7 @@ Every non-2xx response has this shape:
     {"error": {"code": "NOT_FOUND", "message": "...", "details": [...], "request_id": "..."}}
 """
 
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Annotated
 
@@ -17,6 +18,18 @@ from pydantic import BaseModel, Field, PlainSerializer
 Money = Annotated[
     Decimal,
     PlainSerializer(lambda value: f"{value:.2f}", return_type=str, when_used="json"),
+]
+
+
+def _to_utc_string(value: datetime) -> str:
+    """Any timezone → UTC, whole seconds: "2026-11-07T04:30:00Z" (the contract format).
+    PostgreSQL returns TIMESTAMPTZ in the server's time zone, which may not be UTC."""
+    return value.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+# Dates in API responses: ISO 8601 in UTC. The frontend shows them in India time.
+UtcDateTime = Annotated[
+    datetime, PlainSerializer(_to_utc_string, return_type=str, when_used="json")
 ]
 
 
