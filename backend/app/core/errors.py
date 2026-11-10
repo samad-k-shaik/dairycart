@@ -72,6 +72,21 @@ class DuplicateProductError(DomainError):
     code = "DUPLICATE_PRODUCT"
 
 
+class ProductAlreadyExistsError(DomainError):
+    """Admin: another product already has this name and size (issue #86)."""
+
+    status_code = 409
+    code = "PRODUCT_ALREADY_EXISTS"
+
+
+class ProductInUseError(DomainError):
+    """Admin: the product appears in an order, so deleting it would break order history
+    (issue #86). Mark it unavailable instead."""
+
+    status_code = 409
+    code = "PRODUCT_IN_USE"
+
+
 # ---- Building the response ----
 
 INTERNAL_ERROR_MESSAGE = "Something went wrong on our side. Please try again."

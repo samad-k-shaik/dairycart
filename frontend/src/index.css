@@ -1,0 +1,122 @@
+/*
+ * Global styles and design tokens.
+ * Source of truth for every value below: docs/06-ui-ux/design-system.md.
+ * If you change a token here, update that document in the same PR.
+ */
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/manrope";
+
+/*
+ * shadcn components contain `dark:` classes. We have no dark mode, so `dark:`
+ * only applies inside an element with class="dark" (which we never add).
+ * Without this line, Tailwind would apply `dark:` styles whenever the OS is in dark mode.
+ */
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Layer 1 — the token values (CSS variables).
+ * shadcn components read the standard names (--primary, --background, ...).
+ * The last group are our own extra tokens from the design system.
+ */
+:root {
+  --radius: 0.75rem; /* 12px: buttons/inputs (used by toasts) */
+
+  --background: #f8fafc; /* page background (light grey) */
+  --foreground: #0f172a; /* primary text */
+  --card: #ffffff; /* cards = surface */
+  --card-foreground: #0f172a;
+  --popover: #ffffff; /* sheets, toasts */
+  --popover-foreground: #0f172a;
+  --primary: #2563eb; /* buttons, links, active states */
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9; /* neutral secondary surfaces */
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b; /* secondary text */
+  --accent: #eff6ff; /* hover background for outline/ghost buttons = primary-soft */
+  --accent-foreground: #1d4ed8;
+  --destructive: #dc2626; /* = danger */
+  --border: #e2e8f0; /* dividers */
+  --input: #e2e8f0; /* input borders */
+  --ring: #2563eb; /* keyboard focus ring */
+
+  /* Extra design-system tokens */
+  --primary-hover: #1d4ed8;
+  --primary-soft: #eff6ff;
+  --surface: #ffffff;
+  --success: #16a34a; /* DELIVERED, success toasts */
+  --warning: #d97706; /* OUT_FOR_DELIVERY */
+  --danger: #dc2626; /* CANCELLED, errors */
+}
+
+/*
+ * Layer 2 — expose the variables to Tailwind, so `bg-primary`, `text-muted-foreground`,
+ * `bg-primary-soft`, `text-success`, `shadow-card`, `text-h1` ... become real classes.
+ * "inline" makes Tailwind use var(--primary) directly instead of copying the value.
+ */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-surface: var(--surface);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+}
+
+/*
+ * Fixed tokens that are not colours: font, shadow and the typography scale.
+ * Radius needs nothing here: Tailwind's defaults already match the design system
+ * (rounded-xl = 12px for buttons/inputs, rounded-2xl = 16px for cards).
+ */
+@theme {
+  --font-sans: "Manrope Variable", system-ui, sans-serif;
+
+  --shadow-card: 0 2px 12px rgba(15, 23, 42, 0.06);
+
+  /* Typography scale: size / line-height (pair with the weight from the doc) */
+  --text-display: 1.75rem; /* 28px, weight 800 */
+  --text-display--line-height: 2.25rem; /* 36px */
+  --text-h1: 1.5rem; /* 24px, weight 700 */
+  --text-h1--line-height: 2rem; /* 32px */
+  --text-h2: 1.25rem; /* 20px, weight 700 */
+  --text-h2--line-height: 1.75rem; /* 28px */
+  --text-h3: 1rem; /* 16px, weight 600 */
+  --text-h3--line-height: 1.5rem; /* 24px */
+  --text-body: 0.875rem; /* 14px, weight 500 */
+  --text-body--line-height: 1.375rem; /* 22px */
+  --text-small: 0.75rem; /* 12px, weight 500 */
+  --text-small--line-height: 1rem; /* 16px */
+  --text-price: 1.125rem; /* 18px, weight 800 */
+  --text-price--line-height: 1.5rem; /* 24px */
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    /* Default text = "Body" style: Manrope 14/22, weight 500, on the light-grey page */
+    @apply bg-background font-sans text-body font-medium text-foreground antialiased;
+  }
+}

@@ -1,0 +1,155 @@
+"""Order business logic (M3-03 create, M3-05 read, M3-06 status rules, M3-07 admin list).
+
+The key rule: the backend calculates every price and total from the DATABASE (BR-2).
+The request only says which products and how many.
+"""
+
+from decimal import Decimal
+
+from sqlalchemy.orm import Session
+
+from app.core.errors import (
+    DuplicateProductError,
+    InvalidStatusTransitionError,
+    NotFoundError,
+    ProductUnavailableError,
+)
+from app.models import Order, OrderItem, OrderStatus
+from app.repositories.customer_repository import CustomerRepository
+from app.repositories.order_repository import OrderRepository, OrderRow
+from app.repositories.product_repository import ProductRepository
+from app.schemas.common import ErrorDetail
+from app.schemas.order import OrderCreate
+
+# Which status can follow which (functional requirements → Order status lifecycle).
+# DELIVERED and CANCELLED are final: nothing can follow them.
+ALLOWED_TRANSITIONS: dict[OrderStatus, frozenset[OrderStatus]] = {
+    OrderStatus.PLACED: frozenset({OrderStatus.CONFIRMED, OrderStatus.CANCELLED}),
+    OrderStatus.CONFIRMED: frozenset(
+        {OrderStatus.OUT_FOR_DELIVERY, OrderStatus.CANCELLED}
+    ),
+    OrderStatus.OUT_FOR_DELIVERY: frozenset({OrderStatus.DELIVERED}),
+    OrderStatus.DELIVERED: frozenset(),
+    OrderStatus.CANCELLED: frozenset(),
+}
+
+
+def _item_field(index: int) -> str:
+    return f"items[{index}].product_id"
+
+
+def create_order(db: Session, data: OrderCreate) -> Order:
+    """Place an order. Either everything is saved, or nothing is (one transaction).
+
+    1. The same product twice → 400 DUPLICATE_PRODUCT (BR-4)
+    2. Unknown product → 404, unavailable product → 409; the whole order fails (BR-3)
+    3. Find the customer by phone, or create them (BR-5)
+    4. unit_price = the product's price NOW (snapshot, BR-1); subtotal and total (BR-2)
+    """
+    product_ids = [item.product_id for item in data.items]
+    seen: set[int] = set()
+    for index, product_id in enumerate(product_ids):
+        if product_id in seen:
+            raise DuplicateProductError(
+                "The same product appears more than once.",
+                details=[ErrorDetail(field=_item_field(index), issue="duplicate")],
+            )
+        seen.add(product_id)
+
+    # All products in ONE query, not one query per item.
+    products = ProductRepository(db).get_many(product_ids)
+    for index, product_id in enumerate(product_ids):
+        product = products.get(product_id)
+        if product is None:
+            raise NotFoundError(
+                f"Product {product_id} was not found.",
+                details=[ErrorDetail(field=_item_field(index), issue="not found")],
+            )
+        if not product.is_available:
+            raise ProductUnavailableError(
+                f"Product '{product.name} {product.size}' is currently unavailable.",
+                details=[ErrorDetail(field=_item_field(index), issue="unavailable")],
+            )
+
+    try:
+        customers = CustomerRepository(db)
+        customer = customers.get_by_phone(data.customer.phone) or customers.create(
+            data.customer.name, data.customer.phone
+        )
+
+        items = []
+        for requested in data.items:
+            product = products[requested.product_id]
+            unit_price: Decimal = product.price  # snapshot (BR-1)
+            items.append(
+                OrderItem(
+                    product=product,
+                    quantity=requested.quantity,
+                    unit_price=unit_price,
+                    subtotal=unit_price * requested.quantity,
+                )
+            )
+        order = Order(
+            customer=customer,
+            items=items,
+            status=OrderStatus.PLACED,
+            total_amount=sum((item.subtotal for item in items), Decimal("0.00")),
+        )
+        OrderRepository(db).add(order)
+        db.commit()
+    except Exception:
+        db.rollback()  # nothing from this order stays in the database
+        raise
+
+    # Reload with eager loading: after commit the objects are expired, and reading
+    # order.items[i].product one by one would be N+1 queries. This also gets
+    # order_date, which the database fills in (server default now()).
+    return get_order(db, order.order_id)
+
+
+def get_order(db: Session, order_id: int) -> Order:
+    order = OrderRepository(db).get_with_items(order_id)
+    if order is None:
+        raise NotFoundError(f"Order {order_id} was not found.")
+    return order
+
+
+def list_orders_by_phone(db: Session, phone: str) -> list[OrderRow]:
+    """Customer order history, newest first. Unknown phone → [] (not 404).
+
+    POC risk (ADR-003): anyone who knows a phone number can see that customer's orders.
+    """
+    return OrderRepository(db).list_by_phone(phone)
+
+
+def list_admin_orders(
+    db: Session, *, status: OrderStatus | None, page: int, page_size: int
+) -> tuple[list[OrderRow], int, dict[OrderStatus, int]]:
+    """One page of orders, the total matching the filter, and counts for ALL orders."""
+    repository = OrderRepository(db)
+    rows, total = repository.list_admin(status, page, page_size)
+    return rows, total, repository.count_by_status()
+
+
+def update_status(db: Session, order_id: int, new_status: OrderStatus) -> Order:
+    """Move an order to a new status, only along ALLOWED_TRANSITIONS (FR-A4).
+
+    The order row is locked while we check and save, so two admins cannot both change
+    it at the same time. This is the one place future notifications (SMS, WhatsApp)
+    would hook in.
+    """
+    try:
+        order = OrderRepository(db).get_for_update(order_id)
+        if order is None:
+            raise NotFoundError(f"Order {order_id} was not found.")
+        if new_status not in ALLOWED_TRANSITIONS[order.status]:
+            raise InvalidStatusTransitionError(
+                f"Cannot change status from {order.status.value} to {new_status.value}.",
+                details=[ErrorDetail(field="status", issue="transition not allowed")],
+            )
+        order.status = new_status
+        db.commit()  # also releases the row lock
+    except Exception:
+        db.rollback()
+        raise
+    return get_order(db, order_id)  # fresh, eagerly loaded (see create_order)
