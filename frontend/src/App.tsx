@@ -9,6 +9,7 @@ import { DevMockSwitch } from "@/components/common/DevMockSwitch"
 import { Toaster } from "@/components/ui/sonner"
 import { CartProvider } from "@/hooks/cart/CartProvider"
 import { router } from "@/routes/router"
+import { USE_MOCKS } from "@/services/mockMode"
 
 function App() {
   return (
@@ -16,8 +17,8 @@ function App() {
       <RouterProvider router={router} />
       {/* One Toaster for the whole app: toast("...") calls appear here. */}
       <Toaster />
-      {/* Dev-only mock controls; removed from production builds (import.meta.env.DEV is false). */}
-      {import.meta.env.DEV && <DevMockSwitch />}
+      {/* Mock controls: only in development AND only when VITE_USE_MOCKS=true. */}
+      {import.meta.env.DEV && USE_MOCKS && <DevMockSwitch />}
     </CartProvider>
   )
 }

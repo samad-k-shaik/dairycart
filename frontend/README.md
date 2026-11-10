@@ -14,6 +14,17 @@ npm ci            # install the exact versions from package-lock.json
 npm run dev       # start the dev server at http://localhost:5173
 ```
 
+**The app needs the backend** (since M3): start it first (see `backend/README.md`, it runs at `http://localhost:8000`) with PostgreSQL running. Without it, pages show "We could not reach the DairyCart server" with a Retry button.
+
+Settings (optional; copy `.env.example` to `.env.local` and restart `npm run dev`):
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `VITE_API_BASE_URL` | `http://localhost:8000/api/v1` | Backend address. The backend must list this frontend's origin in `CORS_ORIGINS`. |
+| `VITE_USE_MOCKS` | `false` | `true` = use the M2 mock data in the browser instead of the backend (offline UI work only) |
+
+Open the app at **`http://localhost:5173`**, not `http://127.0.0.1:5173`: the browser treats those as different origins, and the backend's CORS setting only allows `localhost:5173`.
+
 Use `npm ci` (not `npm install`) for normal setup so everyone gets identical dependencies. Use `npm install <package>` only when an issue approves adding a library; then commit the updated `package-lock.json`.
 
 ## Scripts
@@ -58,7 +69,7 @@ React Router (`react-router`, ADR-011) maps URLs to pages in `src/routes/router.
 - Pages are placeholders (`components/common/PagePlaceholder`) naming the issue that builds them.
 - React Router 8 requires Node ≥ 22.22.
 
-## Data: types, services and mock data (M2-03, #22)
+## Data: types, services, API client and mock data (M2-03 #22, M3-08 #41)
 
 - **Types** in `src/types/` (`product.ts`, `order.ts`, `api.ts`) mirror `docs/05-api/api-contracts.md` field-for-field, in `snake_case`. Money is a string (`"60.00"`), dates are ISO 8601 UTC strings.
 - **Services** in `src/services/` are the only way pages get data:
@@ -72,10 +83,15 @@ React Router (`react-router`, ADR-011) maps URLs to pages in `src/routes/router.
   | `getOrdersByPhone(phone)` | `GET /orders?phone=` (proposed, ADR-005) |
   | `getAdminOrders({ status?, page?, page_size? })` | `GET /admin/orders` |
   | `updateOrderStatus(id, status)` | `PATCH /admin/orders/{id}/status` |
+  | `createProduct` / `updateProduct` / `deleteProduct` | `POST` / `PATCH` / `DELETE /admin/products` (#86) |
+
+- **API client (M3):** `src/services/apiClient.ts` is the only code that calls `fetch`. It adds the base URL, sends JSON, returns `undefined` for `204`, and turns every failure into a `ServiceError` with the backend's `code`, `message`, `details` and `request_id` (`src/services/apiError.ts`, tested in `apiError.test.ts`). No answer at all (server down, offline, CORS refused) becomes `NETWORK_ERROR` with status `0`.
+- **Real or mock:** `productService.ts` and `orderService.ts` call the backend. Only with `VITE_USE_MOCKS=true` do they forward to `src/services/mock/mockProductService.ts` / `mockOrderService.ts`.
+- **Tabs stay in sync:** after any successful change, `src/lib/crossTabSync.ts` posts a message on a `BroadcastChannel`; other open tabs (e.g. shop + admin) refetch at once instead of waiting for their 30 s cache.
 
 - **Rule:** pages and components never import `src/services/mock/*` or the JSON files. In M3 only the service bodies change to HTTP calls; their names, parameters and return types stay the same.
 - **Errors:** failed calls reject with `ServiceError` (`status`, `code`, `body` in the contract's error format), for mock and real calls alike.
-- **Mock behaviour (M2):** every call waits 300 ms (`MOCK_LATENCY_MS`) and follows the contract's validation and error codes (400, 404, 409, 422). Mock data is kept in memory **and saved to `localStorage`** (`dairycart-mock-db-v1`), so new orders and status changes survive a page reload and appear in other tabs of the same browser (via the `storage` event). Damaged saved data falls back to the original JSON. The dev panel's **Reset mock data** button restores the original 8 orders. `src/services/mock/mockData.test.ts` checks the JSON against the contract and business rules (statuses, maths, unique ids).
+- **Mock behaviour (M2, only with `VITE_USE_MOCKS=true`):** every call waits 300 ms (`MOCK_LATENCY_MS`) and follows the contract's validation and error codes (400, 404, 409, 422). Mock data is kept in memory **and saved to `localStorage`** (`dairycart-mock-db-v1`), so new orders and status changes survive a page reload and appear in other tabs of the same browser (via the `storage` event). Damaged saved data falls back to the original JSON. The dev panel's **Reset mock data** button restores the original 8 orders. `src/services/mock/mockData.test.ts` checks the JSON against the contract and business rules (statuses, maths, unique ids).
 - **Formatting:** `formatCurrency("155.00")` → `"₹155.00"` (`src/lib/format.ts`), Indian digit grouping.
 
 ## Server state with TanStack Query (M2-05, #24)
@@ -104,7 +120,7 @@ The cart lives in the browser (ADR-004): React context + `useReducer`, saved to 
 - **Request body:** built by `lib/orderRequest.ts` from the cart, containing only `{ customer: { name, phone }, items: [{ product_id, quantity }] }`. Prices and totals are never sent. In dev mode the payload is logged to the browser console (`[checkout] POST /api/v1/orders payload`).
 - `useCreateOrder()` (TanStack Query `useMutation`) sends it; the button is disabled while sending. On success the returned order is cached, order lists are invalidated, the user goes to `/orders/:id/confirmation` and the cart is cleared.
 - **Confirmation** shows the order returned by the service (id, items, backend total, status badge). If that total differs from the cart estimate, a notice says so (FR-C8). Payment is cash on delivery: no address, shipping or payment fields.
-- **M2 mock data** is saved per browser (`localStorage`), so orders are not shared between different browsers or devices. That becomes possible when the real API is connected in M3.
+- Orders are saved in PostgreSQL by the backend (M3), so they are shared between browsers and devices. (With `VITE_USE_MOCKS=true` they are saved per browser in `localStorage` instead.)
 - Dates are shown in IST (`formatDateTime`, `formatDate` in `lib/format.ts`); the API sends UTC.
 
 ## Order history (M2-10, #29)
@@ -144,7 +160,7 @@ Every data screen uses the same three building blocks:
 - Error text comes from the API error's `message` (`userFacingMessage()`); anything else shows a generic message. Raw technical errors are never shown to customers.
 - A 404 for a single order/product is shown as an empty state ("not found"), not an error.
 - **Crashes (bugs):** React Router's `errorElement` (`RouteErrorFallback`) and a top-level `ErrorBoundary` (in `main.tsx`) show `AppErrorFallback` ("Something went wrong", Reload / Go to the shop) instead of a blank page. Technical details are shown only in development.
-- **Dev-only mock switch:** a "Mock: …" button at the bottom-left (development only) sets the mock services to *Normal*, *Slow (3 s)*, *Fail every call (500)* or *Empty lists*, and can crash the current page to test the fallback. The mode is stored in `localStorage` (`dairycart-mock-mode-v1`). It is not included in production builds.
+- **Dev-only mock switch (only with `VITE_USE_MOCKS=true`):** a "Mock: …" button at the bottom-left (development only) sets the mock services to *Normal*, *Slow (3 s)*, *Fail every call (500)* or *Empty lists*, and can crash the current page to test the fallback. The mode is stored in `localStorage` (`dairycart-mock-mode-v1`). It is not included in production builds.
 - With "Fail every call", the error state appears after about 4–7 s because queries retry 5xx errors twice (see `lib/queryClient.ts`).
 
 ## Styling and design tokens
@@ -188,7 +204,7 @@ Local changes from the shadcn defaults, to match the design system:
 | `src/pages/{customer,admin}` | Route-level screens |
 | `src/layouts` | Page shells (CustomerLayout, AdminLayout) |
 | `src/routes` | Route definitions |
-| `src/services` | API clients (mock JSON in M2, real HTTP in M3) |
+| `src/services` | API client and services (real HTTP; M2 mocks in `services/mock/` behind `VITE_USE_MOCKS`) |
 | `src/hooks` | Custom hooks, TanStack Query hooks |
 | `src/types` | Shared TypeScript types |
 | `src/lib` | Utilities (formatting, `cn()` helper) |

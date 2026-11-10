@@ -61,7 +61,9 @@ For every task, follow these steps in order.
 - Server state via TanStack Query; API calls only in `src/services/`.
 - Shared types in `src/types/`.
 - Follow the tokens in `docs/06-ui-ux/design-system.md` (Manrope, blue primary, rounded cards).
-- M2 uses mock JSON data only. Do not connect real APIs until the visual design is approved.
+- The frontend uses the **real backend** (M3): every HTTP call goes through `src/services/apiClient.ts`, which reads `VITE_API_BASE_URL` (see `frontend/.env.example`). Pages never call `fetch` directly.
+- The M2 mock services in `src/services/mock/` are kept only for offline UI work behind `VITE_USE_MOCKS=true`. New features must work against the real backend; do not build a feature on the mock alone.
+- Backend and frontend change together: a new or changed endpoint needs the API contract, backend tests, and the matching frontend service function.
 
 ### Git
 - Branch from `develop`: `feature/<issue-number>-short-name`, `bugfix/<issue-number>-short-name`.

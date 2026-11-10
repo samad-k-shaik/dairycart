@@ -4,7 +4,8 @@
  * The mock services (M2) and the real HTTP client (M3) both throw this same class,
  * so pages handle errors one way and never need to know where data came from.
  */
-import type { ApiError, ApiErrorCode } from "@/types/api"
+// Relative ".ts" import so Node's test runner (apiError.test.ts) can load this file too.
+import type { ApiError, ApiErrorCode } from "../types/api.ts"
 
 export class ServiceError extends Error {
   /** HTTP status code, e.g. 404 or 409. */
