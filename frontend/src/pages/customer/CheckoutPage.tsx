@@ -1,7 +1,7 @@
 /**
  * Route: `/checkout` (FR-C5).
  * Name + phone form, order summary from the cart, and "Place order".
- * Sends ONLY product ids and quantities; the backend (mock in M2) calculates prices.
+ * Sends ONLY product ids and quantities; the backend calculates prices and the total.
  * Payment is cash on delivery: no address, shipping or payment fields (out of scope).
  */
 import { useRef, useState, type FormEvent } from "react"
@@ -17,6 +17,7 @@ import { lineSubtotal } from "@/hooks/cart/cartReducer"
 import { useCart } from "@/hooks/useCart"
 import { useCreateOrder } from "@/hooks/useCreateOrder"
 import { formatCurrency } from "@/lib/format"
+import { splitCheckoutErrors } from "@/lib/checkoutErrors"
 import { buildCreateOrderRequest } from "@/lib/orderRequest"
 import { validateName, validatePhone } from "@/lib/validation"
 import { ServiceError } from "@/services/serviceError"
@@ -40,8 +41,17 @@ function CheckoutPage() {
 
   const nameError = validateName(name)
   const phoneError = validatePhone(phone)
-  const showNameError = (touched.name || submitted) && nameError
-  const showPhoneError = (touched.phone || submitted) && phoneError
+  // Backend 422 errors for name/phone go next to the field; others stay in the error box.
+  const serverErrors = splitCheckoutErrors(
+    createOrder.error instanceof ServiceError ? createOrder.error.body.error.details : undefined,
+  )
+  const showNameError = ((touched.name || submitted) && nameError) || serverErrors.name
+  const showPhoneError = ((touched.phone || submitted) && phoneError) || serverErrors.phone
+
+  /** Typing again clears the old server error, so it does not stick to the new value. */
+  function clearServerError() {
+    if (createOrder.isError) createOrder.reset()
+  }
 
   if (lines.length === 0) {
     return <EmptyCheckout />
@@ -128,7 +138,10 @@ function CheckoutPage() {
               name="name"
               autoComplete="name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                setName(e.target.value)
+                clearServerError()
+              }}
               onBlur={() => setTouched((t) => ({ ...t, name: true }))}
               aria-invalid={showNameError ? true : undefined}
               aria-describedby={showNameError ? "checkout-name-error" : undefined}
@@ -137,7 +150,7 @@ function CheckoutPage() {
             />
             {showNameError && (
               <p id="checkout-name-error" className="text-small text-danger">
-                {nameError}
+                {showNameError}
               </p>
             )}
           </div>
@@ -153,7 +166,10 @@ function CheckoutPage() {
               autoComplete="tel-national"
               value={phone}
               // Keep digits only (spaces, dashes and letters are dropped), max 10.
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+              onChange={(e) => {
+                setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
+                clearServerError()
+              }}
               onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
               aria-invalid={showPhoneError ? true : undefined}
               aria-describedby={showPhoneError ? "checkout-phone-error" : "checkout-phone-hint"}
@@ -162,7 +178,7 @@ function CheckoutPage() {
             />
             {showPhoneError ? (
               <p id="checkout-phone-error" className="text-small text-danger">
-                {phoneError}
+                {showPhoneError}
               </p>
             ) : (
               <p id="checkout-phone-hint" className="text-small text-muted-foreground">
@@ -171,7 +187,7 @@ function CheckoutPage() {
             )}
           </div>
 
-          {createOrder.isError && <SubmitError error={createOrder.error} />}
+          {createOrder.isError && <SubmitError error={createOrder.error} otherDetails={serverErrors.other} />}
 
           <Button type="submit" size="lg" className="h-12 w-full" disabled={createOrder.isPending}>
             {createOrder.isPending ? (
@@ -189,15 +205,17 @@ function CheckoutPage() {
   )
 }
 
-/** Error from the order service, in plain words. */
-function SubmitError({ error }: { error: Error }) {
-  const details = error instanceof ServiceError ? (error.body.error.details ?? []) : []
+/** Error from the order service, in plain words. Field errors are shown at their field;
+ *  `otherDetails` are the problems that belong to no field (e.g. an item). */
+function SubmitError({ error, otherDetails }: { error: Error; otherDetails: { field: string; issue: string }[] }) {
+  const details = otherDetails
+  const onlyFieldErrors = error instanceof ServiceError && error.code === "VALIDATION_ERROR" && details.length === 0
   return (
     <div role="alert" className="flex gap-2 rounded-xl bg-red-50 p-3 text-small text-danger">
       <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
       <div>
         <p className="font-semibold">We could not place your order.</p>
-        <p>{userFacingMessage(error)}</p>
+        <p>{onlyFieldErrors ? "Please check the highlighted fields." : userFacingMessage(error)}</p>
         {details.length > 0 && (
           <ul className="mt-1 list-disc pl-4">
             {details.map((d) => (
