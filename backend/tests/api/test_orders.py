@@ -174,13 +174,18 @@ def test_existing_phone_reuses_the_customer(
 
 
 def test_price_change_does_not_alter_placed_orders(
-    client: TestClient, db_session: Session, cow_1l
+    client: TestClient, db_session: Session, cow_1l, admin_user
 ) -> None:
     order = client.post(
         URL, json=body(items=[{"product_id": cow_1l.product_id, "quantity": 2}])
     ).json()
 
-    client.patch(f"/api/v1/admin/products/{cow_1l.product_id}", json={"price": "75.00"})
+    changed = client.patch(
+        f"/api/v1/admin/products/{cow_1l.product_id}",
+        json={"price": "75.00"},
+        headers=factories.auth_header(admin_user),  # admin APIs need an admin (#89)
+    )
+    assert changed.json()["price"] == "75.00"  # the change really happened
 
     again = client.get(f"{URL}/{order['order_id']}").json()
     assert again["items"][0]["unit_price"] == "60.00"

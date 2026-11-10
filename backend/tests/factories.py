@@ -13,7 +13,8 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
-from app.models import Customer, Order, OrderItem, OrderStatus, Product
+from app.core.security import create_access_token, hash_password
+from app.models import Customer, Order, OrderItem, OrderStatus, Product, User, UserRole
 
 _sequence = itertools.count(1)
 
@@ -77,3 +78,35 @@ def make_order(
     db.add(order)
     db.flush()
     return order
+
+
+TEST_PASSWORD = "milk1234"
+
+
+def make_user(
+    db: Session,
+    *,
+    username: str | None = None,
+    email: str | None = None,
+    full_name: str = "Test User",
+    password: str = TEST_PASSWORD,
+    role: UserRole = UserRole.USER,
+) -> User:
+    """A user whose password is `password` (stored hashed, like real sign-ups)."""
+    n = next(_sequence)
+    user = User(
+        full_name=full_name,
+        email=email or f"user{n}@example.com",
+        username=username or f"user{n}",
+        password_hash=hash_password(password),
+        role=role,
+    )
+    db.add(user)
+    db.flush()
+    return user
+
+
+def auth_header(user: User) -> dict[str, str]:
+    """`Authorization: Bearer <token>` for this user, as the frontend sends it."""
+    token, _ = create_access_token(user.user_id, user.role.value)
+    return {"Authorization": f"Bearer {token}"}

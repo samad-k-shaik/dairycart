@@ -37,6 +37,8 @@ if not _test_db_name.endswith("_test"):
 # Force (not setdefault): the app reads DATABASE_URL on import (fail fast, M1-02).
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["APP_ENV"] = "test"
+# A fixed secret for tests only (#89), so tokens can be created and checked.
+os.environ.setdefault("JWT_SECRET_KEY", "test-only-secret-key-that-is-long-enough-123")
 
 # Imported after the environment is prepared (they read the settings on import).
 from alembic import command
@@ -46,8 +48,15 @@ from sqlalchemy import Engine, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
+from app.core import security
 from app.database.session import engine as app_engine
 from app.database.session import get_db
+from app.models import User, UserRole
+from tests import factories
+
+# bcrypt is slow on purpose (cost 12 ≈ 0.2 s per hash). Tests create many users, so they
+# use the minimum cost (4). The algorithm is the same; real code keeps BCRYPT_ROUNDS = 12.
+security.BCRYPT_ROUNDS = 4
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 
@@ -110,3 +119,23 @@ def client(db_session: Session) -> Iterator[TestClient]:
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+
+# ---- Logged-in users (#89) ----
+
+
+@pytest.fixture
+def admin_user(db_session: Session) -> User:
+    return factories.make_user(db_session, role=UserRole.ADMIN)
+
+
+@pytest.fixture
+def normal_user(db_session: Session) -> User:
+    return factories.make_user(db_session, role=UserRole.USER)
+
+
+@pytest.fixture
+def admin_client(client: TestClient, admin_user: User) -> TestClient:
+    """The same test client, but every request is sent as a logged-in ADMIN."""
+    client.headers.update(factories.auth_header(admin_user))
+    return client

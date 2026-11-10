@@ -17,6 +17,7 @@ generic message: a stack trace would reveal code, file paths and library version
 
 import logging
 from collections.abc import Sequence
+from typing import ClassVar
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -37,6 +38,8 @@ class DomainError(Exception):
 
     status_code: int = 400
     code: str = "BAD_REQUEST"
+    # Extra response headers, e.g. WWW-Authenticate for a 401.
+    headers: dict[str, str] | None = None
 
     def __init__(self, message: str, details: Sequence[ErrorDetail] = ()) -> None:
         super().__init__(message)
@@ -77,6 +80,29 @@ class ProductAlreadyExistsError(DomainError):
 
     status_code = 409
     code = "PRODUCT_ALREADY_EXISTS"
+
+
+class UserAlreadyExistsError(DomainError):
+    """Sign-up: the email address or the username is already used (#89)."""
+
+    status_code = 409
+    code = "USER_ALREADY_EXISTS"
+
+
+class UnauthorizedError(DomainError):
+    """Not logged in: no token, a wrong/expired token, or wrong login details (#89)."""
+
+    status_code = 401
+    code = "UNAUTHORIZED"
+    # The standard header that tells clients to send "Authorization: Bearer <token>".
+    headers: ClassVar[dict[str, str]] = {"WWW-Authenticate": "Bearer"}
+
+
+class ForbiddenError(DomainError):
+    """Logged in, but not allowed: e.g. a USER calling an admin API (#89)."""
+
+    status_code = 403
+    code = "FORBIDDEN"
 
 
 class ProductInUseError(DomainError):
@@ -146,7 +172,14 @@ def field_path(location: Sequence[str | int]) -> str:
 
 async def _domain_error(request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, DomainError)
-    return error_response(request, exc.status_code, exc.code, exc.message, exc.details)
+    return error_response(
+        request,
+        exc.status_code,
+        exc.code,
+        exc.message,
+        exc.details,
+        headers=exc.headers,
+    )
 
 
 async def _validation_error(request: Request, exc: Exception) -> JSONResponse:

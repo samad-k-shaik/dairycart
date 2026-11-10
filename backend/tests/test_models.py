@@ -55,12 +55,13 @@ def test_order_status_is_a_string_enum_with_the_five_states() -> None:
     assert OrderStatus.PLACED == "PLACED"
 
 
-def test_all_four_tables_are_registered_for_alembic() -> None:
+def test_all_tables_are_registered_for_alembic() -> None:
     assert set(Base.metadata.tables) == {
         "customers",
         "products",
         "orders",
         "order_items",
+        "users",  # #89
     }
 
 

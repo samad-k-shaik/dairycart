@@ -14,6 +14,14 @@ URL = "/api/v1/admin/products"
 NEW_PRODUCT = {"name": "Toned Milk", "size": "500 ml", "price": "28.50"}
 
 
+@pytest.fixture
+def client(client: TestClient, admin_user) -> TestClient:
+    """Every request in this module is sent as a logged-in ADMIN (#89). Access rules
+    themselves are tested in tests/api/test_auth.py."""
+    client.headers.update(factories.auth_header(admin_user))
+    return client
+
+
 def error_code(response) -> str:
     return response.json()["error"]["code"]
 

@@ -4,8 +4,8 @@
     PATCH  /api/v1/admin/products/{product_id}   → edit some fields     (200)
     DELETE /api/v1/admin/products/{product_id}   → delete if never ordered (204)
 
-Under /admin so they can be protected when authentication is added (ADR-003). Like every
-router, this one only handles HTTP; the rules live in services/product_service.py.
+ADMIN only (#89): 401 without a token, 403 for a USER. Like every router, this one only
+handles HTTP; the rules live in services/product_service.py.
 """
 
 from typing import Annotated
@@ -13,12 +13,21 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Path, Response, status
 from sqlalchemy.orm import Session
 
+from app.core.auth import require_admin
 from app.database.session import get_db
 from app.schemas.common import ErrorResponse
 from app.schemas.product import ProductCreate, ProductRead, ProductUpdate
 from app.services import product_service
 
-router = APIRouter(prefix="/admin/products", tags=["admin products"])
+router = APIRouter(
+    prefix="/admin/products",
+    tags=["admin products"],
+    dependencies=[Depends(require_admin)],  # ADMIN only (#89)
+    responses={
+        401: {"model": ErrorResponse, "description": "Not logged in"},
+        403: {"model": ErrorResponse, "description": "Not an administrator"},
+    },
+)
 
 DbSession = Annotated[Session, Depends(get_db)]
 ProductId = Annotated[int, Path(gt=0, description="A positive product id")]

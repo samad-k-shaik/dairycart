@@ -14,6 +14,14 @@ URL = "/api/v1/admin/orders"
 
 
 @pytest.fixture
+def client(client: TestClient, admin_user) -> TestClient:
+    """Every request in this module is sent as a logged-in ADMIN (#89). Access rules
+    themselves are tested in tests/api/test_auth.py."""
+    client.headers.update(factories.auth_header(admin_user))
+    return client
+
+
+@pytest.fixture
 def product(db_session: Session):
     return factories.make_product(db_session)
 

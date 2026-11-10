@@ -5,7 +5,8 @@ Values come from, in order of priority:
 2. a local ``backend/.env`` file (git-ignored; copy it from ``.env.example``);
 3. the defaults below (only for non-secret values).
 
-``DATABASE_URL`` has no default on purpose: the app must not start without it.
+``DATABASE_URL`` and ``JWT_SECRET_KEY`` have no default on purpose: the app must not start
+without them (a default secret would let anyone create valid login tokens).
 """
 
 from functools import lru_cache
@@ -36,6 +37,13 @@ class Settings(BaseSettings):
     cors_origins: Annotated[list[str], NoDecode] = Field(
         default=["http://localhost:5173"]
     )
+
+    # Signs and checks login tokens (JWT, #89). Anyone who knows it can create a token for
+    # ANY user, including an admin, so: long, random, secret, different per environment.
+    # Generate one with:  python -c "import secrets; print(secrets.token_urlsafe(48))"
+    jwt_secret_key: SecretStr = Field(min_length=32)
+    # How long a login lasts before the user must log in again.
+    jwt_expire_minutes: int = Field(default=60, ge=5, le=1440)
 
     log_level: LogLevel = "INFO"
     app_env: AppEnv = "local"

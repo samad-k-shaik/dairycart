@@ -15,7 +15,15 @@ from app import __version__
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.core.logging import RequestIdMiddleware, configure_logging
-from app.routers import admin_orders, admin_products, health, orders, products
+from app.routers import (
+    admin_orders,
+    admin_products,
+    admin_users,
+    auth,
+    health,
+    orders,
+    products,
+)
 
 API_PREFIX = "/api/v1"
 
@@ -41,7 +49,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
-    allow_headers=["Content-Type", "X-Request-ID"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
     expose_headers=["X-Request-ID", "Location"],
 )
 
@@ -54,3 +62,5 @@ app.include_router(products.router, prefix=API_PREFIX)
 app.include_router(orders.router, prefix=API_PREFIX)
 app.include_router(admin_orders.router, prefix=API_PREFIX)
 app.include_router(admin_products.router, prefix=API_PREFIX)
+app.include_router(auth.router, prefix=API_PREFIX)
+app.include_router(admin_users.router, prefix=API_PREFIX)
