@@ -60,6 +60,16 @@ class Settings(BaseSettings):
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
 
+    @field_validator("cors_origins")
+    @classmethod
+    def no_wildcard_origin(cls, value: list[str]) -> list[str]:
+        # "*" would let ANY website call this API from a visitor's browser (M3-08).
+        if "*" in value:
+            raise ValueError(
+                'must list the allowed frontend origins; "*" is not allowed'
+            )
+        return value
+
     @field_validator("log_level", mode="before")
     @classmethod
     def upper_case_level(cls, value: object) -> object:
