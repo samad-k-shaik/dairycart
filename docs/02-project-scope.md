@@ -41,7 +41,7 @@
 
 ## Simplifying assumptions
 
-1. **No login.** Customers enter name and phone at checkout. The phone number identifies the customer for order history. Admin pages are not protected in the POC. **This is acceptable only because the POC holds no real data and is not public.** Before any real use, authentication is mandatory (tracked as a future milestone).
+1. **Login only for accounts and the admin area (#89).** People can sign up (full name, email, username, password) and log in; the admin area needs an ADMIN account. **Ordering still needs no login:** customers enter name and phone at checkout, and the phone number finds their order history. **This is acceptable only because the POC holds no real data and is not public.** OTP login, password reset and email confirmation remain out of scope.
 2. **Single dairy, single city.** The catalogue starts with four seeded products; admins can add, edit and delete products from the admin Products page (A6, added by #86). A product that was already ordered cannot be deleted, only marked unavailable.
 3. **Cash on delivery** is assumed. No payments are recorded.
 4. **Quantity per line** is 1–20 units.

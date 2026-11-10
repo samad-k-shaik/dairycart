@@ -4,7 +4,7 @@
 - **Format:** JSON, UTF-8. Field names in `snake_case`.
 - **Money:** decimal strings with 2 places (e.g. `"60.00"`) so no precision is lost. Frontend formats them as ₹.
 - **Dates:** ISO 8601 UTC (e.g. `"2026-11-07T04:30:00Z"`).
-- **Auth:** none in the POC (see ADR-003). Admin endpoints live under `/admin` so they can be protected later.
+- **Auth (#89, ADR-013):** ordering needs no login. Every `/admin` endpoint needs an ADMIN token: `Authorization: Bearer <token>` from `POST /auth/login`. See *Accounts and login* below.
 - **Interactive docs:** FastAPI generates OpenAPI at `/docs` and `/openapi.json`. This document is the agreed contract; the OpenAPI output must match it.
 
 > **Key rule:** the backend calculates `unit_price`, `subtotal` and `total_amount` from database prices. Clients send only `product_id` and `quantity`. Any price or total fields sent by a client are rejected (unknown fields → 422).
@@ -24,6 +24,12 @@
 | POST | `/admin/products` | Add a product *(#86)* | 201 |
 | PATCH | `/admin/products/{id}` | Edit a product *(#86)* | 200 |
 | DELETE | `/admin/products/{id}` | Delete a product that was never ordered *(#86)* | 204 |
+| POST | `/auth/register` | Sign up (always `USER`) *(#89)* | 201 |
+| POST | `/auth/login` | Log in → token *(#89)* | 200 |
+| GET | `/auth/me` | The logged-in user *(#89)* | 200 |
+| GET | `/admin/users` | All registered users *(#89)* | 200 |
+
+All `/admin/…` rows need an **ADMIN** token (401 without one, 403 for a `USER`).
 
 ---
 
@@ -202,7 +208,7 @@ Allowed transitions: see [functional requirements](../03-requirements/functional
 
 ## Admin product management (#86)
 
-Admins can add, edit and delete products (FR-A6). Like every admin endpoint, these are not protected in the POC (ADR-003).
+Admins can add, edit and delete products (FR-A6). Like every admin endpoint, these need an ADMIN token (#89).
 
 **Field rules** (the same for add and edit; they match the `products` table):
 
@@ -265,6 +271,71 @@ Only a product that was **never ordered** can be deleted (BR-7). An ordered prod
 
 ---
 
+## Accounts and login (#89)
+
+Tokens are JWTs (HS256) that expire after `JWT_EXPIRE_MINUTES` (default 60). Send them as `Authorization: Bearer <access_token>`. Logout has no endpoint: the client deletes its token.
+
+### POST /api/v1/auth/register
+
+**Request** (no `role`: every new account is `USER`; unknown fields → 422)
+```json
+{ "full_name": "Ravi Kumar", "email": "ravi@example.com", "username": "ravi_k", "password": "milk1234" }
+```
+
+| Field | Rule |
+|---|---|
+| `full_name` | 2–100 characters after trimming |
+| `email` | `something@something.something`, max 254; stored in lower case |
+| `username` | 3–30 of letters, digits, `.`, `_`, `-`; stored in lower case |
+| `password` | 8+ characters and at most 72 bytes (bcrypt's limit), at least one letter and one number |
+
+**201 Created**
+```json
+{ "user_id": 7, "full_name": "Ravi Kumar", "email": "ravi@example.com", "username": "ravi_k", "role": "USER", "created_at": "2026-11-10T10:00:00Z" }
+```
+
+| Status | Code | When |
+|---|---|---|
+| 409 | `USER_ALREADY_EXISTS` | Email and/or username already used (any letter case). `details` names the field(s): `email`, `username` |
+| 422 | `VALIDATION_ERROR` | A field breaks the rules above, or `role` was sent |
+
+### POST /api/v1/auth/login
+
+**Request** (`login` is the username **or** the email)
+```json
+{ "login": "ravi_k", "password": "milk1234" }
+```
+
+**200 OK**
+```json
+{ "access_token": "eyJhbGciOiJIUzI1NiIs...", "token_type": "bearer", "expires_in": 3600, "user": { "user_id": 7, "full_name": "Ravi Kumar", "email": "ravi@example.com", "username": "ravi_k", "role": "USER", "created_at": "2026-11-10T10:00:00Z" } }
+```
+
+| Status | Code | When |
+|---|---|---|
+| 401 | `UNAUTHORIZED` | "Invalid username/email or password." The same message for an unknown user and a wrong password |
+| 422 | `VALIDATION_ERROR` | `login` or `password` missing |
+
+### GET /api/v1/auth/me
+
+Needs a token. **200 OK**: the user (same shape as the register response). **401 `UNAUTHORIZED`**: no token, or an invalid/expired one.
+
+### GET /api/v1/admin/users
+
+ADMIN only. **200 OK**: every user, oldest first (same shape as above, never password hashes).
+
+### Who may call what
+
+| Endpoints | Access |
+|---|---|
+| `/health`, `/products…`, `/orders…`, `/auth/register`, `/auth/login` | Anyone (ordering needs no account) |
+| `/auth/me` | Any logged-in user |
+| Every `/admin/…` endpoint (orders, products, users) | **ADMIN only**: no/invalid token → `401 UNAUTHORIZED` (header `WWW-Authenticate: Bearer`); a `USER` token → `403 FORBIDDEN` "Only administrators can do this." |
+
+The role is read from the database on every request, so an admin who is demoted loses access at once. Admins are created only with `python -m app.scripts.create_admin` (see `backend/README.md`).
+
+---
+
 ## Error format
 
 Every non-2xx response uses one shape:
@@ -302,11 +373,13 @@ Errors that do not come from a specific endpoint use the same shape: an unknown 
 | Code | Meaning in this API |
 |---|---|
 | 200 | Success |
-| 201 | Order or product created |
+| 201 | Order, product or user created |
 | 204 | Deleted (no body) |
 | 400 | Request is well-formed but breaks a simple rule (duplicate product) |
+| 401 | Not logged in, invalid/expired token, or wrong login details |
+| 403 | Logged in, but not allowed (a `USER` on an admin endpoint) |
 | 404 | Resource not found |
-| 409 | Conflicts with current state (unavailable product, illegal transition, duplicate product name + size, deleting an ordered product) |
+| 409 | Conflicts with current state (unavailable product, illegal transition, duplicate product name + size, deleting an ordered product, email/username already registered) |
 | 422 | Schema validation failed |
 | 500 | Unexpected server error (details only in logs) |
 | 503 | Dependency (database) unavailable |

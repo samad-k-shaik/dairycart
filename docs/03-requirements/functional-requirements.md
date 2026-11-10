@@ -26,6 +26,19 @@ Priority uses **MoSCoW**: Must / Should / Could. All "Must" items are required f
 | FR-A5 | View products | Must | Table of all products including unavailable ones, with price and availability. |
 | FR-A6 | Manage products *(#86)* | Must | Admin can add a product (name, size, price, availability), edit any of those fields, and delete a product. Delete asks for confirmation and is refused for a product that was already ordered (BR-7); the admin is offered "Mark unavailable" instead. Field rules match the API contract. |
 
+## Accounts (#89)
+
+| ID | Requirement | Priority | Acceptance criteria |
+|---|---|---|---|
+| FR-U1 | Sign up | Must | Full name (2–100), email (valid format), username (3–30: letters, digits, `.`, `_`, `-`), password (8–72 bytes, at least one letter and one number) and confirm password (must match). Duplicate email or username (any letter case) is rejected at that field. New accounts are always `USER`. |
+| FR-U2 | Log in | Must | Username **or** email + password. Wrong details show "Invalid username/email or password." (the same for unknown user and wrong password). A USER goes to the User Dashboard (`/account`), an ADMIN to the Admin Dashboard (`/admin`), or back to the page that asked for the login. |
+| FR-U3 | User Dashboard | Must | `/account` shows full name, username, email, role and member-since date. Logged-out visitors are sent to the login page. |
+| FR-U4 | Admin only | Must | Every `/admin` page and `/api/v1/admin/*` API needs an ADMIN login: not logged in → login page / 401; logged in as USER → "Admins only" / 403. |
+| FR-U5 | Admin users list | Must | `/admin/users` lists every user (name, username, email, role, joined date). Never shows passwords or hashes. |
+| FR-U6 | Log out | Must | Log out (account page, admin sidebar/top bar) removes the session and cached data; protected pages need a new login. The session also ends when the token expires (60 min). |
+
+Admins are created only with `python -m app.scripts.create_admin` (see `backend/README.md`).
+
 ## Order status lifecycle
 
 ```mermaid
@@ -75,3 +88,7 @@ stateDiagram-v2
 | FR-A4 | `PATCH /api/v1/admin/orders/{id}/status` | Order management |
 | FR-A5 | `GET /api/v1/products?include_unavailable=true` | Admin products |
 | FR-A6 | `POST /api/v1/admin/products`, `PATCH`/`DELETE /api/v1/admin/products/{id}` | Admin products (form panel, delete dialog) |
+| FR-U1 | `POST /api/v1/auth/register` | Sign up |
+| FR-U2 | `POST /api/v1/auth/login` | Log in |
+| FR-U3 | `GET /api/v1/auth/me` | User Dashboard |
+| FR-U4/U5 | `GET /api/v1/admin/users` (every admin API needs an ADMIN token) | Admin users |

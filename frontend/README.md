@@ -163,6 +163,21 @@ Every data screen uses the same three building blocks:
 - **Dev-only mock switch (only with `VITE_USE_MOCKS=true`):** a "Mock: …" button at the bottom-left (development only) sets the mock services to *Normal*, *Slow (3 s)*, *Fail every call (500)* or *Empty lists*, and can crash the current page to test the fallback. The mode is stored in `localStorage` (`dairycart-mock-mode-v1`). It is not included in production builds.
 - With "Fail every call", the error state appears after about 4–7 s because queries retry 5xx errors twice (see `lib/queryClient.ts`).
 
+## Sign-up, login and roles (#89)
+
+| Route | Page | Who |
+|---|---|---|
+| `/signup` | `pages/auth/SignUpPage.tsx` | Anyone |
+| `/login` | `pages/auth/LoginPage.tsx` (username or email + password) | Anyone |
+| `/account` | `pages/customer/UserDashboardPage.tsx` (the User Dashboard) | Logged-in users |
+| `/admin/*` | Dashboard, Orders, Products, `pages/admin/UsersPage.tsx` | **ADMIN only** |
+
+- **Session:** `lib/authSession.ts` (pure rules, tested in `auth.test.ts`) and `lib/sessionStore.ts` keep the token, its expiry and the user in `localStorage` (`dairycart-session-v1`). `apiClient.ts` sends `Authorization: Bearer <token>` on every call; a `401` clears the session.
+- **`AuthProvider` / `useAuth()`** (`hooks/auth/`): `user`, `isAdmin`, `login()`, `logout()`. It checks the saved session with `GET /auth/me` on start, follows logins/logouts in other tabs, and logs out when the token expires. Logout also clears every cached query, so the next person doesn't see the previous user's data.
+- **`RequireAuth`** (`components/auth/RequireAuth.tsx`) guards pages: not logged in → `/login?next=…` (back to that page afterwards); a USER on `/admin` → "Admins only". This only hides pages; the **backend** is the real protection (401/403).
+- After login: `?next=` if it is a safe in-app path (never another website), else `/admin` for an ADMIN and `/account` for a USER (`pathAfterLogin` in `lib/authValidation.ts`).
+- Ordering needs no account; checkout is unchanged.
+
 ## Styling and design tokens
 
 - **Tailwind CSS v4** via the `@tailwindcss/vite` plugin. There is no `tailwind.config.js`: configuration lives in `src/index.css`.

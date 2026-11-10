@@ -12,8 +12,8 @@ FastAPI application (Python 3.12). Scaffolded in M1-01 (#9): a runnable app with
 | 2 | `python3.12 -m venv .venv` | `py -3.12 -m venv .venv` |
 | 3 | `source .venv/bin/activate` | `.venv\Scripts\Activate.ps1` |
 | 4 | `pip install -r requirements.txt -r requirements-dev.txt` | same |
-| 5 | `cp .env.example .env`, start PostgreSQL (see *Local database*) | `copy .env.example .env`, same |
-| 6 | `alembic upgrade head` (tables), then `python -m app.scripts.seed` (products) | same |
+| 5 | `cp .env.example .env`, put your own random `JWT_SECRET_KEY` in it (see *Login and admin accounts*), start PostgreSQL (see *Local database*) | `copy .env.example .env`, same |
+| 6 | `alembic upgrade head` (tables), then `python -m app.scripts.seed` (products), then create an admin: `python -m app.scripts.create_admin --username admin --email admin@example.com --full-name "Dairy Admin"` | same |
 | 7 | `uvicorn app.main:app --reload --port 8000`, then open http://localhost:8000/docs | same |
 | 8 | Run the tests: `pytest` | same |
 
@@ -145,6 +145,39 @@ What makes the order code safe:
 ## CORS (M3-08)
 
 The browser only lets the frontend (`http://localhost:5173`, another origin) call this API because `CORSMiddleware` allows the origins listed in **`CORS_ORIGINS`** (`backend/.env`, comma-separated). `*` is refused when the settings load. A page opened from any other origin, even `http://127.0.0.1:5173`, cannot read the responses. Add an origin there if you open the frontend from another address.
+
+## Login and admin accounts (#89)
+
+| Endpoint | Does | Errors |
+|---|---|---|
+| `POST /api/v1/auth/register` | Sign up → `201`, always role `USER` | `409 USER_ALREADY_EXISTS`, `422` |
+| `POST /api/v1/auth/login` | Username or email + password → `access_token` (JWT) | `401` (one message for unknown user and wrong password) |
+| `GET /api/v1/auth/me` | The logged-in user | `401` |
+| `GET /api/v1/admin/users` | Every user (ADMIN only) | `401`, `403` |
+
+**Every `/api/v1/admin/*` endpoint needs an ADMIN token** (orders, products and users): `401` without one, `403` for a `USER`. In `/docs`, log in with `POST /auth/login`, copy `access_token`, click **Authorize** and paste it.
+
+**Create an admin** (the API never gives the ADMIN role):
+
+```bash
+python -m app.scripts.create_admin --username admin --email admin@example.com --full-name "Dairy Admin"
+#   asks for the password twice (not shown, not saved in your shell history)
+python -m app.scripts.create_admin --promote ravi_k     # make an existing user an admin
+```
+
+**`JWT_SECRET_KEY`** (required, at least 32 characters) signs the tokens. Anyone who knows it can create a token for any user, including an admin, so: random, secret, never committed, different per environment. Make one with:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+How it works (`app/core/security.py`, `app/core/auth.py`):
+
+- **Passwords** are stored as **bcrypt** hashes (salted, deliberately slow, cost 12). Login hashes the typed password and compares. An unknown username still runs one bcrypt check, so response times don't reveal which accounts exist.
+- **Tokens** are signed JWTs with the user id (`sub`) and an expiry (`exp`). Changing any character breaks the signature; only HS256 is accepted (so an unsigned `"alg": "none"` token is refused).
+- **`get_current_user`** reads `Authorization: Bearer …`, checks the token, and loads the user **from the database**. **`require_admin`** then checks the role. A demoted admin loses access at once.
+- **Logout** happens in the browser (the token is deleted). The server keeps no sessions, so a copied token stays valid until it expires (`JWT_EXPIRE_MINUTES`, default 60).
+- Tests use bcrypt cost 4 (faster) and a fixed test secret (`tests/conftest.py`); `admin_client` sends requests as a logged-in admin.
 
 ## Tests (M1-11)
 

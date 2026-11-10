@@ -3,10 +3,11 @@
  * The header is written once here; each page renders inside <Outlet />.
  */
 import { NavLink, Outlet } from "react-router"
-import { House, ReceiptText, ShoppingCart } from "lucide-react"
+import { House, LogIn, ReceiptText, ShoppingCart, UserRound } from "lucide-react"
 
 import { DevCrashProbe } from "@/components/common/DevMockSwitch"
 import { Logo } from "@/components/common/Logo"
+import { useAuth } from "@/hooks/useAuth"
 import { useCart } from "@/hooks/useCart"
 import { cn } from "@/lib/utils"
 
@@ -23,6 +24,7 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 function CustomerLayout() {
   // Re-renders whenever the cart changes, so the badge updates immediately.
   const { itemCount } = useCart()
+  const { user } = useAuth()
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -57,6 +59,18 @@ function CustomerLayout() {
                 )}
               </span>
             </NavLink>
+            {/* #89: "Account" when logged in, otherwise "Log in". */}
+            {user ? (
+              <NavLink to="/account" className={navLinkClass} aria-label={`Account, ${user.username}`}>
+                <UserRound className="size-5" aria-hidden="true" />
+                <span className="hidden sm:inline">Account</span>
+              </NavLink>
+            ) : (
+              <NavLink to="/login" className={navLinkClass}>
+                <LogIn className="size-5" aria-hidden="true" />
+                <span className="sr-only sm:not-sr-only">Log in</span>
+              </NavLink>
+            )}
           </nav>
         </div>
       </header>

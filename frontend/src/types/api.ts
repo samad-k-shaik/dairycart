@@ -15,6 +15,9 @@ export type ApiErrorCode =
   | "INTERNAL_ERROR" // 500: unexpected server error
   | "METHOD_NOT_ALLOWED" // 405: wrong HTTP method
   | "NETWORK_ERROR" // frontend only: no answer at all (server down, offline, CORS)
+  | "UNAUTHORIZED" // 401: not logged in, session expired, or wrong login details (#89)
+  | "FORBIDDEN" // 403: logged in, but not allowed (e.g. a USER on an admin API) (#89)
+  | "USER_ALREADY_EXISTS" // 409: sign-up with an email or username that is taken (#89)
 
 export type ApiErrorDetail = {
   field: string

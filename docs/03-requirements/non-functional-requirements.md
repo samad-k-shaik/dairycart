@@ -13,7 +13,7 @@ Targets are sized for a POC: meaningful enough to learn from, small enough to ac
 | NFR-7 | Security | No secrets in Git; config via environment variables; Secret Manager in GCP | PR review, secret scanning |
 | NFR-8 | Security | All input validated with Pydantic; SQL only via SQLAlchemy (parameterized) | Code review, tests |
 | NFR-9 | Security | CORS restricted to known frontend origins | Config review |
-| NFR-10 | Security (known gap) | No authentication in POC. Admin routes are unprotected. Must not hold real customer data or be advertised publicly | Documented risk; future milestone |
+| NFR-10 | Security | Admin pages and every `/api/v1/admin/*` API need an ADMIN login (#89, ADR-013); passwords stored as bcrypt hashes; JWT secret only in the environment. Remaining gaps: ordering and order history by phone have no login; no login rate limiting, password reset or email confirmation. Must not hold real customer data or be advertised publicly | `backend/tests/api/test_auth.py` (401/403 for every admin API) |
 | NFR-11 | Maintainability | Layered backend (router/service/repository), typed code, linting in CI | CI |
 | NFR-12 | Testability | Backend business logic coverage ≥ 70 % by end of M4 | pytest-cov in CI |
 | NFR-13 | Observability | Structured JSON logs with request id, method, path, status, duration | Cloud Logging in M6 |

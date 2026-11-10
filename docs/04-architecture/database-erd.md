@@ -37,7 +37,18 @@ erDiagram
         numeric unit_price
         numeric subtotal
     }
+    USERS {
+        int user_id PK
+        varchar full_name
+        varchar email UK
+        varchar username UK
+        varchar password_hash
+        varchar role
+        timestamptz created_at
+    }
 ```
+
+`USERS` (#89) has no relationship to the other tables: ordering does not need an account (guest checkout, customer found by phone).
 
 ## Tables
 
@@ -94,6 +105,18 @@ erDiagram
 
 `ORDERS` ↔ `PRODUCTS` is a **many-to-many** relationship resolved by the junction table `ORDER_ITEMS`.
 
+### USERS (#89)
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| user_id | SERIAL | PK | |
+| full_name | VARCHAR(100) | NOT NULL | 2–100 characters |
+| email | VARCHAR(254) | NOT NULL, UNIQUE | Stored in lower case |
+| username | VARCHAR(30) | NOT NULL, UNIQUE | Stored in lower case; letters, digits, `.`, `_`, `-` |
+| password_hash | VARCHAR(100) | NOT NULL | bcrypt hash (60 chars). **Never** the password |
+| role | VARCHAR(10) | NOT NULL, DEFAULT `'USER'`, CHECK in (`USER`, `ADMIN`) | `ADMIN` only via `python -m app.scripts.create_admin` |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
+
 ## Normalization notes
 
 - **1NF:** every column holds a single value; order lines are rows in `order_items`, not a list inside `orders`.
@@ -135,6 +158,9 @@ Every constraint has an explicit, readable name (set by the naming convention in
 | order_items | `ck_order_items_unit_price_positive` | unit_price > 0 |
 | order_items | `ck_order_items_subtotal_non_negative` | subtotal ≥ 0 |
 | order_items | `uq_order_items_order_product` | (order_id, product_id) is unique |
+| users | `uq_users_email` | email is unique |
+| users | `uq_users_username` | username is unique |
+| users | `ck_users_role_allowed` | role is `USER` or `ADMIN` |
 
 Primary keys use PostgreSQL's default names (`customers_pkey`, …).
 

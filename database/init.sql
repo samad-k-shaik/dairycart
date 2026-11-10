@@ -59,3 +59,18 @@ CREATE TABLE order_items (
 CREATE INDEX idx_orders_customer_id ON orders(customer_id);
 CREATE INDEX idx_orders_status      ON orders(status);
 CREATE INDEX idx_order_items_order  ON order_items(order_id);
+
+-- Accounts (#89, migration add_users_table). Not linked to customers: ordering works
+-- without an account (guest checkout). Email and username are stored in lower case.
+CREATE TABLE users (
+    user_id        SERIAL        PRIMARY KEY,
+    full_name      VARCHAR(100)  NOT NULL,
+    email          VARCHAR(254)  NOT NULL,
+    username       VARCHAR(30)   NOT NULL,
+    password_hash  VARCHAR(100)  NOT NULL,   -- bcrypt hash, never the password
+    role           VARCHAR(10)   NOT NULL DEFAULT 'USER',
+    created_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_users_email UNIQUE (email),
+    CONSTRAINT uq_users_username UNIQUE (username),
+    CONSTRAINT ck_users_role_allowed CHECK (role IN ('USER','ADMIN'))
+);

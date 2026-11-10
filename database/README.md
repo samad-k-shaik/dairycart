@@ -47,4 +47,4 @@ Run from `backend/` with the virtual environment active. The database comes from
 
 **Never edit a migration that has been merged.** Other databases have already run it; they would not run it again, so they would silently differ. Write a new migration instead.
 
-The first migration, `initial schema`, creates `customers`, `products`, `orders` and `order_items` with all constraints and indexes, and is identical to `init.sql` (compared on PostgreSQL 16).
+The first migration, `initial schema`, creates `customers`, `products`, `orders` and `order_items` with all constraints and indexes, and is identical to `init.sql` (compared on PostgreSQL 16). The second, `add users table` (#89), adds `users` for sign-up and login.
