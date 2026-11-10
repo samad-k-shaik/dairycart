@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Buffalo milk bottle">
+  <!-- DairyCart original illustration (see ../README.md) -->
+  <ellipse cx="100" cy="182" rx="46" ry="7" fill="#0f172a" opacity="0.08"/>
+  <rect x="80" y="20" width="40" height="18" rx="5" fill="#0f766e"/>
+  <rect x="84" y="36" width="32" height="14" fill="#e2e8f0"/>
+  <path d="M84 50 C84 66 62 70 62 92 L62 168 Q62 180 74 180 L126 180 Q138 180 138 168 L138 92 C138 70 116 66 116 50 Z" fill="#fffdf7" stroke="#cbd5e1" stroke-width="3"/>
+  <rect x="62" y="104" width="76" height="46" fill="#ccfbf1"/>
+  <path d="M76 122 q8 -10 24 -4 q16 -6 24 4 q-6 0 -10 6 q-14 -6 -28 0 q-4 -6 -10 -6 Z" fill="#0f766e"/>
+  <circle cx="100" cy="134" r="7" fill="#0f766e"/>
+  <rect x="62" y="104" width="76" height="46" fill="none" stroke="#0f766e" stroke-width="2"/>
+  <path d="M72 64 Q70 80 70 96" stroke="#ffffff" stroke-width="5" stroke-linecap="round" opacity="0.9"/>
+  <path d="M74 66 Q72 80 72 160" stroke="#e2e8f0" stroke-width="3" stroke-linecap="round" fill="none"/>
+</svg>

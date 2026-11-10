@@ -23,7 +23,8 @@ Priority uses **MoSCoW**: Must / Should / Could. All "Must" items are required f
 | FR-A2 | List orders | Must | Table of all orders: id, customer name, phone, date, total, status. Newest first. Filter by status. Paginated (default 20 per page). |
 | FR-A3 | Order details | Must | Shows customer, items (product, size, qty, unit price, subtotal), total, status, date. |
 | FR-A4 | Update status | Must | Admin can change status only along allowed transitions (below). Invalid transitions are rejected with a clear message. |
-| FR-A5 | View products | Must | Table of all products including unavailable ones, with price and availability. Read-only. |
+| FR-A5 | View products | Must | Table of all products including unavailable ones, with price and availability. |
+| FR-A6 | Manage products *(#86)* | Must | Admin can add a product (name, size, price, availability), edit any of those fields, and delete a product. Delete asks for confirmation and is refused for a product that was already ordered (BR-7); the admin is offered "Mark unavailable" instead. Field rules match the API contract. |
 
 ## Order status lifecycle
 
@@ -57,6 +58,8 @@ stateDiagram-v2
 | BR-4 | The same product cannot appear twice in one order; the frontend merges lines, the backend rejects duplicates. |
 | BR-5 | A customer is found by phone; if not found, created with the given name. |
 | BR-6 | Creating an order and its items happens in a single database transaction. |
+| BR-7 | A product that appears in any order cannot be deleted; it can only be marked unavailable (old orders must still show what was bought). |
+| BR-8 | Product name + size is unique, ignoring upper/lower case. |
 
 ## Traceability
 
@@ -71,3 +74,4 @@ stateDiagram-v2
 | FR-A3 | `GET /api/v1/orders/{id}` | Order management (details panel) |
 | FR-A4 | `PATCH /api/v1/admin/orders/{id}/status` | Order management |
 | FR-A5 | `GET /api/v1/products?include_unavailable=true` | Admin products |
+| FR-A6 | `POST /api/v1/admin/products`, `PATCH`/`DELETE /api/v1/admin/products/{id}` | Admin products (form panel, delete dialog) |

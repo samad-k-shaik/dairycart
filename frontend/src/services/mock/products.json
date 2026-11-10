@@ -1,0 +1,6 @@
+[
+  { "product_id": 1, "name": "Cow Milk", "size": "500 ml", "price": "30.00", "is_available": true },
+  { "product_id": 2, "name": "Cow Milk", "size": "1 Litre", "price": "60.00", "is_available": true },
+  { "product_id": 3, "name": "Buffalo Milk", "size": "500 ml", "price": "35.00", "is_available": true },
+  { "product_id": 4, "name": "Buffalo Milk", "size": "1 Litre", "price": "70.00", "is_available": true }
+]

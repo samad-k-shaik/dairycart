@@ -21,6 +21,9 @@
 | GET | `/orders?phone=` | Customer order history *(proposed, ADR-005)* | 200 |
 | GET | `/admin/orders` | All orders (filter, paginate) | 200 |
 | PATCH | `/admin/orders/{id}/status` | Update order status | 200 |
+| POST | `/admin/products` | Add a product *(#86)* | 201 |
+| PATCH | `/admin/products/{id}` | Edit a product *(#86)* | 200 |
+| DELETE | `/admin/products/{id}` | Delete a product that was never ordered *(#86)* | 204 |
 
 ---
 
@@ -197,6 +200,71 @@ Allowed transitions: see [functional requirements](../03-requirements/functional
 
 ---
 
+## Admin product management (#86)
+
+Admins can add, edit and delete products (FR-A6). Like every admin endpoint, these are not protected in the POC (ADR-003).
+
+**Field rules** (the same for add and edit; they match the `products` table):
+
+| Field | Rule |
+|---|---|
+| `name` | 2–100 characters after trimming spaces |
+| `size` | 1–20 characters after trimming spaces, e.g. `"500 ml"` |
+| `price` | **String** with up to 2 decimals, more than 0, up to `"99999999.99"`. A JSON number (`45.5`) is rejected: money is always a string. |
+| `is_available` | `true` / `false`. Optional on add (default `true`). |
+
+Name + size must be unique, **ignoring upper/lower case** (BR-8) ("cow milk" / "1 litre" counts as the same as "Cow Milk" / "1 Litre"). Unknown fields (e.g. `product_id`) → 422.
+
+### POST /api/v1/admin/products
+
+**Request**
+```json
+{ "name": "Toned Milk", "size": "500 ml", "price": "28.50", "is_available": true }
+```
+
+**201 Created** – the new product, same shape as `GET /products/{id}`:
+```json
+{ "product_id": 5, "name": "Toned Milk", "size": "500 ml", "price": "28.50", "is_available": true }
+```
+
+| Status | Code | When |
+|---|---|---|
+| 409 | `PRODUCT_ALREADY_EXISTS` | Another product has the same name and size |
+| 422 | `VALIDATION_ERROR` | A field breaks the rules above, a field is missing, or an unknown field is sent |
+
+### PATCH /api/v1/admin/products/{id}
+
+Send **only the fields that change**; at least one. `null` is not allowed.
+
+**Request**
+```json
+{ "price": "65.00", "is_available": false }
+```
+
+**200 OK** – the updated product (same shape as `GET /products/{id}`).
+
+Changing a price does **not** change orders that were already placed: each order item keeps its own `unit_price` (BR-1).
+
+| Status | Code | When |
+|---|---|---|
+| 404 | `NOT_FOUND` | No such product |
+| 409 | `PRODUCT_ALREADY_EXISTS` | The new name + size belongs to another product |
+| 422 | `VALIDATION_ERROR` | Empty body `{}`, a `null` value, a field breaks the rules, or the id is not a positive integer |
+
+### DELETE /api/v1/admin/products/{id}
+
+**204 No Content** – the product was deleted (no response body).
+
+Only a product that was **never ordered** can be deleted (BR-7). An ordered product must stay so old orders still show what was bought; the admin marks it unavailable instead (`PATCH` with `{"is_available": false}`), which hides it from customers.
+
+| Status | Code | When |
+|---|---|---|
+| 404 | `NOT_FOUND` | No such product |
+| 409 | `PRODUCT_IN_USE` | The product appears in at least one order. Message: "This product has already been ordered, so it cannot be deleted. Mark it unavailable instead." |
+| 422 | `VALIDATION_ERROR` | The id is not a positive integer |
+
+---
+
 ## Error format
 
 Every non-2xx response uses one shape:
@@ -227,15 +295,18 @@ Validation example (422):
 }
 ```
 
+Errors that do not come from a specific endpoint use the same shape: an unknown URL returns `404 NOT_FOUND`, a wrong HTTP method returns `405 METHOD_NOT_ALLOWED` (with an `Allow` header), and any unexpected server error returns `500 INTERNAL_ERROR` with a generic message (details only in the logs, never a stack trace). `details` is always a list (empty when there is nothing field-specific). Validation `details` never echo the submitted value.
+
 ## Status code reference
 
 | Code | Meaning in this API |
 |---|---|
 | 200 | Success |
-| 201 | Order created |
+| 201 | Order or product created |
+| 204 | Deleted (no body) |
 | 400 | Request is well-formed but breaks a simple rule (duplicate product) |
 | 404 | Resource not found |
-| 409 | Conflicts with current state (unavailable product, illegal transition) |
+| 409 | Conflicts with current state (unavailable product, illegal transition, duplicate product name + size, deleting an ordered product) |
 | 422 | Schema validation failed |
 | 500 | Unexpected server error (details only in logs) |
 | 503 | Dependency (database) unavailable |
