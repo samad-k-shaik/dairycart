@@ -162,6 +162,12 @@ Every data screen uses the same three building blocks:
 - **Dev-only mock switch (only with `VITE_USE_MOCKS=true`):** a "Mock: …" button at the bottom-left (development only) sets the mock services to *Normal*, *Slow (3 s)*, *Fail every call (500)* or *Empty lists*, and can crash the current page to test the fallback. The mode is stored in `localStorage` (`dairycart-mock-mode-v1`). It is not included in production builds.
 - With "Fail every call", the error state appears after about 4–7 s because queries retry 5xx errors twice (see `lib/queryClient.ts`).
 
+## Stock (#92)
+
+- **Admin:** Products table has a **Stock** column (0 in red, "Out of stock"); the Add/Edit form has a **Stock (bottles)** field (whole number 0–100000, `validateStock` in `lib/productForm.ts`). Data: `getAdminProducts()` → `GET /admin/products` (ADMIN only), type `AdminProduct`.
+- **Shop:** customers never get the number, only `in_stock`. Out-of-stock products show "Out of stock" on the card and details page, with no add-to-cart button.
+- **Checkout:** if stock ran out after the cart was filled, the backend's `INSUFFICIENT_STOCK` message ("Only a limited quantity of … is left") is shown.
+
 ## Sign-up, login and roles (#89)
 
 | Route | Page | Who |

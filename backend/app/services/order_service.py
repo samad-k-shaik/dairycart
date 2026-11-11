@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.errors import (
     DuplicateProductError,
+    InsufficientStockError,
     InvalidStatusTransitionError,
     NotFoundError,
     ProductUnavailableError,
@@ -44,8 +45,10 @@ def create_order(db: Session, data: OrderCreate, user: User) -> Order:
 
     1. The same product twice → 400 DUPLICATE_PRODUCT (BR-4)
     2. Unknown product → 404, unavailable product → 409; the whole order fails (BR-3)
-    3. Find the customer by phone, or create them (BR-5)
-    4. unit_price = the product's price NOW (snapshot, BR-1); subtotal and total (BR-2)
+    3. More than the stock → 409 INSUFFICIENT_STOCK (#92)
+    4. Find the customer by phone, or create them (BR-5)
+    5. unit_price = the product's price NOW (snapshot, BR-1); subtotal and total (BR-2)
+    6. Reduce each product's stock by the ordered quantity (#92)
     """
     # Read the id now, before building the order: reading it later (after an earlier
     # commit expired `user`) would make SQLAlchemy save half-built order lines too early.
@@ -60,22 +63,36 @@ def create_order(db: Session, data: OrderCreate, user: User) -> Order:
             )
         seen.add(product_id)
 
-    # All products in ONE query, not one query per item.
-    products = ProductRepository(db).get_many(product_ids)
-    for index, product_id in enumerate(product_ids):
-        product = products.get(product_id)
-        if product is None:
-            raise NotFoundError(
-                f"Product {product_id} was not found.",
-                details=[ErrorDetail(field=_item_field(index), issue="not found")],
-            )
-        if not product.is_available:
-            raise ProductUnavailableError(
-                f"Product '{product.name} {product.size}' is currently unavailable.",
-                details=[ErrorDetail(field=_item_field(index), issue="unavailable")],
-            )
-
     try:
+        # All products in ONE query, LOCKED until commit (#92): another order for the
+        # same products waits here, so the stock check below cannot be outdated.
+        products = ProductRepository(db).get_many_for_update(product_ids)
+        for index, requested in enumerate(data.items):
+            product = products.get(requested.product_id)
+            if product is None:
+                raise NotFoundError(
+                    f"Product {requested.product_id} was not found.",
+                    details=[ErrorDetail(field=_item_field(index), issue="not found")],
+                )
+            if not product.is_available:
+                raise ProductUnavailableError(
+                    f"Product '{product.name} {product.size}' is currently unavailable.",
+                    details=[
+                        ErrorDetail(field=_item_field(index), issue="unavailable")
+                    ],
+                )
+            if requested.quantity > product.stock_quantity:
+                # No number in the message: stock levels are for admins only.
+                raise InsufficientStockError(
+                    f"Only a limited quantity of '{product.name} {product.size}' is "
+                    "left. Please reduce the quantity.",
+                    details=[
+                        ErrorDetail(
+                            field=f"items[{index}].quantity", issue="more than in stock"
+                        )
+                    ],
+                )
+
         customers = CustomerRepository(db)
         customer = customers.get_by_phone(data.customer.phone) or customers.create(
             data.customer.name, data.customer.phone
@@ -85,6 +102,7 @@ def create_order(db: Session, data: OrderCreate, user: User) -> Order:
         for requested in data.items:
             product = products[requested.product_id]
             unit_price: Decimal = product.price  # snapshot (BR-1)
+            product.stock_quantity -= requested.quantity  # #92 (row is locked)
             items.append(
                 OrderItem(
                     product=product,
@@ -154,6 +172,8 @@ def update_status(db: Session, order_id: int, new_status: OrderStatus) -> Order:
     The order row is locked while we check and save, so two admins cannot both change
     it at the same time. This is the one place future notifications (SMS, WhatsApp)
     would hook in.
+
+    Cancelling puts the ordered quantities back into stock (#92).
     """
     try:
         order = OrderRepository(db).get_for_update(order_id)
@@ -164,8 +184,13 @@ def update_status(db: Session, order_id: int, new_status: OrderStatus) -> Order:
                 f"Cannot change status from {order.status.value} to {new_status.value}.",
                 details=[ErrorDetail(field="status", issue="transition not allowed")],
             )
+        if new_status == OrderStatus.CANCELLED:
+            quantities = {item.product_id: item.quantity for item in order.items}
+            products = ProductRepository(db).get_many_for_update(quantities)
+            for product_id, quantity in quantities.items():
+                products[product_id].stock_quantity += quantity
         order.status = new_status
-        db.commit()  # also releases the row lock
+        db.commit()  # also releases the row locks
     except Exception:
         db.rollback()
         raise

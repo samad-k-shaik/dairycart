@@ -17,15 +17,15 @@ import { useAdminProducts } from "@/hooks/useProducts"
 import { formatCurrency } from "@/lib/format"
 import { getProductImage } from "@/lib/productDisplay"
 import { cn } from "@/lib/utils"
-import type { Product } from "@/types/product"
+import type { AdminProduct } from "@/types/product"
 
 /** Which panel is open: the add/edit form (product null = add) or nothing. */
-type FormState = { open: false } | { open: true; product: Product | null }
+type FormState = { open: false } | { open: true; product: AdminProduct | null }
 
 function ProductsPage() {
   const { data: products, isPending, isError, error, refetch, isFetching } = useAdminProducts()
   const [form, setForm] = useState<FormState>({ open: false })
-  const [toDelete, setToDelete] = useState<Product | null>(null)
+  const [toDelete, setToDelete] = useState<AdminProduct | null>(null)
 
   const openAdd = () => setForm({ open: true, product: null })
 
@@ -74,6 +74,7 @@ function ProductsPage() {
                 <TableHead className="hidden sm:table-cell">ID</TableHead>
                 <TableHead>Product</TableHead>
                 <TableHead className="text-right">Price</TableHead>
+                <TableHead className="text-right">Stock</TableHead>
                 <TableHead className="hidden sm:table-cell">Availability</TableHead>
                 <TableHead className="text-right">
                   <span className="sr-only">Actions</span>
@@ -104,6 +105,13 @@ function ProductsPage() {
                   </TableCell>
                   <TableCell className={product.is_available ? "text-right font-semibold" : "text-right font-semibold opacity-70"}>
                     {formatCurrency(product.price)}
+                  </TableCell>
+                  {/* Stock number: admins only (#92). 0 is shown in red. */}
+                  <TableCell className="text-right">
+                    <span className={product.stock_quantity === 0 ? "font-semibold text-danger" : "font-semibold"}>
+                      {product.stock_quantity}
+                    </span>
+                    {product.stock_quantity === 0 && <span className="block text-xs text-danger">Out of stock</span>}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
                     <AvailabilityBadge available={product.is_available} />

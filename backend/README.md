@@ -142,6 +142,13 @@ What makes the order code safe:
 - **No N+1 queries.** An order is loaded with its customer, items and products in 2 queries (`joinedload` + `selectinload`); a test counts them.
 - **Who sees what (#89, #90):** ordering needs a logged-in user, and the order is saved with `orders.user_id`. An order is visible only to its owner and to admins; anyone else gets the same `404` as for a missing order. The old phone lookup was removed.
 
+## Stock (#92)
+
+- `products.stock_quantity` = bottles left. **Admins only** see the number (`GET /api/v1/admin/products`, admin create/edit responses, and the `stock_quantity` field there). Public product responses only carry `in_stock` (true/false).
+- `create_order` locks the ordered products (`ProductRepository.get_many_for_update`, `SELECT … FOR UPDATE`, always in `product_id` order to avoid deadlocks), refuses a quantity above the stock with `409 INSUFFICIENT_STOCK` (the message never says how many are left), and reduces the stock in the same transaction as the order.
+- `update_status(…, CANCELLED)` adds the quantities back. Delivering does not change stock.
+- The seed gives each catalogue product 100 (`SEED_STOCK`); the migration gave products that already existed 100; new products default to 0 until the admin sets it.
+
 ## CORS (M3-08)
 
 The browser only lets the frontend (`http://localhost:5173`, another origin) call this API because `CORSMiddleware` allows the origins listed in **`CORS_ORIGINS`** (`backend/.env`, comma-separated). `*` is refused when the settings load. A page opened from any other origin, even `http://127.0.0.1:5173`, cannot read the responses. Add an origin there if you open the frontend from another address.

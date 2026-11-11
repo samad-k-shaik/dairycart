@@ -34,6 +34,18 @@ class ProductRepository:
         query = select(Product).where(Product.product_id.in_(list(product_ids)))
         return {product.product_id: product for product in self.db.scalars(query)}
 
+    def get_many_for_update(self, product_ids: Iterable[int]) -> dict[int, Product]:
+        """Like get_many, but LOCKS the rows until commit (SELECT ... FOR UPDATE), so two
+        orders cannot both take the last bottles (#92). Always locked in product_id
+        order, so two orders never wait for each other in a circle (a deadlock)."""
+        query = (
+            select(Product)
+            .where(Product.product_id.in_(list(product_ids)))
+            .order_by(Product.product_id)
+            .with_for_update()
+        )
+        return {product.product_id: product for product in self.db.scalars(query)}
+
     def find_by_name_and_size(
         self, name: str, size: str, *, exclude_id: int | None = None
     ) -> Product | None:

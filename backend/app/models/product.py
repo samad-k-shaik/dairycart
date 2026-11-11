@@ -32,6 +32,8 @@ class Product(Base):
         # Constraint names: the Base naming convention turns "price_positive" into
         # "ck_products_price_positive".
         CheckConstraint("price > 0", name="price_positive"),
+        # Stock can never go below zero, even if two orders race (#92).
+        CheckConstraint("stock_quantity >= 0", name="stock_quantity_non_negative"),
         UniqueConstraint("name", "size", name="uq_products_name_size"),
     )
 
@@ -47,8 +49,16 @@ class Product(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+    # How many bottles are left (#92). ADMIN-only: the public API never returns the
+    # number, only `in_stock`. Orders reduce it; cancelling an order puts it back.
+    stock_quantity: Mapped[int] = mapped_column(server_default="0", default=0)
 
     order_items: Mapped[list[OrderItem]] = relationship(back_populates="product")
+
+    @property
+    def in_stock(self) -> bool:
+        """What customers may know: is there at least one bottle left?"""
+        return self.stock_quantity > 0
 
     def __repr__(self) -> str:
         return f"Product(product_id={self.product_id!r}, name={self.name!r}, size={self.size!r})"

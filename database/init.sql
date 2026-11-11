@@ -79,3 +79,8 @@ CREATE TABLE users (
 ALTER TABLE orders ADD COLUMN user_id INTEGER
     CONSTRAINT orders_user_id_fkey REFERENCES users(user_id) ON DELETE RESTRICT;
 CREATE INDEX idx_orders_user_id ON orders(user_id);
+
+-- Stock per product (#92, migration add_stock_quantity_to_products). Admin-only number.
+-- (The migration gives products that already exist 100; new ones default to 0.)
+ALTER TABLE products ADD COLUMN stock_quantity INTEGER NOT NULL DEFAULT 0
+    CONSTRAINT ck_products_stock_quantity_non_negative CHECK (stock_quantity >= 0);

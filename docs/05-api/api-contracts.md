@@ -22,6 +22,7 @@
 | GET | `/admin/orders` | All orders (filter, paginate) | 200 |
 | PATCH | `/admin/orders/{id}/status` | Update order status | 200 |
 | POST | `/admin/products` | Add a product *(#86)* | 201 |
+| GET | `/admin/products` | All products **with stock numbers** *(#92)* | 200 |
 | PATCH | `/admin/products/{id}` | Edit a product *(#86)* | 200 |
 | DELETE | `/admin/products/{id}` | Delete a product that was never ordered *(#86)* | 204 |
 | POST | `/auth/register` | Sign up (always `USER`) *(#89)* | 201 |
@@ -58,10 +59,10 @@ Checks that the API is running and can reach the database.
 **200 OK**
 ```json
 [
-  { "product_id": 1, "name": "Cow Milk", "size": "500 ml", "price": "30.00", "is_available": true },
-  { "product_id": 2, "name": "Cow Milk", "size": "1 Litre", "price": "60.00", "is_available": true },
-  { "product_id": 3, "name": "Buffalo Milk", "size": "500 ml", "price": "35.00", "is_available": true },
-  { "product_id": 4, "name": "Buffalo Milk", "size": "1 Litre", "price": "70.00", "is_available": true }
+  { "product_id": 1, "name": "Cow Milk", "size": "500 ml", "price": "30.00", "is_available": true, "in_stock": true },
+  { "product_id": 2, "name": "Cow Milk", "size": "1 Litre", "price": "60.00", "is_available": true, "in_stock": true },
+  { "product_id": 3, "name": "Buffalo Milk", "size": "500 ml", "price": "35.00", "is_available": true, "in_stock": true },
+  { "product_id": 4, "name": "Buffalo Milk", "size": "1 Litre", "price": "70.00", "is_available": true, "in_stock": true }
 ]
 ```
 
@@ -73,7 +74,7 @@ Returns `[]` (not 404) if there are no products.
 
 **200 OK**
 ```json
-{ "product_id": 2, "name": "Cow Milk", "size": "1 Litre", "price": "60.00", "is_available": true }
+{ "product_id": 2, "name": "Cow Milk", "size": "1 Litre", "price": "60.00", "is_available": true, "in_stock": true }
 ```
 
 | Status | When |
@@ -131,6 +132,7 @@ Needs a logged-in user (#90): no token → `401 UNAUTHORIZED`. The order is save
 | 400 | `DUPLICATE_PRODUCT` | Same `product_id` appears twice |
 | 404 | `NOT_FOUND` | A `product_id` does not exist |
 | 409 | `PRODUCT_UNAVAILABLE` | A product has `is_available = false` |
+| 409 | `INSUFFICIENT_STOCK` | A quantity is more than the stock *(#92)*. Message: "Only a limited quantity of 'Cow Milk 1 Litre' is left. Please reduce the quantity." (never the number). Detail field: `items[i].quantity` |
 | 422 | `VALIDATION_ERROR` | Body fails schema validation |
 
 The whole order is rejected if any item fails. Nothing is saved.
@@ -224,19 +226,34 @@ Admins can add, edit and delete products (FR-A6). Like every admin endpoint, the
 | `size` | 1–20 characters after trimming spaces, e.g. `"500 ml"` |
 | `price` | **String** with up to 2 decimals, more than 0, up to `"99999999.99"`. A JSON number (`45.5`) is rejected: money is always a string. |
 | `is_available` | `true` / `false`. Optional on add (default `true`). |
+| `stock_quantity` | Whole number 0–100000 *(#92)*. Optional on add (default `0`). |
 
 Name + size must be unique, **ignoring upper/lower case** (BR-8) ("cow milk" / "1 litre" counts as the same as "Cow Milk" / "1 Litre"). Unknown fields (e.g. `product_id`) → 422.
+
+### Stock *(#92)*
+
+- Every product has a **stock quantity** (bottles left). **Only admins see the number**: `GET /admin/products` and the admin create/edit responses include `stock_quantity`. Public responses (`GET /products…`) only say `in_stock` (`true` when at least one is left).
+- `POST /orders` locks the ordered products, refuses a quantity above the stock with `409 INSUFFICIENT_STOCK` (nothing is saved), and otherwise **reduces** each product's stock in the same transaction.
+- Changing an order's status to `CANCELLED` **adds the quantities back**.
+- The database refuses negative stock (`ck_products_stock_quantity_non_negative`).
+
+### GET /api/v1/admin/products *(#92)*
+
+ADMIN only. **200 OK**: every product (including unavailable ones), ordered by id, each with `stock_quantity`:
+```json
+[ { "product_id": 1, "name": "Cow Milk", "size": "500 ml", "price": "30.00", "is_available": true, "in_stock": true, "stock_quantity": 100 } ]
+```
 
 ### POST /api/v1/admin/products
 
 **Request**
 ```json
-{ "name": "Toned Milk", "size": "500 ml", "price": "28.50", "is_available": true }
+{ "name": "Toned Milk", "size": "500 ml", "price": "28.50", "is_available": true, "stock_quantity": 50 }
 ```
 
 **201 Created** – the new product, same shape as `GET /products/{id}`:
 ```json
-{ "product_id": 5, "name": "Toned Milk", "size": "500 ml", "price": "28.50", "is_available": true }
+{ "product_id": 5, "name": "Toned Milk", "size": "500 ml", "price": "28.50", "is_available": true, "in_stock": true, "stock_quantity": 50 }
 ```
 
 | Status | Code | When |

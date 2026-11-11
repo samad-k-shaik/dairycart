@@ -25,6 +25,7 @@ Priority uses **MoSCoW**: Must / Should / Could. All "Must" items are required f
 | FR-A4 | Update status | Must | Admin can change status only along allowed transitions (below). Invalid transitions are rejected with a clear message. |
 | FR-A5 | View products | Must | Table of all products including unavailable ones, with price and availability. |
 | FR-A6 | Manage products *(#86)* | Must | Admin can add a product (name, size, price, availability), edit any of those fields, and delete a product. Delete asks for confirmation and is refused for a product that was already ordered (BR-7); the admin is offered "Mark unavailable" instead. Field rules match the API contract. |
+| FR-A7 | Stock *(#92)* | Must | Admin sets each product's stock (whole number 0–100000) in the add/edit form and sees it in a Stock column (0 shown as "Out of stock"). Only admins see numbers. Customers see "Out of stock" (and cannot add it to the cart) when nothing is left. Orders reduce the stock (BR-9); cancelled orders restore it. |
 
 ## Accounts (#89)
 
@@ -73,6 +74,7 @@ stateDiagram-v2
 | BR-6 | Creating an order and its items happens in a single database transaction. |
 | BR-7 | A product that appears in any order cannot be deleted; it can only be marked unavailable (old orders must still show what was bought). |
 | BR-8 | Product name + size is unique, ignoring upper/lower case. |
+| BR-9 | Placing an order reduces each product's stock by the ordered quantity, in the same transaction, with the product rows locked. A quantity above the stock rejects the whole order (409 `INSUFFICIENT_STOCK`). Cancelling an order adds the quantities back. Stock never goes below 0. |
 
 ## Traceability
 

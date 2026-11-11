@@ -26,12 +26,14 @@ def make_product(
     size: str = "1 Litre",
     price: str | Decimal = "60.00",
     is_available: bool = True,
+    stock_quantity: int = 100,  # #92: plenty, unless a test wants a low stock
 ) -> Product:
     product = Product(
         name=name or f"Test Milk {next(_sequence)}",
         size=size,
         price=Decimal(price),
         is_available=is_available,
+        stock_quantity=stock_quantity,
     )
     db.add(product)
     db.flush()

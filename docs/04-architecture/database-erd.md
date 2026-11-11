@@ -21,6 +21,7 @@ erDiagram
         varchar size
         numeric price
         boolean is_available
+        int stock_quantity
         timestamptz created_at
     }
     ORDERS {
@@ -72,6 +73,7 @@ erDiagram
 | size | VARCHAR(20) | NOT NULL | e.g. "500 ml" |
 | price | NUMERIC(10,2) | NOT NULL, CHECK > 0 | Current price in INR |
 | is_available | BOOLEAN | NOT NULL, default TRUE | Hidden from customers when false |
+| stock_quantity | INTEGER | NOT NULL, DEFAULT 0, CHECK ≥ 0 | Bottles left (#92). Admin-only number; orders reduce it, cancelling restores it |
 | created_at | TIMESTAMPTZ | NOT NULL, default now() | Audit column |
 | | | UNIQUE (name, size) | Prevents duplicate catalogue entries |
 
@@ -151,6 +153,7 @@ Every constraint has an explicit, readable name (set by the naming convention in
 | customers | `uq_customers_phone` | phone is unique |
 | products | `ck_products_price_positive` | price > 0 |
 | products | `uq_products_name_size` | (name, size) is unique |
+| products | `ck_products_stock_quantity_non_negative` | stock_quantity ≥ 0 (#92) |
 | orders | `orders_customer_id_fkey` | → customers, ON DELETE RESTRICT |
 | orders | `orders_user_id_fkey` | → users, ON DELETE RESTRICT (#90) |
 | orders | `ck_orders_total_amount_non_negative` | total_amount ≥ 0 |

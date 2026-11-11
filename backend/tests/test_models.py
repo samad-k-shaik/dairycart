@@ -94,6 +94,7 @@ ERD_COLUMNS = {
         "price": ("NUMERIC(10, 2)", False),
         "is_available": ("BOOLEAN", False),
         "created_at": ("TIMESTAMP WITH TIME ZONE", False),
+        "stock_quantity": ("INTEGER", False),  # #92
     },
     "orders": {
         "order_id": ("INTEGER", False),
@@ -170,6 +171,7 @@ def test_check_and_unique_constraints_have_readable_names(schema: Engine) -> Non
 
     assert checks == {
         "ck_products_price_positive",
+        "ck_products_stock_quantity_non_negative",  # #92
         "ck_orders_total_amount_non_negative",
         "ck_orders_status_allowed",
         "ck_order_items_quantity_range",

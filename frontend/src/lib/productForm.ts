@@ -7,11 +7,12 @@
  * Each validate function returns an error message, or null when the value is valid.
  * (Relative ".ts" imports so Node's test runner can load this file.)
  */
-import type { Money, Product, ProductUpdate } from "../types/product.ts"
+import type { AdminProduct, Money, Product, ProductUpdate } from "../types/product.ts"
 
 export const PRODUCT_NAME_MIN = 2
 export const PRODUCT_NAME_MAX = 100
 export const PRODUCT_SIZE_MAX = 20
+export const STOCK_MAX = 100_000
 /** NUMERIC(10,2): up to 8 digits before the point. */
 const PRICE_PATTERN = /^\d{1,8}(\.\d{1,2})?$/
 
@@ -20,15 +21,18 @@ export type ProductFormValues = {
   name: string
   size: string
   price: string
+  /** Bottles in stock, as typed (#92). */
+  stock: string
   is_available: boolean
 }
 
-export type ProductFormErrors = Partial<Record<"name" | "size" | "price", string>>
+export type ProductFormErrors = Partial<Record<"name" | "size" | "price" | "stock", string>>
 
 export const EMPTY_PRODUCT_FORM: ProductFormValues = {
   name: "",
   size: "",
   price: "",
+  stock: "",
   is_available: true,
 }
 
@@ -56,6 +60,15 @@ export function validatePrice(value: string): string | null {
   return null
 }
 
+/** Whole number of bottles, 0–100 000 (#92). */
+export function validateStock(value: string): string | null {
+  const stock = value.trim()
+  if (stock.length === 0) return "Please enter how many are in stock (0 if none)."
+  if (!/^\d+$/.test(stock)) return "Enter a whole number, e.g. 50."
+  if (Number(stock) > STOCK_MAX) return "Stock can be at most 100000."
+  return null
+}
+
 export function validateProductForm(values: ProductFormValues): ProductFormErrors {
   const errors: ProductFormErrors = {}
   const name = validateProductName(values.name)
@@ -64,6 +77,8 @@ export function validateProductForm(values: ProductFormValues): ProductFormError
   if (name) errors.name = name
   if (size) errors.size = size
   if (price) errors.price = price
+  const stock = validateStock(values.stock)
+  if (stock) errors.stock = stock
   return errors
 }
 
@@ -76,11 +91,12 @@ export function normalizePrice(value: string): Money {
 }
 
 /** A product's current values, to fill the Edit form. */
-export function toFormValues(product: Product): ProductFormValues {
+export function toFormValues(product: AdminProduct): ProductFormValues {
   return {
     name: product.name,
     size: product.size,
     price: product.price,
+    stock: String(product.stock_quantity),
     is_available: product.is_available,
   }
 }
@@ -91,17 +107,19 @@ export function toProductInput(values: ProductFormValues) {
     name: values.name.trim(),
     size: values.size.trim(),
     price: normalizePrice(values.price),
+    stock_quantity: Number(values.stock.trim()),
     is_available: values.is_available,
   }
 }
 
 /** For PATCH: only the fields that changed. Empty object = nothing to save. */
-export function changedFields(product: Product, values: ProductFormValues): ProductUpdate {
+export function changedFields(product: AdminProduct, values: ProductFormValues): ProductUpdate {
   const input = toProductInput(values)
   const changes: ProductUpdate = {}
   if (input.name !== product.name) changes.name = input.name
   if (input.size !== product.size) changes.size = input.size
   if (input.price !== product.price) changes.price = input.price
+  if (input.stock_quantity !== product.stock_quantity) changes.stock_quantity = input.stock_quantity
   if (input.is_available !== product.is_available) changes.is_available = input.is_available
   return changes
 }

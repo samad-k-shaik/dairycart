@@ -61,6 +61,14 @@ class ProductUnavailableError(DomainError):
     code = "PRODUCT_UNAVAILABLE"
 
 
+class InsufficientStockError(DomainError):
+    """The order asks for more bottles than are in stock (#92). The message never says
+    how many are left: stock numbers are for admins only."""
+
+    status_code = 409
+    code = "INSUFFICIENT_STOCK"
+
+
 class InvalidStatusTransitionError(DomainError):
     """The request is valid, but the order cannot move to that status (e.g. DELIVERED → PLACED)."""
 

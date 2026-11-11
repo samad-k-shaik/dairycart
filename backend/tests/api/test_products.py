@@ -10,12 +10,37 @@ from tests import factories
 # The contract's example (docs/05-api/api-contracts.md), without product_id: ids depend
 # on the database sequence, which rollbacks do not reset.
 CONTRACT_LIST = [
-    {"name": "Cow Milk", "size": "500 ml", "price": "30.00", "is_available": True},
-    {"name": "Cow Milk", "size": "1 Litre", "price": "60.00", "is_available": True},
-    {"name": "Buffalo Milk", "size": "500 ml", "price": "35.00", "is_available": True},
-    {"name": "Buffalo Milk", "size": "1 Litre", "price": "70.00", "is_available": True},
+    {
+        "name": "Cow Milk",
+        "size": "500 ml",
+        "price": "30.00",
+        "is_available": True,
+        "in_stock": True,
+    },
+    {
+        "name": "Cow Milk",
+        "size": "1 Litre",
+        "price": "60.00",
+        "is_available": True,
+        "in_stock": True,
+    },
+    {
+        "name": "Buffalo Milk",
+        "size": "500 ml",
+        "price": "35.00",
+        "is_available": True,
+        "in_stock": True,
+    },
+    {
+        "name": "Buffalo Milk",
+        "size": "1 Litre",
+        "price": "70.00",
+        "is_available": True,
+        "in_stock": True,
+    },
 ]
-PRODUCT_FIELDS = {"product_id", "name", "size", "price", "is_available"}
+# #92: `in_stock` (true/false) but NEVER the stock number.
+PRODUCT_FIELDS = {"product_id", "name", "size", "price", "is_available", "in_stock"}
 
 
 def without_ids(products: list[dict]) -> list[dict]:
@@ -98,6 +123,7 @@ def test_details_match_the_contract_example(
         "size": "1 Litre",
         "price": "60.00",
         "is_available": True,
+        "in_stock": True,
     }
 
 

@@ -29,12 +29,12 @@ import {
   type ProductFormValues,
 } from "@/lib/productForm"
 import { ServiceError } from "@/services/serviceError"
-import type { Product } from "@/types/product"
+import type { AdminProduct } from "@/types/product"
 
 type ProductFormSheetProps = {
   open: boolean
   /** null = add a new product; a product = edit it. */
-  product: Product | null
+  product: AdminProduct | null
   onClose: () => void
 }
 
@@ -51,9 +51,9 @@ export function ProductFormSheet({ open, product, onClose }: ProductFormSheetPro
 }
 
 /** Field names that can show an error under them. */
-const FORM_FIELDS = ["name", "size", "price"] as const
+const FORM_FIELDS = ["name", "size", "price", "stock"] as const
 
-function ProductForm({ product, onDone }: { product: Product | null; onDone: () => void }) {
+function ProductForm({ product, onDone }: { product: AdminProduct | null; onDone: () => void }) {
   const isEdit = product !== null
   const [values, setValues] = useState<ProductFormValues>(() =>
     product ? toFormValues(product) : EMPTY_PRODUCT_FORM,
@@ -80,7 +80,8 @@ function ProductForm({ product, onDone }: { product: Product | null; onDone: () 
     // VALIDATION_ERROR: put each problem under its field when we have one.
     const fieldErrors: ProductFormErrors = {}
     for (const detail of error.body.error.details ?? []) {
-      const field = FORM_FIELDS.find((f) => f === detail.field)
+      const name = detail.field === "stock_quantity" ? "stock" : detail.field
+      const field = FORM_FIELDS.find((f) => f === name)
       if (field) fieldErrors[field] = detail.issue
     }
     if (Object.keys(fieldErrors).length > 0) setErrors(fieldErrors)
@@ -161,6 +162,18 @@ function ProductForm({ product, onDone }: { product: Product | null; onDone: () 
           error={errors.price}
           onChange={(value) => setField("price", value)}
         />
+        <TextField
+          id="product-stock"
+          label="Stock (bottles)"
+          placeholder="e.g. 50"
+          inputMode="numeric"
+          value={values.stock}
+          error={errors.stock}
+          onChange={(value) => setField("stock", value)}
+        />
+        <p className="-mt-2 text-small text-muted-foreground">
+          Only admins see this number. Orders reduce it; cancelled orders put it back.
+        </p>
 
         <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border p-3">
           <input
@@ -198,7 +211,7 @@ type TextFieldProps = {
   error?: string
   placeholder?: string
   maxLength?: number
-  inputMode?: "decimal"
+  inputMode?: "decimal" | "numeric"
   onChange: (value: string) => void
 }
 

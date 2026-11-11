@@ -17,6 +17,13 @@ export type Product = {
   size: string
   price: Money
   is_available: boolean
+  /** Is at least one bottle left? Customers never get the number (#92). */
+  in_stock: boolean
+}
+
+/** GET /admin/products row and admin create/edit response: also the stock number (#92). */
+export type AdminProduct = Product & {
+  stock_quantity: number
 }
 
 /** POST /admin/products body (issue #86). The server gives the product_id. */
@@ -25,7 +32,8 @@ export type ProductCreate = {
   size: string
   price: Money
   is_available?: boolean // default true
+  stock_quantity?: number // default 0 (#92)
 }
 
 /** PATCH /admin/products/{id} body: only the fields that change. */
-export type ProductUpdate = Partial<Omit<Product, "product_id">>
+export type ProductUpdate = Partial<Omit<AdminProduct, "product_id" | "in_stock">>
