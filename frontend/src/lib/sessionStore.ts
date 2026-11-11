@@ -1,18 +1,26 @@
 /**
- * Keeps the login session in localStorage (#89), so a page reload or a new tab stays
- * logged in. Trade-off: any script running on our page could read it (XSS), which is why
- * the app never renders user input as HTML. Logout simply deletes it (the backend keeps
- * no sessions).
+ * Keeps the login session in sessionStorage (#91): ONE session PER BROWSER TAB.
  *
- * Other code is told about changes (login, logout, a 401 from the API) through
- * `onSessionChange`; other TABS learn about them through the browser's `storage` event.
+ * Why sessionStorage and not localStorage (#89 used localStorage)?
+ *   localStorage is shared by every tab of the site, so logging in as an admin in a second
+ *   tab replaced the user's login in the first tab. sessionStorage belongs to one tab:
+ *   tab 1 can be a USER and tab 2 an ADMIN at the same time.
+ * Trade-offs:
+ *   - a reload keeps the tab's login; a NEW tab opened by typing the address starts logged
+ *     out (the browser copies sessionStorage only into tabs opened from this one);
+ *   - logging out in one tab does not log out the others.
+ * Like any browser storage, a script running on our page could read it (XSS), which is why
+ * the app never renders user input as HTML. Logout simply deletes it (the backend keeps no
+ * sessions).
+ *
+ * Other code in this tab is told about changes (login, logout, a 401 from the API) through
+ * `onSessionChange`.
  */
 import { parseSession, SESSION_STORAGE_KEY, type Session } from "@/lib/authSession"
 
-
 const listeners = new Set<() => void>()
 
-/** Run `listener` after every login/logout in THIS tab or another tab. Returns "stop". */
+/** Run `listener` after every login/logout in this tab. Returns "stop". */
 export function onSessionChange(listener: () => void): () => void {
   listeners.add(listener)
   return () => listeners.delete(listener)
@@ -22,14 +30,17 @@ function notify() {
   listeners.forEach((listener) => listener())
 }
 
-window.addEventListener("storage", (event) => {
-  // key null = localStorage.clear() in another tab
-  if (event.key === SESSION_STORAGE_KEY || event.key === null) notify()
-})
+// Clean-up: before #91 the session was kept in localStorage. Remove such an old, shared copy
+// so a token is not left behind in the browser.
+try {
+  window.localStorage.removeItem(SESSION_STORAGE_KEY)
+} catch {
+  // storage blocked: nothing to clean
+}
 
 export function readSession(): Session | null {
   try {
-    return parseSession(window.localStorage.getItem(SESSION_STORAGE_KEY))
+    return parseSession(window.sessionStorage.getItem(SESSION_STORAGE_KEY))
   } catch {
     return null // storage blocked
   }
@@ -37,7 +48,7 @@ export function readSession(): Session | null {
 
 export function saveSession(session: Session): void {
   try {
-    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
+    window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
   } catch {
     // storage blocked: the login works until the page is reloaded
   }
@@ -47,7 +58,7 @@ export function saveSession(session: Session): void {
 /** Logout, or the API said the token is no longer valid (401). */
 export function clearSession(): void {
   try {
-    window.localStorage.removeItem(SESSION_STORAGE_KEY)
+    window.sessionStorage.removeItem(SESSION_STORAGE_KEY)
   } catch {
     // ignore
   }

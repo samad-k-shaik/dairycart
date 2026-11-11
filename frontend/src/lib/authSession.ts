@@ -3,7 +3,7 @@
  * expires, and the user it belongs to.
  *
  * This file has the PURE rules (tested in auth.test.ts); lib/sessionStore.ts keeps the
- * session in the browser's localStorage.
+ * session in the browser's sessionStorage (one per tab, #91).
  * (Relative ".ts" imports so Node's test runner can load this file.)
  */
 import type { User } from "../types/auth.ts"

@@ -171,7 +171,7 @@ Every data screen uses the same three building blocks:
 | `/account` | `pages/customer/UserDashboardPage.tsx` (the User Dashboard) | Logged-in users |
 | `/admin/*` | Dashboard, Orders, Products, `pages/admin/UsersPage.tsx` | **ADMIN only** |
 
-- **Session:** `lib/authSession.ts` (pure rules, tested in `auth.test.ts`) and `lib/sessionStore.ts` keep the token, its expiry and the user in `localStorage` (`dairycart-session-v1`). `apiClient.ts` sends `Authorization: Bearer <token>` on every call; a `401` clears the session.
+- **Session:** `lib/authSession.ts` (pure rules, tested in `auth.test.ts`) and `lib/sessionStore.ts` keep the token, its expiry and the user in **`sessionStorage`** (`dairycart-session-v1`), so **each tab has its own login** (#91): a user in one tab and an admin in another. A reload keeps the tab's login; a new tab opened by typing the address starts logged out; logout affects only that tab. `apiClient.ts` sends `Authorization: Bearer <token>` on every call; a `401` clears the session.
 - **`AuthProvider` / `useAuth()`** (`hooks/auth/`): `user`, `isAdmin`, `login()`, `logout()`. It checks the saved session with `GET /auth/me` on start, follows logins/logouts in other tabs, and logs out when the token expires. Logout also clears every cached query, so the next person doesn't see the previous user's data.
 - **`RequireAuth`** (`components/auth/RequireAuth.tsx`) guards pages: not logged in → `/login?next=…` (back to that page afterwards); a USER on `/admin` → "Admins only". This only hides pages; the **backend** is the real protection (401/403).
 - After login: `?next=` if it is a safe in-app path (never another website), else `/admin` for an ADMIN and `/account` for a USER (`pathAfterLogin` in `lib/authValidation.ts`).

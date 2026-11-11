@@ -4,7 +4,8 @@
  * - On start it reads the saved session (lib/sessionStore.ts) and asks the backend
  *   GET /auth/me once, so a role change or a deleted account is noticed. If the token is
  *   no longer valid, apiClient gets a 401 and clears the session.
- * - It re-reads the session whenever it changes: login, logout, a 401, or another tab.
+ * - It re-reads the session whenever it changes: login, logout or a 401. Each TAB has its
+ *   own session (#91), so a user and an admin can be logged in side by side.
  * - It logs out by itself when the token expires.
  */
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
@@ -21,7 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const [session, setSession] = useState(readSession)
 
-  // Follow every change of the stored session (this tab and other tabs).
+  // Follow every change of this tab's stored session.
   useEffect(() => onSessionChange(() => setSession(readSession())), [])
 
   // Check the saved session with the backend once per token.
