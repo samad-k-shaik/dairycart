@@ -80,7 +80,7 @@ React Router (`react-router`, ADR-011) maps URLs to pages in `src/routes/router.
   | `getProduct(id)` | `GET /products/{id}` |
   | `createOrder(request)` | `POST /orders` |
   | `getOrder(id)` | `GET /orders/{id}` |
-  | `getOrdersByPhone(phone)` | `GET /orders?phone=` (proposed, ADR-005) |
+  | `getMyOrders()` | `GET /orders/mine` (#90) |
   | `getAdminOrders({ status?, page?, page_size? })` | `GET /admin/orders` |
   | `updateOrderStatus(id, status)` | `PATCH /admin/orders/{id}/status` |
   | `createProduct` / `updateProduct` / `deleteProduct` | `POST` / `PATCH` / `DELETE /admin/products` (#86) |
@@ -125,10 +125,9 @@ The cart lives in the browser (ADR-004): React context + `useReducer`, saved to 
 
 ## Order history (M2-10, #29)
 
-- `/orders?phone=9876543210`: the phone is a URL query parameter (bookmarkable, Back button works; the confirmation page links straight to it). The last valid phone is remembered in `localStorage` (`milk-last-phone-v1`) and reused when `/orders` is opened without one.
-- `useOrdersByPhone(phone)` only fetches when the phone is valid (`enabled` in `useQuery`). Orders appear newest first as `OrderCard`s (IST date, item count, total, `StatusBadge`). Unknown phone → "No orders found"; invalid phone → error message.
+- **Since #90** `/orders` is "My orders": the logged-in user's orders from `GET /orders/mine` (`useMyOrders`). The phone search was removed. Orders appear newest first as `OrderCard`s (IST date, item count, total, `StatusBadge`).
 - `/orders/:id` (route added in this issue) shows the order with `OrderStatusTimeline`: Placed → Confirmed → Out for delivery → Delivered, or Placed → Cancelled. Timeline steps come from `getTimelineSteps()` in `lib/orderStatus.ts` (unit-tested for all five statuses).
-- **Privacy note (ADR-003):** there is no login in the POC, so anyone who knows a phone number can see its orders. Do not show more personal data here than the contract returns.
+- **Privacy (#90):** only the owner or an admin can open an order; others see "Order not found".
 - Do not pass custom font-size tokens (`text-body`, `text-small`, `text-h3` …) to components through `cn()` together with a text colour: the class merger treats them as colours and drops the colour. Use Tailwind's `text-sm`/`text-xs` there.
 
 ## Admin dashboard (M2-11, #30)
@@ -176,7 +175,7 @@ Every data screen uses the same three building blocks:
 - **`AuthProvider` / `useAuth()`** (`hooks/auth/`): `user`, `isAdmin`, `login()`, `logout()`. It checks the saved session with `GET /auth/me` on start, follows logins/logouts in other tabs, and logs out when the token expires. Logout also clears every cached query, so the next person doesn't see the previous user's data.
 - **`RequireAuth`** (`components/auth/RequireAuth.tsx`) guards pages: not logged in → `/login?next=…` (back to that page afterwards); a USER on `/admin` → "Admins only". This only hides pages; the **backend** is the real protection (401/403).
 - After login: `?next=` if it is a safe in-app path (never another website), else `/admin` for an ADMIN and `/account` for a USER (`pathAfterLogin` in `lib/authValidation.ts`).
-- Ordering needs no account; checkout is unchanged.
+- **Ordering needs an account (#90):** the cart works logged out (its button says "Log in to checkout"), but `/checkout`, `/orders` (My orders), `/orders/:id` and the confirmation page are wrapped in `RequireAuth`. After login the visitor comes back to `/checkout` with the same cart; the name is pre-filled from the account.
 
 ## Styling and design tokens
 

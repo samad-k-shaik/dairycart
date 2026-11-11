@@ -44,7 +44,9 @@ def test_total_is_calculated_from_database_prices(db_session: Session) -> None:
     buffalo = factories.make_product(db_session, price="35.00")
 
     order = order_service.create_order(
-        db_session, order_request([(cow.product_id, 2), (buffalo.product_id, 1)])
+        db_session,
+        order_request([(cow.product_id, 2), (buffalo.product_id, 1)]),
+        factories.make_user(db_session),
     )
 
     assert order.total_amount == Decimal("155.00")
@@ -72,7 +74,9 @@ def test_errors_leave_the_database_unchanged(
     }[setup]
 
     with pytest.raises(error):
-        order_service.create_order(db_session, order_request(items))
+        order_service.create_order(
+            db_session, user=factories.make_user(db_session), data=order_request(items)
+        )
 
     assert (count(db_session, Order), count(db_session, Customer)) == (0, 0)
 
@@ -90,7 +94,11 @@ def test_forced_failure_while_saving_rolls_everything_back(
     monkeypatch.setattr(OrderRepository, "add", broken_add)
 
     with pytest.raises(RuntimeError):
-        order_service.create_order(db_session, order_request([(product.product_id, 1)]))
+        order_service.create_order(
+            db_session,
+            user=factories.make_user(db_session),
+            data=order_request([(product.product_id, 1)]),
+        )
 
     assert (count(db_session, Order), count(db_session, Customer)) == (0, 0)
 
@@ -101,11 +109,12 @@ def test_new_phone_creates_a_customer_existing_phone_reuses_it(
     product = factories.make_product(db_session)
     existing = factories.make_customer(db_session, name="Old Name", phone="9000000001")
 
+    buyer = factories.make_user(db_session)
     reused = order_service.create_order(
-        db_session, order_request([(product.product_id, 1)], phone="9000000001")
+        db_session, order_request([(product.product_id, 1)], phone="9000000001"), buyer
     )
     created = order_service.create_order(
-        db_session, order_request([(product.product_id, 1)], phone="9000000002")
+        db_session, order_request([(product.product_id, 1)], phone="9000000002"), buyer
     )
 
     assert reused.customer.customer_id == existing.customer_id
@@ -192,7 +201,10 @@ def test_order_repository_lists(db_session: Session) -> None:
     )
     repository = OrderRepository(db_session)
 
-    history = repository.list_by_phone("9111111111")
+    owner = factories.make_user(db_session)
+    first.user_id = second.user_id = owner.user_id
+    db_session.flush()
+    history = repository.list_by_user(owner.user_id)
     rows, total = repository.list_admin(OrderStatus.CANCELLED, page=1, page_size=10)
 
     assert [r.order_id for r in history] == [second.order_id, first.order_id]

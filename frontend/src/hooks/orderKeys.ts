@@ -4,6 +4,6 @@ import type { AdminOrderQuery } from "@/types/order"
 export const orderKeys = {
   all: ["orders"] as const,
   detail: (orderId: number) => ["orders", "detail", orderId] as const,
-  byPhone: (phone: string) => ["orders", "by-phone", phone] as const,
+  mine: ["orders", "mine"] as const, // GET /orders/mine (#90)
   admin: (query: AdminOrderQuery = {}) => ["orders", "admin", query] as const,
 }

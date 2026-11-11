@@ -53,6 +53,7 @@ def make_order(
     customer: Customer | None = None,
     items: list[tuple[Product, int]] | None = None,
     status: OrderStatus = OrderStatus.PLACED,
+    user: User | None = None,
 ) -> Order:
     """An order with correct subtotals and total (price snapshot × quantity)."""
     # Create (and flush) the customer and default product BEFORE building the order
@@ -74,6 +75,7 @@ def make_order(
         items=order_items,
         total_amount=sum((item.subtotal for item in order_items), Decimal("0.00")),
         status=status,
+        user_id=user.user_id if user else None,  # None = placed before #90 (guest)
     )
     db.add(order)
     db.flush()

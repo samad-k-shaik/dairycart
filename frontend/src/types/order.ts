@@ -53,7 +53,7 @@ export type Order = {
   total_amount: Money
 }
 
-/** Customer order history row: GET /orders?phone= (proposed, ADR-005). */
+/** "My orders" row: GET /orders/mine (#90). */
 export type OrderSummary = {
   order_id: number
   order_date: IsoDateTime

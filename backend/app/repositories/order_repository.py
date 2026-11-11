@@ -76,12 +76,13 @@ class OrderRepository:
         )
         return [OrderRow(*row) for row in self.db.execute(columns).all()]
 
-    def list_by_phone(self, phone: str) -> list[OrderRow]:
-        """A customer's orders, newest first (same second → higher id first)."""
+    def list_by_user(self, user_id: int) -> list[OrderRow]:
+        """The orders placed by this account, newest first (same second → higher id
+        first). #90: replaces the old lookup by phone number."""
         query = (
             select(Order)
             .join(Order.customer)
-            .where(Customer.phone == phone)
+            .where(Order.user_id == user_id)
             .order_by(Order.order_date.desc(), Order.order_id.desc())
         )
         return self._rows(query)

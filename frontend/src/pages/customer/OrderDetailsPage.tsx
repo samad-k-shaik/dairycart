@@ -17,7 +17,7 @@ function OrderDetailsPage() {
   const { id } = useParams()
   const { data: order, isPending, isError, error, refetch, isFetching } = useOrder(Number(id))
 
-  const backTo = order ? `/orders?phone=${order.customer.phone}` : "/orders"
+  const backTo = "/orders" // My orders (#90)
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">

@@ -101,6 +101,7 @@ ERD_COLUMNS = {
         "order_date": ("TIMESTAMP WITH TIME ZONE", False),
         "total_amount": ("NUMERIC(10, 2)", False),
         "status": ("VARCHAR(20)", False),
+        "user_id": ("INTEGER", True),  # nullable: orders from before #90
     },
     "order_items": {
         "order_item_id": ("INTEGER", False),
@@ -195,6 +196,7 @@ def test_foreign_keys_and_on_delete_rules(schema: Engine) -> None:
 
     assert fks == {
         ("orders", "customer_id"): ("customers", "RESTRICT"),
+        ("orders", "user_id"): ("users", "RESTRICT"),  # #90
         ("order_items", "order_id"): ("orders", "CASCADE"),
         ("order_items", "product_id"): ("products", "RESTRICT"),
     }

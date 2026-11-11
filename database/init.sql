@@ -60,8 +60,7 @@ CREATE INDEX idx_orders_customer_id ON orders(customer_id);
 CREATE INDEX idx_orders_status      ON orders(status);
 CREATE INDEX idx_order_items_order  ON order_items(order_id);
 
--- Accounts (#89, migration add_users_table). Not linked to customers: ordering works
--- without an account (guest checkout). Email and username are stored in lower case.
+-- Accounts (#89, migration add_users_table). Email and username are stored in lower case.
 CREATE TABLE users (
     user_id        SERIAL        PRIMARY KEY,
     full_name      VARCHAR(100)  NOT NULL,
@@ -74,3 +73,9 @@ CREATE TABLE users (
     CONSTRAINT uq_users_username UNIQUE (username),
     CONSTRAINT ck_users_role_allowed CHECK (role IN ('USER','ADMIN'))
 );
+
+-- Orders belong to the account that placed them (#90, migration add_user_id_to_orders).
+-- NULL = an order placed before #90 (guest checkout).
+ALTER TABLE orders ADD COLUMN user_id INTEGER
+    CONSTRAINT orders_user_id_fkey REFERENCES users(user_id) ON DELETE RESTRICT;
+CREATE INDEX idx_orders_user_id ON orders(user_id);

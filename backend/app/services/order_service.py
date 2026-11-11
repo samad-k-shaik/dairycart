@@ -14,7 +14,7 @@ from app.core.errors import (
     NotFoundError,
     ProductUnavailableError,
 )
-from app.models import Order, OrderItem, OrderStatus
+from app.models import Order, OrderItem, OrderStatus, User, UserRole
 from app.repositories.customer_repository import CustomerRepository
 from app.repositories.order_repository import OrderRepository, OrderRow
 from app.repositories.product_repository import ProductRepository
@@ -38,14 +38,18 @@ def _item_field(index: int) -> str:
     return f"items[{index}].product_id"
 
 
-def create_order(db: Session, data: OrderCreate) -> Order:
-    """Place an order. Either everything is saved, or nothing is (one transaction).
+def create_order(db: Session, data: OrderCreate, user: User) -> Order:
+    """Place an order for the logged-in `user` (#90). Either everything is saved, or
+    nothing is (one transaction).
 
     1. The same product twice → 400 DUPLICATE_PRODUCT (BR-4)
     2. Unknown product → 404, unavailable product → 409; the whole order fails (BR-3)
     3. Find the customer by phone, or create them (BR-5)
     4. unit_price = the product's price NOW (snapshot, BR-1); subtotal and total (BR-2)
     """
+    # Read the id now, before building the order: reading it later (after an earlier
+    # commit expired `user`) would make SQLAlchemy save half-built order lines too early.
+    user_id = user.user_id
     product_ids = [item.product_id for item in data.items]
     seen: set[int] = set()
     for index, product_id in enumerate(product_ids):
@@ -90,7 +94,8 @@ def create_order(db: Session, data: OrderCreate) -> Order:
                 )
             )
         order = Order(
-            customer=customer,
+            customer=customer,  # delivery contact (name + phone from the form)
+            user_id=user_id,  # the account that placed it (#90)
             items=items,
             status=OrderStatus.PLACED,
             total_amount=sum((item.subtotal for item in items), Decimal("0.00")),
@@ -114,12 +119,24 @@ def get_order(db: Session, order_id: int) -> Order:
     return order
 
 
-def list_orders_by_phone(db: Session, phone: str) -> list[OrderRow]:
-    """Customer order history, newest first. Unknown phone → [] (not 404).
+def get_order_for(db: Session, order_id: int, user: User) -> Order:
+    """One order, but only for its owner or an ADMIN (#90).
 
-    POC risk (ADR-003): anyone who knows a phone number can see that customer's orders.
+    Anyone else gets the SAME 404 as for an order that does not exist, so nobody can
+    find out which order ids exist by trying them.
     """
-    return OrderRepository(db).list_by_phone(phone)
+    order = OrderRepository(db).get_with_items(order_id)
+    is_allowed = order is not None and (
+        user.role == UserRole.ADMIN or order.user_id == user.user_id
+    )
+    if not is_allowed:
+        raise NotFoundError(f"Order {order_id} was not found.")
+    return order
+
+
+def list_my_orders(db: Session, user: User) -> list[OrderRow]:
+    """The logged-in user's orders, newest first ("My orders", #90)."""
+    return OrderRepository(db).list_by_user(user.user_id)
 
 
 def list_admin_orders(

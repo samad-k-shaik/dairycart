@@ -128,9 +128,9 @@ How the rules are split across the layers:
 
 | Endpoint | Does | Errors |
 |---|---|---|
-| `POST /api/v1/orders` | Place an order → `201` + `Location: /api/v1/orders/{id}` | `400 DUPLICATE_PRODUCT`, `404`, `409 PRODUCT_UNAVAILABLE`, `422` |
-| `GET /api/v1/orders/{order_id}` | One order with items | `404` |
-| `GET /api/v1/orders?phone=9876543210` | Customer history, newest first; unknown phone → `[]` | `422` (missing/invalid phone) |
+| `POST /api/v1/orders` | Place an order (login required, #90) → `201` + `Location: /api/v1/orders/{id}` | `401`, `400 DUPLICATE_PRODUCT`, `404`, `409 PRODUCT_UNAVAILABLE`, `422` |
+| `GET /api/v1/orders/mine` | The logged-in user's orders, newest first (#90) | `401` |
+| `GET /api/v1/orders/{order_id}` | One order with items (owner or ADMIN only, #90) | `401`, `404` (also for someone else's order) |
 | `GET /api/v1/admin/orders?status=&page=&page_size=` | One page (newest first, `page_size` ≤ 100) + `status_counts` for all orders | `422` |
 | `PATCH /api/v1/admin/orders/{order_id}/status` | Next status, only along the allowed transitions | `404`, `409 INVALID_STATUS_TRANSITION`, `422` |
 
@@ -140,7 +140,7 @@ What makes the order code safe:
 - **One transaction.** Customer (found or created by phone), order and items are saved with one `commit()`. Any error rolls everything back: a failed order leaves no rows behind.
 - **Status rules** live in one dict, `ALLOWED_TRANSITIONS` in `app/services/order_service.py` (5 arrows: PLACED → CONFIRMED/CANCELLED, CONFIRMED → OUT_FOR_DELIVERY/CANCELLED, OUT_FOR_DELIVERY → DELIVERED). The order row is locked (`SELECT … FOR UPDATE`) while it is checked and saved, so two admins cannot both change it.
 - **No N+1 queries.** An order is loaded with its customer, items and products in 2 queries (`joinedload` + `selectinload`); a test counts them.
-- **POC risk (ADR-003):** there is no login. Anyone who knows a phone number can see that customer's orders, and admin routes (marked `TODO(auth)`) are open.
+- **Who sees what (#89, #90):** ordering needs a logged-in user, and the order is saved with `orders.user_id`. An order is visible only to its owner and to admins; anyone else gets the same `404` as for a missing order. The old phone lookup was removed.
 
 ## CORS (M3-08)
 

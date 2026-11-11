@@ -10,9 +10,9 @@ Priority uses **MoSCoW**: Must / Should / Could. All "Must" items are required f
 | FR-C2 | Product details | Must | Selecting a product opens a details page with name, size, price, description and an "Add to cart" action. Unknown product id shows a "Product not found" message. |
 | FR-C3 | Select quantity | Must | Quantity selector allows 1–20. Values outside the range cannot be submitted. |
 | FR-C4 | Add to cart | Must | Adding the same product twice increases its quantity. Cart shows line subtotals and an estimated total. Items can be removed or quantity changed. Cart survives a page refresh (browser storage). |
-| FR-C5 | Place order | Must | Checkout requires name (2–100 chars) and a 10-digit Indian mobile number. Submitting sends only product ids and quantities. Backend calculates prices and total. Empty cart cannot be submitted. |
+| FR-C5 | Place order | Must | **Login required (#90):** a logged-out visitor who opens checkout is sent to login and comes back to checkout with the same cart. The order is saved with the account. Checkout requires name (2–100 chars, pre-filled from the account) and a 10-digit Indian mobile number. Submitting sends only product ids and quantities. Backend calculates prices and total. Empty cart cannot be submitted. |
 | FR-C6 | Order confirmation | Must | After success, show order id, items, backend-calculated total and status `PLACED`. Cart is cleared. |
-| FR-C7 | Order history | Must | Customer enters their phone number and sees their orders, newest first, with date, total and status. Selecting one shows its details. |
+| FR-C7 | Order history | Must | "My orders" (login required, #90) lists the logged-in user's orders, newest first, with date, total and status. Selecting one shows its details. Only the owner or an admin can open an order. |
 | FR-C8 | Price changed notice | Should | If the backend total differs from the cart estimate, the confirmation clearly shows the backend total. |
 
 ## Admin
@@ -82,7 +82,7 @@ stateDiagram-v2
 | FR-C2 | `GET /api/v1/products/{id}` | Product details |
 | FR-C3/C4 | – (client-side) | Product details, Cart |
 | FR-C5/C6 | `POST /api/v1/orders` | Checkout, Confirmation |
-| FR-C7 | `GET /api/v1/orders?phone=`, `GET /api/v1/orders/{id}` | Order history |
+| FR-C7 | `GET /api/v1/orders/mine`, `GET /api/v1/orders/{id}` | My orders |
 | FR-A1/A2 | `GET /api/v1/admin/orders` | Admin dashboard, Order management |
 | FR-A3 | `GET /api/v1/orders/{id}` | Order management (details panel) |
 | FR-A4 | `PATCH /api/v1/admin/orders/{id}/status` | Order management |

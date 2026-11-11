@@ -39,11 +39,13 @@ export const router = createBrowserRouter([
       { index: true, element: <HomePage /> }, // "index" = the parent's own URL, "/"
       { path: "products/:id", element: <ProductDetailsPage /> }, // ":id" is a URL parameter
       { path: "cart", element: <CartPage /> },
-      { path: "checkout", element: <CheckoutPage /> },
-      { path: "orders", element: <OrderHistoryPage /> }, // ?phone=... in the query string
-      { path: "orders/:id", element: <OrderDetailsPage /> }, // added in M2-10 (#29)
-      { path: "orders/:id/confirmation", element: <OrderConfirmationPage /> },
-      // Accounts (#89). Ordering itself does not need an account (guest checkout).
+      // Ordering needs an account (#90): these pages send logged-out visitors to /login
+      // and bring them back afterwards. Browsing and the cart stay open to everyone.
+      { path: "checkout", element: <RequireAuth><CheckoutPage /></RequireAuth> },
+      { path: "orders", element: <RequireAuth><OrderHistoryPage /></RequireAuth> }, // My orders
+      { path: "orders/:id", element: <RequireAuth><OrderDetailsPage /></RequireAuth> },
+      { path: "orders/:id/confirmation", element: <RequireAuth><OrderConfirmationPage /></RequireAuth> },
+      // Accounts (#89).
       { path: "signup", element: <SignUpPage /> },
       { path: "login", element: <LoginPage /> },
       {

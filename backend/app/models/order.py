@@ -52,12 +52,19 @@ class Order(Base):
         CheckConstraint(f"status IN ({_STATUS_VALUES_SQL})", name="status_allowed"),
         Index("idx_orders_customer_id", "customer_id"),  # order history by customer
         Index("idx_orders_status", "status"),  # admin filter by status
+        Index("idx_orders_user_id", "user_id"),  # "My orders" (#90)
     )
 
     order_id: Mapped[int] = mapped_column(primary_key=True)
     # RESTRICT: a customer who has orders cannot be deleted (protects order history).
     customer_id: Mapped[int] = mapped_column(
         ForeignKey("customers.customer_id", ondelete="RESTRICT")
+    )
+    # The account that placed the order (#90). Ordering needs login, so every new order has
+    # one; orders placed before #90 (guest checkout) have NULL and are seen by admins only.
+    # RESTRICT: an account with orders cannot be deleted (protects order history).
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.user_id", ondelete="RESTRICT"), default=None
     )
     # Stored in UTC (TIMESTAMPTZ); shown in IST by the frontend.
     order_date: Mapped[datetime] = mapped_column(

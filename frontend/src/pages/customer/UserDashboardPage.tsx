@@ -72,7 +72,7 @@ function UserDashboardPage() {
         <Button asChild variant="outline" className="h-12 justify-start">
           <Link to="/orders">
             <ReceiptText aria-hidden="true" />
-            My orders (by phone number)
+            My orders
           </Link>
         </Button>
         {isAdmin && (

@@ -4,7 +4,7 @@
 - **Format:** JSON, UTF-8. Field names in `snake_case`.
 - **Money:** decimal strings with 2 places (e.g. `"60.00"`) so no precision is lost. Frontend formats them as ₹.
 - **Dates:** ISO 8601 UTC (e.g. `"2026-11-07T04:30:00Z"`).
-- **Auth (#89, ADR-013):** ordering needs no login. Every `/admin` endpoint needs an ADMIN token: `Authorization: Bearer <token>` from `POST /auth/login`. See *Accounts and login* below.
+- **Auth (#89, #90, ADR-013):** send `Authorization: Bearer <token>` from `POST /auth/login`. Placing and viewing orders needs a logged-in user (#90); every `/admin` endpoint needs an ADMIN. See *Accounts and login* below.
 - **Interactive docs:** FastAPI generates OpenAPI at `/docs` and `/openapi.json`. This document is the agreed contract; the OpenAPI output must match it.
 
 > **Key rule:** the backend calculates `unit_price`, `subtotal` and `total_amount` from database prices. Clients send only `product_id` and `quantity`. Any price or total fields sent by a client are rejected (unknown fields → 422).
@@ -18,7 +18,7 @@
 | GET | `/products/{id}` | Product details | 200 |
 | POST | `/orders` | Place an order | 201 |
 | GET | `/orders/{id}` | Order details | 200 |
-| GET | `/orders?phone=` | Customer order history *(proposed, ADR-005)* | 200 |
+| GET | `/orders/mine` | The logged-in user's orders *(#90)* | 200 |
 | GET | `/admin/orders` | All orders (filter, paginate) | 200 |
 | PATCH | `/admin/orders/{id}/status` | Update order status | 200 |
 | POST | `/admin/products` | Add a product *(#86)* | 201 |
@@ -85,6 +85,8 @@ Returns `[]` (not 404) if there are no products.
 
 ## POST /api/v1/orders
 
+Needs a logged-in user (#90): no token → `401 UNAUTHORIZED`. The order is saved with that account; `customer` (name + phone) is the delivery contact.
+
 **Request**
 ```json
 {
@@ -137,17 +139,22 @@ The whole order is rejected if any item fails. Nothing is saved.
 
 ## GET /api/v1/orders/{id}
 
+Needs a logged-in user (#90). Only the user who placed the order, or an ADMIN, may see it.
+
 **200 OK** – same shape as the `POST /orders` response.
 
 | Status | When |
 |---|---|
-| 404 `NOT_FOUND` | No such order |
+| 404 `NOT_FOUND` | No such order, **or it belongs to another user** (same answer, #90) |
+| 401 `UNAUTHORIZED` | Not logged in |
 
 ---
 
-## GET /api/v1/orders?phone={phone} *(proposed – ADR-005)*
+## GET /api/v1/orders/mine *(#90)*
 
-Customer order history, newest first.
+"My orders": the logged-in user's orders, newest first. Needs a token (401 without one). Returns `[]` when the user has no orders.
+
+*(Replaces `GET /orders?phone=`, removed in #90: anyone who knew a phone number could see that customer's orders. It now answers `405`.)*
 
 **200 OK**
 ```json
@@ -157,7 +164,6 @@ Customer order history, newest first.
 ]
 ```
 
-Unknown phone → `200 []`. Missing/invalid phone → `422`.
 
 ---
 
@@ -328,7 +334,9 @@ ADMIN only. **200 OK**: every user, oldest first (same shape as above, never pas
 
 | Endpoints | Access |
 |---|---|
-| `/health`, `/products…`, `/orders…`, `/auth/register`, `/auth/login` | Anyone (ordering needs no account) |
+| `/health`, `/products…`, `/auth/register`, `/auth/login` | Anyone |
+| `POST /orders`, `GET /orders/mine` | Any logged-in user; the order is saved with that account (#90) |
+| `GET /orders/{id}` | The user who placed it, or an ADMIN. Anyone else gets `404` (the same as a missing order, so ids cannot be probed) (#90) |
 | `/auth/me` | Any logged-in user |
 | Every `/admin/…` endpoint (orders, products, users) | **ADMIN only**: no/invalid token → `401 UNAUTHORIZED` (header `WWW-Authenticate: Bearer`); a `USER` token → `403 FORBIDDEN` "Only administrators can do this." |
 

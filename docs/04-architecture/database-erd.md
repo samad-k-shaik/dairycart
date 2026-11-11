@@ -5,6 +5,7 @@
 ```mermaid
 erDiagram
     CUSTOMERS ||--o{ ORDERS : places
+    USERS |o--o{ ORDERS : "placed by"
     ORDERS ||--|{ ORDER_ITEMS : contains
     PRODUCTS ||--o{ ORDER_ITEMS : "appears in"
 
@@ -25,6 +26,7 @@ erDiagram
     ORDERS {
         int order_id PK
         int customer_id FK
+        int user_id FK
         timestamptz order_date
         numeric total_amount
         varchar status
@@ -48,7 +50,7 @@ erDiagram
     }
 ```
 
-`USERS` (#89) has no relationship to the other tables: ordering does not need an account (guest checkout, customer found by phone).
+`USERS` (#89) → `ORDERS` (#90): every new order belongs to the account that placed it (`orders.user_id`). Orders placed before #90 (guest checkout) have `user_id = NULL`. `CUSTOMERS` stays the delivery contact (name + phone from checkout).
 
 ## Tables
 
@@ -150,6 +152,7 @@ Every constraint has an explicit, readable name (set by the naming convention in
 | products | `ck_products_price_positive` | price > 0 |
 | products | `uq_products_name_size` | (name, size) is unique |
 | orders | `orders_customer_id_fkey` | → customers, ON DELETE RESTRICT |
+| orders | `orders_user_id_fkey` | → users, ON DELETE RESTRICT (#90) |
 | orders | `ck_orders_total_amount_non_negative` | total_amount ≥ 0 |
 | orders | `ck_orders_status_allowed` | status in the five allowed values |
 | order_items | `order_items_order_id_fkey` | → orders, ON DELETE CASCADE |

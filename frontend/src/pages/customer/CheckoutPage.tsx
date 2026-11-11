@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { lineSubtotal } from "@/hooks/cart/cartReducer"
+import { useAuth } from "@/hooks/useAuth"
 import { useCart } from "@/hooks/useCart"
 import { useCreateOrder } from "@/hooks/useCreateOrder"
 import { formatCurrency } from "@/lib/format"
@@ -30,8 +31,11 @@ function CheckoutPage() {
   const createOrder = useCreateOrder()
   const navigate = useNavigate()
 
+  const { user } = useAuth()
+
   // Controlled inputs: React state holds what the user typed.
-  const [name, setName] = useState("")
+  // Name starts as the account's name (#90); it is the delivery contact and can be changed.
+  const [name, setName] = useState(user?.full_name ?? "")
   const [phone, setPhone] = useState("")
   // Show a field's error only after the user leaves it, or after they try to submit.
   const [touched, setTouched] = useState({ name: false, phone: false })
