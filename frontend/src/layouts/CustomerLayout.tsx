@@ -11,6 +11,9 @@ import { useAuth } from "@/hooks/useAuth"
 import { useCart } from "@/hooks/useCart"
 import { cn } from "@/lib/utils"
 
+/** Served from frontend/public, so the path starts at the site root. */
+const BACKGROUND_IMAGE = "/images/backgrounds/dairy-barn.webp"
+
 /**
  * Style for header links. NavLink passes `isActive`, so the link for the current page is blue.
  * h-11 = 44px: the minimum comfortable touch target on phones.
@@ -27,7 +30,26 @@ function CustomerLayout() {
   const { user } = useAuth()
 
   return (
-    <div className="flex min-h-screen flex-col">
+    // `isolate` starts a new stacking layer, so the -z-10 background below sits behind the
+    // page content but still in front of the body's plain grey colour.
+    // `[--muted-foreground:…]`: grey text is one shade darker (slate-600) on customer pages,
+    // because over the darkest part of the photo the normal grey (#64748b) is only ~3.3:1
+    // contrast; #475569 keeps it above the WCAG AA minimum of 4.5:1 (#93).
+    <div className="isolate flex min-h-screen flex-col [--muted-foreground:#475569]">
+      {/*
+        #93: dairy-barn photo behind every customer page (admin pages do not use this layout).
+        - `fixed inset-0`: it fills the window and does not scroll with the page.
+        - The second layer is a light veil (page colour at 85%) so text and cards stay readable.
+        - aria-hidden: it is decoration, screen readers skip it.
+        Photo: "Cows feeding in a long barn aisle" by Ahmad Nasihin, Unsplash License.
+      */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 -z-10 bg-cover bg-center"
+        style={{ backgroundImage: `url(${BACKGROUND_IMAGE})` }}
+      />
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 bg-background/85" />
+
       <header className="sticky top-0 z-40 border-b bg-surface/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-2 px-4 md:px-6 lg:px-8">
           <Logo />

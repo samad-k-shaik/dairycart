@@ -104,7 +104,9 @@ Admin products list (read-only table) reuses the table component.
 
 - Product images: clean photos or illustrations on a light background, square (1:1), WebP, ≤ 100 KB, stored in `frontend/public/images/products/`.
 - Use only images we own, created ourselves, or licensed for reuse. Record the source in `frontend/public/images/README.md` when images are added.
-- Every image has meaningful `alt` text.
+- Every image has meaningful `alt` text. Exception: purely decorative backgrounds are `aria-hidden` and have no alt text.
+- **Customer page background (#93):** a dairy-barn photo (`frontend/public/images/backgrounds/dairy-barn.webp`, 1600×900 WebP, ~250 KB) is fixed behind every customer page (`CustomerLayout`), under a veil of the page colour at 85% (`bg-background/85`) so it stays light. Admin pages keep the plain background.
+- On customer pages `muted-foreground` is one shade darker (`#475569`, slate-600): over the darkest part of the photo, the normal `#64748B` only reaches about 3.3:1 contrast, and `#475569` keeps it above 4.5:1 (WCAG AA). Body text (`foreground`) stays above 12:1.
 
 ## Approval gate
 
