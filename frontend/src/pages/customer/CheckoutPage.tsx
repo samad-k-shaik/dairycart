@@ -84,7 +84,7 @@ function CheckoutPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
+      <div className="photo-panel space-y-1 px-4 py-3">
         <h1 className="text-h1 font-bold">Checkout</h1>
         <p className="text-muted-foreground">Enter your details to place the order.</p>
       </div>

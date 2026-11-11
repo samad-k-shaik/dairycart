@@ -30,7 +30,7 @@ function ProductDetailsPage() {
     <div className="space-y-4">
       <Link
         to="/"
-        className="inline-flex items-center gap-1.5 rounded-xl font-semibold text-muted-foreground hover:text-primary"
+        className="photo-panel inline-flex items-center gap-1.5 px-3 py-2 font-semibold text-muted-foreground hover:text-primary"
       >
         <ArrowLeft className="size-4" aria-hidden="true" />
         Back to products
@@ -76,11 +76,11 @@ function ProductDetails({ product }: { product: Product }) {
           alt={label}
           width={400}
           height={400}
-          className="size-full object-contain p-6"
+          className="size-full object-cover"
         />
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="photo-panel flex flex-col gap-4 p-4 md:p-5">
         <div className="space-y-1">
           <h1 className="text-h1 font-bold">{product.name}</h1>
           <p className="text-muted-foreground">{product.size}</p>

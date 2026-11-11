@@ -111,6 +111,18 @@
   --text-price--line-height: 1.5rem; /* 24px */
 }
 
+/*
+ * photo-panel (#94): a frosted white panel for text that sits straight on the customer
+ * background photo (page titles, subtitles, back links). 88% white + blur keeps grey text
+ * above WCAG AA contrast even over the darkest part of the photo. Add padding per use.
+ */
+@utility photo-panel {
+  border-radius: 1rem;
+  background-color: color-mix(in srgb, var(--surface) 88%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

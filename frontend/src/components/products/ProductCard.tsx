@@ -31,7 +31,7 @@ export function ProductCard({ product, onAdd }: ProductCardProps) {
           width={200}
           height={200}
           loading="lazy"
-          className="size-full object-contain p-2"
+          className="size-full object-cover"
         />
       </div>
 

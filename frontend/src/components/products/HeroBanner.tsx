@@ -15,9 +15,14 @@ export function HeroBanner() {
         </p>
       </div>
       {/* Decorative only: hidden from screen readers. */}
-      <div className="pointer-events-none absolute -right-6 -bottom-6 hidden gap-0 sm:flex" aria-hidden="true">
-        <img src="/images/products/cow-milk.svg" alt="" className="size-36 md:size-44" />
-        <img src="/images/products/buffalo-milk.svg" alt="" className="-ml-10 size-36 md:size-44" />
+      {/* #94: the product pictures now have their own green background, so they are shown as
+          two rounded tiles (from 768px; on phones the text needs the full width). */}
+      <div
+        className="pointer-events-none absolute top-1/2 right-5 hidden -translate-y-1/2 gap-3 md:flex lg:right-8"
+        aria-hidden="true"
+      >
+        <img src="/images/products/cow-milk.svg" alt="" className="size-24 rounded-2xl shadow-card lg:size-36" />
+        <img src="/images/products/buffalo-milk.svg" alt="" className="size-24 rounded-2xl shadow-card lg:size-36" />
       </div>
     </section>
   )

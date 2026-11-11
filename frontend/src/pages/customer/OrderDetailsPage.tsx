@@ -23,7 +23,7 @@ function OrderDetailsPage() {
     <div className="mx-auto max-w-3xl space-y-4">
       <Link
         to={backTo}
-        className="inline-flex items-center gap-1.5 rounded-xl font-semibold text-muted-foreground hover:text-primary"
+        className="photo-panel inline-flex items-center gap-1.5 px-3 py-2 font-semibold text-muted-foreground hover:text-primary"
       >
         <ArrowLeft className="size-4" aria-hidden="true" />
         Back to my orders
@@ -41,7 +41,7 @@ function OrderDetailsPage() {
         <OrderLoadProblem error={error} onRetry={() => refetch()} retrying={isFetching} />
       ) : (
         <>
-          <header className="flex flex-wrap items-center justify-between gap-3">
+          <header className="photo-panel flex flex-wrap items-center justify-between gap-3 px-4 py-3">
             <div>
               <h1 className="text-h1 font-bold">Order #{order.order_id}</h1>
               <p className="text-muted-foreground">{formatDateTime(order.order_date)}</p>

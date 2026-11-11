@@ -29,7 +29,7 @@ function UserDashboardPage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="photo-panel flex flex-wrap items-center justify-between gap-3 px-4 py-3">
         <div className="space-y-1">
           <h1 className="text-h1 font-bold">Hello, {user.full_name.split(" ")[0]}</h1>
           <p className="text-muted-foreground">Your DairyCart account.</p>

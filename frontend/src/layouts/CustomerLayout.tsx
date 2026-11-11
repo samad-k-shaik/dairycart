@@ -39,7 +39,8 @@ function CustomerLayout() {
       {/*
         #93: dairy-barn photo behind every customer page (admin pages do not use this layout).
         - `fixed inset-0`: it fills the window and does not scroll with the page.
-        - The second layer is a light veil (page colour at 85%) so text and cards stay readable.
+        - The second layer is a thin veil (page colour at 35%, #94) so the photo stays bright;
+          text that sits straight on the photo uses the `photo-panel` class (index.css).
         - aria-hidden: it is decoration, screen readers skip it.
         Photo: "Cows feeding in a long barn aisle" by Ahmad Nasihin, Unsplash License.
       */}
@@ -48,7 +49,7 @@ function CustomerLayout() {
         className="pointer-events-none fixed inset-0 -z-10 bg-cover bg-center"
         style={{ backgroundImage: `url(${BACKGROUND_IMAGE})` }}
       />
-      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 bg-background/85" />
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 bg-background/35" />
 
       <header className="sticky top-0 z-40 border-b bg-surface/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-2 px-4 md:px-6 lg:px-8">

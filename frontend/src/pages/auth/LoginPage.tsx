@@ -53,7 +53,7 @@ function LoginPage() {
 
   return (
     <div className="mx-auto w-full max-w-md space-y-6">
-      <div className="space-y-1 text-center">
+      <div className="photo-panel space-y-1 px-4 py-4 text-center">
         <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary-soft text-primary">
           <LogIn className="size-6" aria-hidden="true" />
         </span>
