@@ -85,7 +85,7 @@ sequenceDiagram
 | npm registry | Frontend packages |
 | PyPI | Backend packages |
 | Docker Hub | Base images |
-| Google Fonts | Manrope typeface (or self-hosted via `@fontsource/manrope`) |
+| Google Fonts | Manrope typeface (or self-hosted via `@fontsource/manrope`); Fraunces for customer headings, self-hosted via `@fontsource-variable/fraunces` (ADR-014) |
 | GitHub | Code, CI/CD |
 | GCP | Hosting (M6) |
 
@@ -152,3 +152,4 @@ Any addition to the approved stack needs an entry here (a lightweight Architectu
 | ADR-011 | React Router (`react-router`, data router) for client-side routing | Proposed – M2-04 (#23) | The one React app needs separate customer and admin route trees with shared layouts (ADR-002); React Router is the standard, well-documented choice with nested routes and `<Outlet />` |
 | ADR-012 | Admin product management under `/api/v1/admin/products` (POST, PATCH, DELETE); delete only never-ordered products | Accepted – #86 | Scope change requested in #86 (FR-A6). Separate admin paths keep writes where auth can be added later (ADR-003); refusing to delete ordered products protects order history (BR-7). No new libraries. |
 | ADR-013 | Username/email + password login with JWT; roles `USER`/`ADMIN`; new libraries **bcrypt 5.0.0** (password hashing) and **PyJWT 2.15.1** (HS256 tokens) | Accepted – #89 | #89 asks for sign-up, login and an admin users page. bcrypt is slow and salted, the standard for password storage; PyJWT is the standard Python JWT library. Tokens are stateless (no server sessions), kept per browser tab in `sessionStorage` (#91, so a user and an admin can be logged in in two tabs): logout deletes the token in that tab, so a copied token stays valid until it expires (60 min). Every `/api/v1/admin/*` route needs an ADMIN token; admins are created only by `app/scripts/create_admin.py`. Since #90 placing and viewing orders also needs a login (`orders.user_id`; an order is visible to its owner and admins only). OTP login stays out of scope. |
+| ADR-014 | Second typeface **Fraunces** for customer headings, prices and logo, self-hosted via **@fontsource-variable/fraunces 5.3.0** (SIL Open Font License) | Accepted – #95 | #95 asks for a warmer type design. Fraunces' soft serif matches the product pictures (#94). It is a font-files package of the same kind as the Manrope one (no runtime code, no external request), scoped to `CustomerLayout`, with about 60 KB of font per page for Latin text. Admin keeps Manrope only. |

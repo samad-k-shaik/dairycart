@@ -46,6 +46,8 @@ These map to shadcn/ui CSS variables (`--primary`, `--background`, …) in `fron
 
 Font: **Manrope**, self-hosted via `@fontsource-variable/manrope` (all weights in one file), fallback `system-ui, sans-serif`.
 
+**Customer pages (#95): Fraunces for headings.** On every page inside `CustomerLayout`, headings (`h1`–`h3`, `text-display`), prices (`text-price`) and the logo name (`brand-name`) use **Fraunces**: a warm, soft serif that matches the serif names on the product pictures. It is self-hosted via `@fontsource-variable/fraunces/soft.css` (weight + SOFT axes, SIL Open Font License), with the SOFT axis at 100 and letter-spacing -0.01em. Token: `--font-display: "Fraunces Variable", "Manrope Variable", Georgia, serif`; Manrope comes second so any missing character (such as ₹) still matches the app. The rule lives in `src/index.css` under `.customer-type`, the class on the CustomerLayout wrapper. Body text, buttons, chips and forms stay Manrope. Admin pages use Manrope only. The sizes and weights in the table below apply to both fonts.
+
 | Style | Size / line-height | Weight | Tailwind usage | Use |
 |---|---|---|---|---|
 | Display | 28 / 36 px | 800 | `text-display font-extrabold` | Home hero |

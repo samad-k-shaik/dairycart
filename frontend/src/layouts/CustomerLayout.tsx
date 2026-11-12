@@ -35,7 +35,8 @@ function CustomerLayout() {
     // `[--muted-foreground:…]`: grey text is one shade darker (slate-600) on customer pages,
     // because over the darkest part of the photo the normal grey (#64748b) is only ~3.3:1
     // contrast; #475569 keeps it above the WCAG AA minimum of 4.5:1 (#93).
-    <div className="isolate flex min-h-screen flex-col [--muted-foreground:#475569]">
+    // `customer-type`: Fraunces headings, prices and logo on customer pages only (#95, index.css).
+    <div className="customer-type isolate flex min-h-screen flex-col [--muted-foreground:#475569]">
       {/*
         #93: dairy-barn photo behind every customer page (admin pages do not use this layout).
         - `fixed inset-0`: it fills the window and does not scroll with the page.
