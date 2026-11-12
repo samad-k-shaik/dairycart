@@ -14,6 +14,14 @@ URL = "/api/v1/admin/orders"
 
 
 @pytest.fixture
+def client(client: TestClient, admin_user) -> TestClient:
+    """Every request in this module is sent as a logged-in ADMIN (#89). Access rules
+    themselves are tested in tests/api/test_auth.py."""
+    client.headers.update(factories.auth_header(admin_user))
+    return client
+
+
+@pytest.fixture
 def product(db_session: Session):
     return factories.make_product(db_session)
 
@@ -46,6 +54,7 @@ def test_list_newest_first_with_counts_across_all_orders(
         "status",
         "total_amount",
         "item_count",
+        "subscription_id",  # #97
     }
     everything = client.get(URL).json()
     assert [o["order_id"] for o in everything["items"]] == [

@@ -30,7 +30,7 @@ function ProductDetailsPage() {
     <div className="space-y-4">
       <Link
         to="/"
-        className="inline-flex items-center gap-1.5 rounded-xl font-semibold text-muted-foreground hover:text-primary"
+        className="photo-panel inline-flex items-center gap-1.5 px-3 py-2 font-semibold text-muted-foreground hover:text-primary"
       >
         <ArrowLeft className="size-4" aria-hidden="true" />
         Back to products
@@ -76,11 +76,11 @@ function ProductDetails({ product }: { product: Product }) {
           alt={label}
           width={400}
           height={400}
-          className="size-full object-contain p-6"
+          className="size-full object-cover"
         />
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="photo-panel flex flex-col gap-4 p-4 md:p-5">
         <div className="space-y-1">
           <h1 className="text-h1 font-bold">{product.name}</h1>
           <p className="text-muted-foreground">{product.size}</p>
@@ -88,7 +88,7 @@ function ProductDetails({ product }: { product: Product }) {
         <p className="text-price font-extrabold">{formatCurrency(product.price)}</p>
         <p className="text-muted-foreground">{getProductDescription(product)}</p>
 
-        {product.is_available ? (
+        {product.is_available && product.in_stock ? (
           <>
             <div className="space-y-2">
               <p className="font-semibold">Quantity</p>
@@ -108,7 +108,7 @@ function ProductDetails({ product }: { product: Product }) {
           </>
         ) : (
           <p className="rounded-xl bg-red-50 p-3 font-semibold text-danger" role="status">
-            This product is currently unavailable.
+            {product.is_available ? "Out of stock. Please check again later." : "This product is currently unavailable."}
           </p>
         )}
       </div>
@@ -117,7 +117,7 @@ function ProductDetails({ product }: { product: Product }) {
           It is a child of the whole <article> (not the text column) because a sticky
           element can only move inside its parent; the article starts at the top, so the
           bar can stick to the screen bottom even on short screens. */}
-      {product.is_available && (
+      {product.is_available && product.in_stock && (
         <div className="sticky bottom-0 z-30 -mx-4 border-t bg-surface/95 px-4 py-3 backdrop-blur md:hidden">
           <Button size="lg" className="h-12 w-full" onClick={handleAddToCart}>
             <ShoppingCart aria-hidden="true" />

@@ -14,6 +14,14 @@ URL = "/api/v1/admin/products"
 NEW_PRODUCT = {"name": "Toned Milk", "size": "500 ml", "price": "28.50"}
 
 
+@pytest.fixture
+def client(client: TestClient, admin_user) -> TestClient:
+    """Every request in this module is sent as a logged-in ADMIN (#89). Access rules
+    themselves are tested in tests/api/test_auth.py."""
+    client.headers.update(factories.auth_header(admin_user))
+    return client
+
+
 def error_code(response) -> str:
     return response.json()["error"]["code"]
 
@@ -38,6 +46,8 @@ def test_create_returns_201_with_the_new_product(
         "size": "500 ml",
         "price": "28.50",  # money is a string, like everywhere else
         "is_available": True,  # default
+        "stock_quantity": 0,  # default (#92)
+        "in_stock": False,
     }
     saved = db_session.get(Product, body["product_id"])
     assert saved is not None and saved.price == Decimal("28.50")
@@ -48,7 +58,9 @@ def test_created_product_appears_in_the_customer_list(client: TestClient) -> Non
 
     listed = client.get("/api/v1/products").json()
 
-    assert created in listed
+    # The public list has the same product, but WITHOUT the stock number (#92).
+    public = {k: v for k, v in created.items() if k != "stock_quantity"}
+    assert public in listed
 
 
 def test_create_can_add_an_unavailable_product(client: TestClient) -> None:
@@ -149,6 +161,8 @@ def test_update_changes_only_the_fields_sent(
         "size": "1 Litre",
         "price": "65.00",
         "is_available": True,
+        "stock_quantity": 100,  # unchanged
+        "in_stock": True,
     }
 
 
@@ -157,10 +171,17 @@ def test_update_can_change_every_field(client: TestClient, db_session: Session) 
     changes = {"name": "A2 Milk", "size": "2 Litre", "price": "140.00"}
 
     body = client.patch(
-        f"{URL}/{product.product_id}", json=changes | {"is_available": False}
+        f"{URL}/{product.product_id}",
+        json=changes | {"is_available": False, "stock_quantity": 0},
     ).json()
 
-    assert body == {"product_id": product.product_id, **changes, "is_available": False}
+    assert body == {
+        "product_id": product.product_id,
+        **changes,
+        "is_available": False,
+        "stock_quantity": 0,
+        "in_stock": False,
+    }
 
 
 def test_mark_unavailable_hides_it_from_customers(
@@ -291,7 +312,7 @@ def test_invalid_ids_are_422(client: TestClient, bad_id: str) -> None:
 def test_admin_product_endpoints_are_documented(client: TestClient) -> None:
     paths = client.get("/openapi.json").json()["paths"]
 
-    assert set(paths[URL]) == {"post"}
+    assert set(paths[URL]) == {"get", "post"}  # GET: admin list with stock (#92)
     assert set(paths[URL + "/{product_id}"]) == {"patch", "delete"}
     assert {"201", "409", "422"} <= set(paths[URL]["post"]["responses"])
     assert {"204", "404", "409"} <= set(

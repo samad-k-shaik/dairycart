@@ -10,10 +10,12 @@ Priority uses **MoSCoW**: Must / Should / Could. All "Must" items are required f
 | FR-C2 | Product details | Must | Selecting a product opens a details page with name, size, price, description and an "Add to cart" action. Unknown product id shows a "Product not found" message. |
 | FR-C3 | Select quantity | Must | Quantity selector allows 1–20. Values outside the range cannot be submitted. |
 | FR-C4 | Add to cart | Must | Adding the same product twice increases its quantity. Cart shows line subtotals and an estimated total. Items can be removed or quantity changed. Cart survives a page refresh (browser storage). |
-| FR-C5 | Place order | Must | Checkout requires name (2–100 chars) and a 10-digit Indian mobile number. Submitting sends only product ids and quantities. Backend calculates prices and total. Empty cart cannot be submitted. |
+| FR-C5 | Place order | Must | **Login required (#90):** a logged-out visitor who opens checkout is sent to login and comes back to checkout with the same cart. The order is saved with the account. Checkout requires name (2–100 chars, pre-filled from the account) and a 10-digit Indian mobile number. Submitting sends only product ids and quantities. Backend calculates prices and total. Empty cart cannot be submitted. |
 | FR-C6 | Order confirmation | Must | After success, show order id, items, backend-calculated total and status `PLACED`. Cart is cleared. |
-| FR-C7 | Order history | Must | Customer enters their phone number and sees their orders, newest first, with date, total and status. Selecting one shows its details. |
+| FR-C7 | Order history | Must | "My orders" (login required, #90) lists the logged-in user's orders, newest first, with date, total and status. Selecting one shows its details. Only the owner or an admin can open an order. |
 | FR-C8 | Price changed notice | Should | If the backend total differs from the cart estimate, the confirmation clearly shows the backend total. |
+| FR-C9 | Order once or subscribe *(#97)* | Must | At checkout the customer chooses **Order once** (FR-C5) or **Subscribe**: the cart's items every day for **1 week, 15 days or 1 month**, starting on a day they pick (tomorrow up to 30 days ahead). The summary shows the daily and plan totals (estimates; the backend calculates and locks the prices). One active subscription per account (BR-10). |
+| FR-C10 | My subscriptions *(#97)* | Must | "My subscriptions" lists the user's subscriptions with plan, dates, items, daily and plan totals, status and deliveries so far. An active subscription has **Cancel subscription** with a confirmation; after cancelling, no further deliveries are created (BR-11). Each day's delivery also appears in "My orders", marked "Subscription". |
 
 ## Admin
 
@@ -25,6 +27,21 @@ Priority uses **MoSCoW**: Must / Should / Could. All "Must" items are required f
 | FR-A4 | Update status | Must | Admin can change status only along allowed transitions (below). Invalid transitions are rejected with a clear message. |
 | FR-A5 | View products | Must | Table of all products including unavailable ones, with price and availability. |
 | FR-A6 | Manage products *(#86)* | Must | Admin can add a product (name, size, price, availability), edit any of those fields, and delete a product. Delete asks for confirmation and is refused for a product that was already ordered (BR-7); the admin is offered "Mark unavailable" instead. Field rules match the API contract. |
+| FR-A8 | Subscriptions *(#97)* | Must | Admin sees every subscription (customer, plan, dates, daily total, orders created, status; filter by status) and presses **Create today's subscription orders** once a day (BR-12). The result lists created orders, already-created ones and skipped subscriptions with the reason. |
+| FR-A7 | Stock *(#92)* | Must | Admin sets each product's stock (whole number 0–100000) in the add/edit form and sees it in a Stock column (0 shown as "Out of stock"). Only admins see numbers. Customers see "Out of stock" (and cannot add it to the cart) when nothing is left. Orders reduce the stock (BR-9); cancelled orders restore it. |
+
+## Accounts (#89)
+
+| ID | Requirement | Priority | Acceptance criteria |
+|---|---|---|---|
+| FR-U1 | Sign up | Must | Full name (2–100), email (valid format), username (3–30: letters, digits, `.`, `_`, `-`), password (8–72 bytes, at least one letter and one number) and confirm password (must match). Duplicate email or username (any letter case) is rejected at that field. New accounts are always `USER`. |
+| FR-U2 | Log in | Must | Username **or** email + password. Wrong details show "Invalid username/email or password." (the same for unknown user and wrong password). A USER goes to the User Dashboard (`/account`), an ADMIN to the Admin Dashboard (`/admin`), or back to the page that asked for the login. |
+| FR-U3 | User Dashboard | Must | `/account` shows full name, username, email, role and member-since date. Logged-out visitors are sent to the login page. |
+| FR-U4 | Admin only | Must | Every `/admin` page and `/api/v1/admin/*` API needs an ADMIN login: not logged in → login page / 401; logged in as USER → "Admins only" / 403. |
+| FR-U5 | Admin users list | Must | `/admin/users` lists every user (name, username, email, role, joined date). Never shows passwords or hashes. |
+| FR-U6 | Log out | Must | Log out (account page, admin sidebar/top bar) removes the session and cached data; protected pages need a new login. The session also ends when the token expires (60 min). |
+
+Admins are created only with `python -m app.scripts.create_admin` (see `backend/README.md`).
 
 ## Order status lifecycle
 
@@ -60,6 +77,10 @@ stateDiagram-v2
 | BR-6 | Creating an order and its items happens in a single database transaction. |
 | BR-7 | A product that appears in any order cannot be deleted; it can only be marked unavailable (old orders must still show what was bought). |
 | BR-8 | Product name + size is unique, ignoring upper/lower case. |
+| BR-10 | Subscriptions *(#97)*: plans are 7, 15 or 30 days, including the start day (tomorrow at the earliest, at most 30 days ahead, India time). Prices are locked when subscribing. A user may have only one ACTIVE subscription (enforced by the database). After the last day it becomes COMPLETED. |
+| BR-11 | Cancelling a subscription (owner or admin) stops future orders only; an order already created for today stays. Only an ACTIVE subscription can be cancelled. |
+| BR-12 | "Generate orders" creates, for one day, one normal order per ACTIVE subscription that delivers that day, with the locked prices, reducing stock like any order (BR-9). It never creates two orders for the same subscription and day. If a product is unavailable or out of stock, that subscription is skipped for the day and continues. |
+| BR-9 | Placing an order reduces each product's stock by the ordered quantity, in the same transaction, with the product rows locked. A quantity above the stock rejects the whole order (409 `INSUFFICIENT_STOCK`). Cancelling an order adds the quantities back. Stock never goes below 0. |
 
 ## Traceability
 
@@ -69,9 +90,16 @@ stateDiagram-v2
 | FR-C2 | `GET /api/v1/products/{id}` | Product details |
 | FR-C3/C4 | – (client-side) | Product details, Cart |
 | FR-C5/C6 | `POST /api/v1/orders` | Checkout, Confirmation |
-| FR-C7 | `GET /api/v1/orders?phone=`, `GET /api/v1/orders/{id}` | Order history |
+| FR-C7 | `GET /api/v1/orders/mine`, `GET /api/v1/orders/{id}` | My orders |
+| FR-C9 | `POST /api/v1/subscriptions` | Checkout (Subscribe) |
+| FR-C10 | `GET /api/v1/subscriptions/mine`, `POST /api/v1/subscriptions/{id}/cancel` | My subscriptions |
+| FR-A8 | `GET /api/v1/admin/subscriptions`, `POST /api/v1/admin/subscriptions/generate-orders` | Admin subscriptions |
 | FR-A1/A2 | `GET /api/v1/admin/orders` | Admin dashboard, Order management |
 | FR-A3 | `GET /api/v1/orders/{id}` | Order management (details panel) |
 | FR-A4 | `PATCH /api/v1/admin/orders/{id}/status` | Order management |
 | FR-A5 | `GET /api/v1/products?include_unavailable=true` | Admin products |
 | FR-A6 | `POST /api/v1/admin/products`, `PATCH`/`DELETE /api/v1/admin/products/{id}` | Admin products (form panel, delete dialog) |
+| FR-U1 | `POST /api/v1/auth/register` | Sign up |
+| FR-U2 | `POST /api/v1/auth/login` | Log in |
+| FR-U3 | `GET /api/v1/auth/me` | User Dashboard |
+| FR-U4/U5 | `GET /api/v1/admin/users` (every admin API needs an ADMIN token) | Admin users |

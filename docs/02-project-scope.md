@@ -13,6 +13,7 @@
 | C5 | Place an order |
 | C6 | View order confirmation |
 | C7 | View previous orders |
+| C8 | Choose "order once" or a daily subscription (1 week / 15 days / 1 month) and cancel it *(added by #97, approved scope change)* |
 
 ### Admin application
 
@@ -24,6 +25,7 @@
 | A4 | Update order status |
 | A5 | View available products |
 | A6 | Add, edit and delete products (delete only if never ordered) *(added by #86)* |
+| A7 | View subscriptions and create each day's subscription orders *(added by #97)* |
 
 ## Out of scope
 
@@ -31,7 +33,7 @@
 |---|---|---|
 | OTP authentication | Adds an SMS provider and session security | Customer identified by phone; an `auth` module and `users` table can be added later |
 | Payment gateway | External integration, compliance | `orders` can gain a `payment_status` column and a `payments` table |
-| Subscription management | Scheduling logic | New `subscriptions` module generating orders |
+| Automatic scheduling, pausing/skipping days, editing a running subscription, prepaid plans *(basic subscriptions moved in scope by #97)* | Needs a scheduler and payments | A scheduler can call the same `generate_orders_for(day)` service; the admin button / script does it today |
 | Multi-vendor marketplace | Major domain change | Products can gain a `vendor_id` later |
 | Delivery partner app | Separate user type and app | New route tree and `deliveries` table |
 | Google Maps | External API, cost | Address fields can be added to `customers` |
@@ -41,7 +43,7 @@
 
 ## Simplifying assumptions
 
-1. **No login.** Customers enter name and phone at checkout. The phone number identifies the customer for order history. Admin pages are not protected in the POC. **This is acceptable only because the POC holds no real data and is not public.** Before any real use, authentication is mandatory (tracked as a future milestone).
+1. **Login only for accounts and the admin area (#89).** People can sign up (full name, email, username, password) and log in; the admin area needs an ADMIN account. **Ordering needs an account too (#90):** the cart works without login, but checkout, "My orders" and order details need a logged-in user. Name and phone at checkout are the delivery contact. **This is acceptable only because the POC holds no real data and is not public.** OTP login, password reset and email confirmation remain out of scope.
 2. **Single dairy, single city.** The catalogue starts with four seeded products; admins can add, edit and delete products from the admin Products page (A6, added by #86). A product that was already ordered cannot be deleted, only marked unavailable.
 3. **Cash on delivery** is assumed. No payments are recorded.
 4. **Quantity per line** is 1–20 units.

@@ -3,11 +3,12 @@
  * Desktop (≥ 768px): sidebar on the left. Mobile: top bar with a row of links.
  * Each admin page renders inside <Outlet />.
  */
-import { NavLink, Outlet } from "react-router"
-import { ClipboardList, LayoutDashboard, Package, Store } from "lucide-react"
+import { NavLink, Outlet, useNavigate } from "react-router"
+import { ClipboardList, LayoutDashboard, LogOut, Package, Repeat, Store, Users } from "lucide-react"
 
 import { DevCrashProbe } from "@/components/common/DevMockSwitch"
 import { Logo } from "@/components/common/Logo"
+import { useAuth } from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
 
 /** One list drives both the sidebar and the mobile bar, so they never disagree. */
@@ -16,6 +17,9 @@ const adminLinks = [
   { to: "/admin", label: "Dashboard", Icon: LayoutDashboard, end: true },
   { to: "/admin/orders", label: "Orders", Icon: ClipboardList, end: false },
   { to: "/admin/products", label: "Products", Icon: Package, end: false },
+  { to: "/admin/users", label: "Users", Icon: Users, end: false }, // #89
+  // #97. `short`: the phone tab bar has room for a short word only.
+  { to: "/admin/subscriptions", label: "Subscriptions", short: "Plans", Icon: Repeat, end: false },
 ]
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -24,17 +28,26 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? "bg-primary-soft text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
   )
 
-/** Mobile top bar: the 3 links share the row equally, with smaller text, so all fit at 360px. */
+/**
+ * Mobile top bar: the 5 links share the row equally. The icon sits ABOVE the label
+ * (like a phone tab bar), so all 5 fit at 360px while staying 44px+ tall to tap.
+ */
 const compactLinkClass = ({ isActive }: { isActive: boolean }) =>
-  cn(linkClass({ isActive }), "flex-1 justify-center gap-1.5 px-2 text-small")
+  cn(linkClass({ isActive }), "h-auto min-h-11 min-w-0 flex-1 flex-col justify-center gap-0.5 px-1 py-1 text-xs")
 
 function AdminLinks({ compact = false }: { compact?: boolean }) {
   return (
     <>
-      {adminLinks.map(({ to, label, Icon, end }) => (
-        <NavLink key={to} to={to} end={end} className={compact ? compactLinkClass : linkClass}>
+      {adminLinks.map(({ to, label, short, Icon, end }) => (
+        <NavLink
+          key={to}
+          to={to}
+          end={end}
+          className={compact ? compactLinkClass : linkClass}
+          aria-label={compact && short ? label : undefined}
+        >
           <Icon className={compact ? "size-4" : "size-5"} aria-hidden="true" />
-          {label}
+          {compact && short ? short : label}
         </NavLink>
       ))}
     </>
@@ -50,7 +63,19 @@ function BackToShopLink() {
   )
 }
 
+/** Logout (#89): forget the token and cached data, then show the login page. */
+function useLogout() {
+  const { logout } = useAuth()
+  const navigate = useNavigate()
+  return () => {
+    logout()
+    navigate("/login", { replace: true })
+  }
+}
+
 function AdminLayout() {
+  const { user } = useAuth()
+  const handleLogout = useLogout()
   return (
     <div className="min-h-screen md:flex">
       {/* Desktop sidebar: hidden below 768px. */}
@@ -59,7 +84,14 @@ function AdminLayout() {
         <nav aria-label="Admin" className="flex flex-col gap-1">
           <AdminLinks />
         </nav>
-        <div className="mt-auto">
+        <div className="mt-auto space-y-1">
+          <p className="truncate px-3 text-small text-muted-foreground">
+            Logged in as <span className="font-semibold text-foreground">{user?.username}</span>
+          </p>
+          <button type="button" onClick={handleLogout} className={linkClass({ isActive: false }) + " w-full"}>
+            <LogOut className="size-5" aria-hidden="true" />
+            Log out
+          </button>
           <BackToShopLink />
         </div>
       </aside>
@@ -68,13 +100,23 @@ function AdminLayout() {
       <header className="sticky top-0 z-40 border-b bg-surface/95 backdrop-blur md:hidden">
         <div className="flex h-14 items-center justify-between px-4">
           <Logo to="/admin" label="Admin" />
-          <NavLink
-            to="/"
-            aria-label="Back to shop"
-            className="flex size-11 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <Store className="size-5" aria-hidden="true" />
-          </NavLink>
+          <div className="flex items-center">
+            <NavLink
+              to="/"
+              aria-label="Back to shop"
+              className="flex size-11 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <Store className="size-5" aria-hidden="true" />
+            </NavLink>
+            <button
+              type="button"
+              onClick={handleLogout}
+              aria-label="Log out"
+              className="flex size-11 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <LogOut className="size-5" aria-hidden="true" />
+            </button>
+          </div>
         </div>
         <nav aria-label="Admin" className="flex gap-1 px-4 pb-2">
           <AdminLinks compact />

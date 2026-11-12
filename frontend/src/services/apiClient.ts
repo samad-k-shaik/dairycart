@@ -7,7 +7,12 @@
  *
  * The backend address comes from VITE_API_BASE_URL (see frontend/.env.example).
  * Vite reads VITE_* variables at BUILD/START time: restart `npm run dev` after changing them.
+ *
+ * Logged in (#89)? Every request carries `Authorization: Bearer <token>`. If the API then
+ * answers 401, the token is expired or invalid: we clear the session, so the app shows
+ * the user as logged out and the login page can be shown.
  */
+import { clearSession, readSession } from "@/lib/sessionStore"
 import { errorFromResponse, networkError } from "@/services/apiError"
 
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1").replace(/\/$/, "")
@@ -15,11 +20,16 @@ export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "http://localh
 type Method = "GET" | "POST" | "PATCH" | "DELETE"
 
 async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
+  const session = readSession()
+  const headers: Record<string, string> = { Accept: "application/json" }
+  if (body !== undefined) headers["Content-Type"] = "application/json"
+  if (session) headers.Authorization = `Bearer ${session.token}`
+
   let response: Response
   try {
     response = await fetch(API_BASE_URL + path, {
       method,
-      headers: body === undefined ? { Accept: "application/json" } : { Accept: "application/json", "Content-Type": "application/json" },
+      headers,
       body: body === undefined ? undefined : JSON.stringify(body),
     })
   } catch {
@@ -31,6 +41,8 @@ async function request<T>(method: Method, path: string, body?: unknown): Promise
 
   const json: unknown = await response.json().catch(() => null)
   if (!response.ok) {
+    // Token expired or invalid → log out. (Not for a wrong password on the login form.)
+    if (response.status === 401 && session && path !== "/auth/login") clearSession()
     throw errorFromResponse(response.status, json, response.headers.get("X-Request-ID"))
   }
   return json as T

@@ -27,7 +27,7 @@ export function CartItem({ line, onQuantityChange, onRemove }: CartItemProps) {
         className="size-20 shrink-0 overflow-hidden rounded-xl bg-primary-soft sm:size-24"
         aria-label={`View ${label}`}
       >
-        <img src={getProductImage(line)} alt="" width={96} height={96} className="size-full object-contain p-1.5" />
+        <img src={getProductImage(line)} alt="" width={96} height={96} className="size-full object-cover" />
       </Link>
 
       <div className="flex min-w-0 flex-1 flex-col gap-2">

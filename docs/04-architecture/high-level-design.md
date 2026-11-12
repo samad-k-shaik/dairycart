@@ -85,7 +85,7 @@ sequenceDiagram
 | npm registry | Frontend packages |
 | PyPI | Backend packages |
 | Docker Hub | Base images |
-| Google Fonts | Manrope typeface (or self-hosted via `@fontsource/manrope`) |
+| Google Fonts | Manrope typeface (or self-hosted via `@fontsource/manrope`); Fraunces for customer headings, self-hosted via `@fontsource-variable/fraunces` (ADR-014) |
 | GitHub | Code, CI/CD |
 | GCP | Hosting (M6) |
 
@@ -131,7 +131,7 @@ Authentication from GitHub Actions to GCP will use **Workload Identity Federatio
 
 ## 9. Extensibility
 
-Future features plug in as new backend modules and frontend route trees without changing the core design: `auth` (OTP), `payments`, `subscriptions`, `deliveries`, `notifications`. Status changes go through one service method, which becomes the hook for notifications.
+Future features plug in as new backend modules and frontend route trees without changing the core design: `auth` (OTP), `payments`, `deliveries`, `notifications`. (`subscriptions` was added this way in #97, ADR-015.) Status changes go through one service method, which becomes the hook for notifications.
 
 ## Architecture decisions
 
@@ -141,9 +141,9 @@ Any addition to the approved stack needs an entry here (a lightweight Architectu
 |---|---|---|---|
 | ADR-001 | Modular monolith, not microservices | Accepted | POC size; simpler to learn, run and deploy |
 | ADR-002 | Customer and admin UIs in one React app | Accepted | Shared components/types; one build |
-| ADR-003 | No authentication in POC; customer identified by phone | Accepted (temporary) | Explicitly excluded from scope; documented risk NFR-10 |
+| ADR-003 | No authentication in POC; customer identified by phone | **Superseded by ADR-013 (#89) and #90** | Ordering and the admin area now need a login; the phone at checkout is only the delivery contact |
 | ADR-004 | Cart stored in browser `localStorage`, not the database | Accepted | No extra tables or APIs; cart is not business data until ordered |
-| ADR-005 | Add `GET /api/v1/orders?phone=` to the initial endpoint list | Proposed – review in M0 | FR-C7 (order history) cannot be met by the seven listed endpoints |
+| ADR-005 | Add `GET /api/v1/orders?phone=` to the initial endpoint list | **Replaced by `GET /orders/mine` (#90)** | FR-C7 (order history) cannot be met by the seven listed endpoints |
 | ADR-006 | `include_unavailable` query parameter on `GET /api/v1/products` for admin | Proposed – review in M0 | FR-A5 needs unavailable products; avoids a separate admin endpoint |
 | ADR-007 | psycopg 3 as the PostgreSQL driver | Accepted | Required by SQLAlchemy to talk to PostgreSQL |
 | ADR-008 | nginx to serve the built frontend on Cloud Run | Proposed – confirm in M6 | Cloud Run needs an HTTP server for static files; nginx is the standard minimal choice |
@@ -151,3 +151,6 @@ Any addition to the approved stack needs an entry here (a lightweight Architectu
 | ADR-010 | Lint/format: Ruff (Python), ESLint + Prettier (TypeScript) | Proposed – confirm in M4 | Fast, widely used, CI-friendly |
 | ADR-011 | React Router (`react-router`, data router) for client-side routing | Proposed – M2-04 (#23) | The one React app needs separate customer and admin route trees with shared layouts (ADR-002); React Router is the standard, well-documented choice with nested routes and `<Outlet />` |
 | ADR-012 | Admin product management under `/api/v1/admin/products` (POST, PATCH, DELETE); delete only never-ordered products | Accepted – #86 | Scope change requested in #86 (FR-A6). Separate admin paths keep writes where auth can be added later (ADR-003); refusing to delete ordered products protects order history (BR-7). No new libraries. |
+| ADR-013 | Username/email + password login with JWT; roles `USER`/`ADMIN`; new libraries **bcrypt 5.0.0** (password hashing) and **PyJWT 2.15.1** (HS256 tokens) | Accepted – #89 | #89 asks for sign-up, login and an admin users page. bcrypt is slow and salted, the standard for password storage; PyJWT is the standard Python JWT library. Tokens are stateless (no server sessions), kept per browser tab in `sessionStorage` (#91, so a user and an admin can be logged in in two tabs): logout deletes the token in that tab, so a copied token stays valid until it expires (60 min). Every `/api/v1/admin/*` route needs an ADMIN token; admins are created only by `app/scripts/create_admin.py`. Since #90 placing and viewing orders also needs a login (`orders.user_id`; an order is visible to its owner and admins only). OTP login stays out of scope. |
+| ADR-014 | Second typeface **Fraunces** for customer headings, prices and logo, self-hosted via **@fontsource-variable/fraunces 5.3.0** (SIL Open Font License) | Accepted – #95 | #95 asks for a warmer type design. Fraunces' soft serif matches the product pictures (#94). It is a font-files package of the same kind as the Manrope one (no runtime code, no external request), scoped to `CustomerLayout`, with about 60 KB of font per page for Latin text. Admin keeps Manrope only. |
+| ADR-015 | Subscriptions (1 week / 15 days / 1 month) as a `subscriptions` module that creates normal orders; daily orders made by an **admin button or a script**, not a scheduler | Accepted – #97 | Approved scope change (#97). Reusing orders keeps one order flow (stock, status, My orders, admin list). No new library: a scheduler (e.g. APScheduler) would only run while the server is up and runs in every worker, while the explicit run is simple, visible and safe to repeat thanks to `uq_orders_subscription_day`. Prices are locked at subscription time; one active subscription per user is a partial unique index. A real scheduler can later call the same `generate_orders_for(day)`. |

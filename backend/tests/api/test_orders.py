@@ -1,4 +1,4 @@
-"""API tests for the customer order endpoints (M3-01, M3-04, M3-05)."""
+"""API tests for the customer order endpoints (M3-01, M3-04, M3-05; login: #90)."""
 
 import re
 
@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Customer, Order, OrderItem
+from app.models import Customer, Order, OrderItem, User
 from tests import factories
 
 URL = "/api/v1/orders"
@@ -23,6 +23,20 @@ def body(customer_phone: str = "9876543210", items: list | None = None) -> dict:
 
 def count(db: Session, model) -> int:
     return db.scalar(select(func.count()).select_from(model))
+
+
+@pytest.fixture
+def client(client: TestClient, normal_user: User) -> TestClient:
+    """Ordering needs login since #90: requests in this module are sent as a logged-in
+    USER (`normal_user`). `anonymous` below is the same client without the token."""
+    client.headers.update(factories.auth_header(normal_user))
+    return client
+
+
+@pytest.fixture
+def anonymous(client: TestClient) -> TestClient:
+    del client.headers["Authorization"]
+    return client
 
 
 @pytest.fixture
@@ -174,30 +188,107 @@ def test_existing_phone_reuses_the_customer(
 
 
 def test_price_change_does_not_alter_placed_orders(
-    client: TestClient, db_session: Session, cow_1l
+    client: TestClient, db_session: Session, cow_1l, admin_user
 ) -> None:
     order = client.post(
         URL, json=body(items=[{"product_id": cow_1l.product_id, "quantity": 2}])
     ).json()
 
-    client.patch(f"/api/v1/admin/products/{cow_1l.product_id}", json={"price": "75.00"})
+    changed = client.patch(
+        f"/api/v1/admin/products/{cow_1l.product_id}",
+        json={"price": "75.00"},
+        headers=factories.auth_header(admin_user),  # admin APIs need an admin (#89)
+    )
+    assert changed.json()["price"] == "75.00"  # the change really happened
 
     again = client.get(f"{URL}/{order['order_id']}").json()
     assert again["items"][0]["unit_price"] == "60.00"
     assert again["total_amount"] == "120.00"
 
 
-# ---- GET /orders/{id} ----
+# ---- login required (#90) ----
 
 
-def test_get_order(client: TestClient, db_session: Session, cow_1l) -> None:
-    order = factories.make_order(db_session, items=[(cow_1l, 3)])
+@pytest.mark.parametrize(
+    ("method", "url"),
+    [("POST", URL), ("GET", URL + "/mine"), ("GET", URL + "/1")],
+)
+def test_order_endpoints_need_login(
+    anonymous: TestClient, db_session: Session, method: str, url: str
+) -> None:
+    response = anonymous.request(
+        method, url, json=body(items=[{"product_id": 1, "quantity": 1}])
+    )
+
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "UNAUTHORIZED"
+    assert count(db_session, Order) == 0
+
+
+def test_order_is_saved_with_the_logged_in_account(
+    client: TestClient, db_session: Session, normal_user: User, cow_1l
+) -> None:
+    created = client.post(
+        URL, json=body(items=[{"product_id": cow_1l.product_id, "quantity": 1}])
+    ).json()
+
+    order = db_session.get(Order, created["order_id"])
+    assert order.user_id == normal_user.user_id
+
+
+def test_admins_can_order_too(client: TestClient, admin_user: User, cow_1l) -> None:
+    response = client.post(
+        URL,
+        json=body(items=[{"product_id": cow_1l.product_id, "quantity": 1}]),
+        headers=factories.auth_header(admin_user),
+    )
+
+    assert response.status_code == 201
+
+
+# ---- GET /orders/{id}: owner or admin only (#90) ----
+
+
+def test_owner_can_see_the_order(
+    client: TestClient, db_session: Session, normal_user: User, cow_1l
+) -> None:
+    order = factories.make_order(db_session, items=[(cow_1l, 3)], user=normal_user)
 
     response = client.get(f"{URL}/{order.order_id}")
 
     assert response.status_code == 200
     assert response.json()["order_id"] == order.order_id
     assert response.json()["items"][0]["quantity"] == 3
+
+
+def test_another_user_gets_404_like_a_missing_order(
+    client: TestClient, db_session: Session, cow_1l
+) -> None:
+    someone_else = factories.make_user(db_session)
+    order = factories.make_order(db_session, items=[(cow_1l, 1)], user=someone_else)
+
+    response = client.get(f"{URL}/{order.order_id}")
+
+    assert response.status_code == 404
+    # Same message as for an id that does not exist: no hint that the order exists.
+    assert (
+        response.json()["error"]["message"] == f"Order {order.order_id} was not found."
+    )
+
+
+def test_admin_can_see_any_order_including_old_guest_orders(
+    client: TestClient, db_session: Session, admin_user: User, normal_user: User, cow_1l
+) -> None:
+    users_order = factories.make_order(
+        db_session, items=[(cow_1l, 1)], user=normal_user
+    )
+    guest_order = factories.make_order(db_session, items=[(cow_1l, 1)])  # before #90
+    admin = factories.auth_header(admin_user)
+
+    assert client.get(f"{URL}/{users_order.order_id}", headers=admin).status_code == 200
+    assert client.get(f"{URL}/{guest_order.order_id}", headers=admin).status_code == 200
+    # ...but a normal user cannot open an old guest order.
+    assert client.get(f"{URL}/{guest_order.order_id}").status_code == 404
 
 
 def test_get_unknown_order_is_404(client: TestClient) -> None:
@@ -207,20 +298,22 @@ def test_get_unknown_order_is_404(client: TestClient) -> None:
     assert response.json()["error"]["message"] == "Order 424242 was not found."
 
 
-# ---- GET /orders?phone= ----
+# ---- GET /orders/mine (#90) ----
 
 
-def test_history_newest_first_with_item_count(
-    client: TestClient, db_session: Session, cow_1l, buffalo_500
+def test_my_orders_newest_first_with_item_count(
+    client: TestClient, db_session: Session, normal_user: User, cow_1l, buffalo_500
 ) -> None:
-    customer = factories.make_customer(db_session, phone="9123456780")
-    older = factories.make_order(db_session, customer=customer, items=[(cow_1l, 1)])
+    older = factories.make_order(db_session, items=[(cow_1l, 1)], user=normal_user)
     newer = factories.make_order(
-        db_session, customer=customer, items=[(cow_1l, 1), (buffalo_500, 2)]
+        db_session, items=[(cow_1l, 1), (buffalo_500, 2)], user=normal_user
     )
-    factories.make_order(db_session, items=[(cow_1l, 1)])  # someone else
+    factories.make_order(
+        db_session, items=[(cow_1l, 1)], user=factories.make_user(db_session)
+    )
+    factories.make_order(db_session, items=[(cow_1l, 1)])  # old guest order
 
-    response = client.get(URL, params={"phone": "9123456780"})
+    response = client.get(URL + "/mine")
 
     assert response.status_code == 200
     rows = response.json()
@@ -232,18 +325,21 @@ def test_history_newest_first_with_item_count(
         "status",
         "total_amount",
         "item_count",
+        "subscription_id",  # #97
     }
 
 
-def test_history_for_an_unknown_phone_is_empty(client: TestClient) -> None:
-    response = client.get(URL, params={"phone": "9000000000"})
+def test_my_orders_is_empty_for_a_new_account(client: TestClient) -> None:
+    response = client.get(URL + "/mine")
 
     assert (response.status_code, response.json()) == (200, [])
 
 
-@pytest.mark.parametrize("params", [{}, {"phone": "123"}, {"phone": "5876543210"}])
-def test_history_needs_a_valid_phone(client: TestClient, params: dict) -> None:
-    assert client.get(URL, params=params).status_code == 422
+def test_phone_lookup_was_removed(client: TestClient) -> None:
+    # GET /orders?phone= let anyone who knew a phone number see orders (removed in #90).
+    response = client.get(URL, params={"phone": "9876543210"})
+
+    assert response.status_code == 405  # only POST exists on /orders now
 
 
 def test_order_item_lines_are_stored_with_database_prices(

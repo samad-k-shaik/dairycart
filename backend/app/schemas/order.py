@@ -4,6 +4,7 @@ Requests have `extra="forbid"`: a client that sends `price`, `unit_price` or `to
 gets a 422. The backend calculates every price and total from the database (BR-2).
 """
 
+from datetime import date
 from typing import Annotated, Self
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
@@ -85,6 +86,9 @@ class OrderRead(BaseModel):
     status: OrderStatus
     items: list[OrderItemRead]
     total_amount: Money
+    # #97: set for orders created from a subscription (null for one-time orders).
+    subscription_id: int | None = None
+    delivery_date: date | None = None
 
     @classmethod
     def from_order(cls, order: Order) -> Self:
@@ -108,6 +112,8 @@ class OrderRead(BaseModel):
                 for item in sorted(order.items, key=lambda i: i.order_item_id)
             ],
             total_amount=order.total_amount,
+            subscription_id=order.subscription_id,
+            delivery_date=order.delivery_date,
         )
 
 
@@ -119,6 +125,8 @@ class OrderSummary(BaseModel):
     status: OrderStatus
     total_amount: Money
     item_count: int
+    # #97: the subscription this order came from (null for a one-time order).
+    subscription_id: int | None = None
 
 
 class AdminOrderSummary(BaseModel):
@@ -131,6 +139,8 @@ class AdminOrderSummary(BaseModel):
     status: OrderStatus
     total_amount: Money
     item_count: int
+    # #97: the subscription this order came from (null for a one-time order).
+    subscription_id: int | None = None
 
 
 class AdminOrderPage(BaseModel):

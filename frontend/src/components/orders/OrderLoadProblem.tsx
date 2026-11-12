@@ -20,10 +20,10 @@ export function OrderLoadProblem({ error, onRetry, retrying }: Props) {
         icon={PackageSearch}
         headingLevel="h1"
         title="Order not found"
-        description="We could not find this order. Check the order number, or look it up with your phone number."
+        description="We could not find this order in your account. Check the order number, or open My orders."
         action={
           <Button asChild>
-            <Link to="/orders">Find my orders</Link>
+            <Link to="/orders">Go to My orders</Link>
           </Button>
         }
       />

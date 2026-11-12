@@ -13,7 +13,8 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
-from app.models import Customer, Order, OrderItem, OrderStatus, Product
+from app.core.security import create_access_token, hash_password
+from app.models import Customer, Order, OrderItem, OrderStatus, Product, User, UserRole
 
 _sequence = itertools.count(1)
 
@@ -25,12 +26,14 @@ def make_product(
     size: str = "1 Litre",
     price: str | Decimal = "60.00",
     is_available: bool = True,
+    stock_quantity: int = 100,  # #92: plenty, unless a test wants a low stock
 ) -> Product:
     product = Product(
         name=name or f"Test Milk {next(_sequence)}",
         size=size,
         price=Decimal(price),
         is_available=is_available,
+        stock_quantity=stock_quantity,
     )
     db.add(product)
     db.flush()
@@ -52,6 +55,7 @@ def make_order(
     customer: Customer | None = None,
     items: list[tuple[Product, int]] | None = None,
     status: OrderStatus = OrderStatus.PLACED,
+    user: User | None = None,
 ) -> Order:
     """An order with correct subtotals and total (price snapshot × quantity)."""
     # Create (and flush) the customer and default product BEFORE building the order
@@ -73,7 +77,40 @@ def make_order(
         items=order_items,
         total_amount=sum((item.subtotal for item in order_items), Decimal("0.00")),
         status=status,
+        user_id=user.user_id if user else None,  # None = placed before #90 (guest)
     )
     db.add(order)
     db.flush()
     return order
+
+
+TEST_PASSWORD = "milk1234"
+
+
+def make_user(
+    db: Session,
+    *,
+    username: str | None = None,
+    email: str | None = None,
+    full_name: str = "Test User",
+    password: str = TEST_PASSWORD,
+    role: UserRole = UserRole.USER,
+) -> User:
+    """A user whose password is `password` (stored hashed, like real sign-ups)."""
+    n = next(_sequence)
+    user = User(
+        full_name=full_name,
+        email=email or f"user{n}@example.com",
+        username=username or f"user{n}",
+        password_hash=hash_password(password),
+        role=role,
+    )
+    db.add(user)
+    db.flush()
+    return user
+
+
+def auth_header(user: User) -> dict[str, str]:
+    """`Authorization: Bearer <token>` for this user, as the frontend sends it."""
+    token, _ = create_access_token(user.user_id, user.role.value)
+    return {"Authorization": f"Bearer {token}"}

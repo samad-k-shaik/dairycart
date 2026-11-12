@@ -12,18 +12,19 @@ import { OrderStatusTimeline } from "@/components/orders/OrderStatusTimeline"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useOrder } from "@/hooks/useOrder"
 import { formatDateTime } from "@/lib/format"
+import { formatDay } from "@/lib/subscription"
 
 function OrderDetailsPage() {
   const { id } = useParams()
   const { data: order, isPending, isError, error, refetch, isFetching } = useOrder(Number(id))
 
-  const backTo = order ? `/orders?phone=${order.customer.phone}` : "/orders"
+  const backTo = "/orders" // My orders (#90)
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <Link
         to={backTo}
-        className="inline-flex items-center gap-1.5 rounded-xl font-semibold text-muted-foreground hover:text-primary"
+        className="photo-panel inline-flex items-center gap-1.5 px-3 py-2 font-semibold text-muted-foreground hover:text-primary"
       >
         <ArrowLeft className="size-4" aria-hidden="true" />
         Back to my orders
@@ -41,10 +42,16 @@ function OrderDetailsPage() {
         <OrderLoadProblem error={error} onRetry={() => refetch()} retrying={isFetching} />
       ) : (
         <>
-          <header className="flex flex-wrap items-center justify-between gap-3">
+          <header className="photo-panel flex flex-wrap items-center justify-between gap-3 px-4 py-3">
             <div>
               <h1 className="text-h1 font-bold">Order #{order.order_id}</h1>
               <p className="text-muted-foreground">{formatDateTime(order.order_date)}</p>
+              {/* #97: orders created from a subscription say which day they are for. */}
+              {order.subscription_id && order.delivery_date && (
+                <p className="text-small font-semibold text-primary">
+                  Subscription delivery for {formatDay(order.delivery_date)}
+                </p>
+              )}
             </div>
             {/* text-sm (not our text-body token): cn() would treat "text-body" as a colour
                 and drop the status colour. */}

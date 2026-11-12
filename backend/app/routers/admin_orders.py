@@ -3,8 +3,7 @@
     GET   /api/v1/admin/orders                     → one page of orders + status counts
     PATCH /api/v1/admin/orders/{order_id}/status   → move an order to its next status
 
-TODO(auth): admin routes are not protected in the POC (ADR-003, NFR-10). They all live
-under /admin so one dependency can protect them when login is added.
+Protected (#89): every endpoint here needs an ADMIN token (401 without one, 403 for a USER).
 """
 
 from dataclasses import asdict
@@ -13,13 +12,22 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.orm import Session
 
+from app.core.auth import require_admin
 from app.database.session import get_db
 from app.models import OrderStatus
 from app.schemas.common import ErrorResponse
 from app.schemas.order import AdminOrderPage, AdminOrderSummary, OrderRead, StatusUpdate
 from app.services import order_service
 
-router = APIRouter(prefix="/admin/orders", tags=["admin orders"])
+router = APIRouter(
+    prefix="/admin/orders",
+    tags=["admin orders"],
+    dependencies=[Depends(require_admin)],  # ADMIN only (#89)
+    responses={
+        401: {"model": ErrorResponse, "description": "Not logged in"},
+        403: {"model": ErrorResponse, "description": "Not an administrator"},
+    },
+)
 
 DbSession = Annotated[Session, Depends(get_db)]
 

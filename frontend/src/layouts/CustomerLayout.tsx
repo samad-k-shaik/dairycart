@@ -3,12 +3,16 @@
  * The header is written once here; each page renders inside <Outlet />.
  */
 import { NavLink, Outlet } from "react-router"
-import { House, ReceiptText, ShoppingCart } from "lucide-react"
+import { House, LogIn, ReceiptText, Repeat, ShoppingCart, UserRound } from "lucide-react"
 
 import { DevCrashProbe } from "@/components/common/DevMockSwitch"
 import { Logo } from "@/components/common/Logo"
+import { useAuth } from "@/hooks/useAuth"
 import { useCart } from "@/hooks/useCart"
 import { cn } from "@/lib/utils"
+
+/** Served from frontend/public, so the path starts at the site root. */
+const BACKGROUND_IMAGE = "/images/backgrounds/dairy-barn.webp"
 
 /**
  * Style for header links. NavLink passes `isActive`, so the link for the current page is blue.
@@ -23,11 +27,35 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 function CustomerLayout() {
   // Re-renders whenever the cart changes, so the badge updates immediately.
   const { itemCount } = useCart()
+  const { user } = useAuth()
 
   return (
-    <div className="flex min-h-screen flex-col">
+    // `isolate` starts a new stacking layer, so the -z-10 background below sits behind the
+    // page content but still in front of the body's plain grey colour.
+    // `[--muted-foreground:…]`: grey text is one shade darker (slate-600) on customer pages,
+    // because over the darkest part of the photo the normal grey (#64748b) is only ~3.3:1
+    // contrast; #475569 keeps it above the WCAG AA minimum of 4.5:1 (#93).
+    // `customer-type`: Fraunces headings, prices and logo on customer pages only (#95, index.css).
+    <div className="customer-type isolate flex min-h-screen flex-col [--muted-foreground:#475569]">
+      {/*
+        #93: dairy-barn photo behind every customer page (admin pages do not use this layout).
+        - `fixed inset-0`: it fills the window and does not scroll with the page.
+        - The second layer is a thin veil (page colour at 35%, #94) so the photo stays bright;
+          text that sits straight on the photo uses the `photo-panel` class (index.css).
+        - aria-hidden: it is decoration, screen readers skip it.
+        Photo: "Cows feeding in a long barn aisle" by Ahmad Nasihin, Unsplash License.
+      */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 -z-10 bg-cover bg-center"
+        style={{ backgroundImage: `url(${BACKGROUND_IMAGE})` }}
+      />
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 bg-background/35" />
+
       <header className="sticky top-0 z-40 border-b bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-2 px-4 md:px-6 lg:px-8">
+        {/* #97: with 5 header links, the "DairyCart" text hides below 420px (icon and
+            screen-reader name stay), so every link still fits on a 360px phone. */}
+        <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-2 px-4 md:px-6 lg:px-8 max-[420px]:[&_.brand-name]:sr-only">
           <Logo />
           <nav aria-label="Main" className="ml-auto flex items-center gap-1">
             {/* `end`: "/" is active only on the home page, not on every page under it. */}
@@ -39,6 +67,11 @@ function CustomerLayout() {
             <NavLink to="/orders" end className={navLinkClass}>
               <ReceiptText className="size-5" aria-hidden="true" />
               <span className="sr-only sm:not-sr-only">My orders</span>
+            </NavLink>
+            {/* #97. The label shows from 1024px; below that the icon (and screen-reader text). */}
+            <NavLink to="/subscriptions" className={navLinkClass}>
+              <Repeat className="size-5" aria-hidden="true" />
+              <span className="sr-only lg:not-sr-only">Subscriptions</span>
             </NavLink>
             <NavLink
               to="/cart"
@@ -57,6 +90,18 @@ function CustomerLayout() {
                 )}
               </span>
             </NavLink>
+            {/* #89: "Account" when logged in, otherwise "Log in". */}
+            {user ? (
+              <NavLink to="/account" className={navLinkClass} aria-label={`Account, ${user.username}`}>
+                <UserRound className="size-5" aria-hidden="true" />
+                <span className="hidden sm:inline">Account</span>
+              </NavLink>
+            ) : (
+              <NavLink to="/login" className={navLinkClass}>
+                <LogIn className="size-5" aria-hidden="true" />
+                <span className="sr-only sm:not-sr-only">Log in</span>
+              </NavLink>
+            )}
           </nav>
         </div>
       </header>
@@ -70,9 +115,8 @@ function CustomerLayout() {
       <footer className="border-t bg-surface">
         <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-2 px-4 py-4 text-small text-muted-foreground md:px-6 lg:px-8">
           <span>DairyCart · Milk Delivery POC</span>
-          <NavLink to="/admin" className="font-semibold hover:text-primary">
-            Admin
-          </NavLink>
+          {/* #96: no "Admin" link for customers. Admins reach the dashboard by logging in
+              (they land on /admin) or from "Open the Admin Dashboard" on the Account page. */}
         </div>
       </footer>
     </div>

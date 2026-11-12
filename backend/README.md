@@ -12,8 +12,8 @@ FastAPI application (Python 3.12). Scaffolded in M1-01 (#9): a runnable app with
 | 2 | `python3.12 -m venv .venv` | `py -3.12 -m venv .venv` |
 | 3 | `source .venv/bin/activate` | `.venv\Scripts\Activate.ps1` |
 | 4 | `pip install -r requirements.txt -r requirements-dev.txt` | same |
-| 5 | `cp .env.example .env`, start PostgreSQL (see *Local database*) | `copy .env.example .env`, same |
-| 6 | `alembic upgrade head` (tables), then `python -m app.scripts.seed` (products) | same |
+| 5 | `cp .env.example .env`, put your own random `JWT_SECRET_KEY` in it (see *Login and admin accounts*), start PostgreSQL (see *Local database*) | `copy .env.example .env`, same |
+| 6 | `alembic upgrade head` (tables), then `python -m app.scripts.seed` (products), then create an admin: `python -m app.scripts.create_admin --username admin --email admin@example.com --full-name "Dairy Admin"` | same |
 | 7 | `uvicorn app.main:app --reload --port 8000`, then open http://localhost:8000/docs | same |
 | 8 | Run the tests: `pytest` | same |
 
@@ -128,9 +128,9 @@ How the rules are split across the layers:
 
 | Endpoint | Does | Errors |
 |---|---|---|
-| `POST /api/v1/orders` | Place an order → `201` + `Location: /api/v1/orders/{id}` | `400 DUPLICATE_PRODUCT`, `404`, `409 PRODUCT_UNAVAILABLE`, `422` |
-| `GET /api/v1/orders/{order_id}` | One order with items | `404` |
-| `GET /api/v1/orders?phone=9876543210` | Customer history, newest first; unknown phone → `[]` | `422` (missing/invalid phone) |
+| `POST /api/v1/orders` | Place an order (login required, #90) → `201` + `Location: /api/v1/orders/{id}` | `401`, `400 DUPLICATE_PRODUCT`, `404`, `409 PRODUCT_UNAVAILABLE`, `422` |
+| `GET /api/v1/orders/mine` | The logged-in user's orders, newest first (#90) | `401` |
+| `GET /api/v1/orders/{order_id}` | One order with items (owner or ADMIN only, #90) | `401`, `404` (also for someone else's order) |
 | `GET /api/v1/admin/orders?status=&page=&page_size=` | One page (newest first, `page_size` ≤ 100) + `status_counts` for all orders | `422` |
 | `PATCH /api/v1/admin/orders/{order_id}/status` | Next status, only along the allowed transitions | `404`, `409 INVALID_STATUS_TRANSITION`, `422` |
 
@@ -140,11 +140,73 @@ What makes the order code safe:
 - **One transaction.** Customer (found or created by phone), order and items are saved with one `commit()`. Any error rolls everything back: a failed order leaves no rows behind.
 - **Status rules** live in one dict, `ALLOWED_TRANSITIONS` in `app/services/order_service.py` (5 arrows: PLACED → CONFIRMED/CANCELLED, CONFIRMED → OUT_FOR_DELIVERY/CANCELLED, OUT_FOR_DELIVERY → DELIVERED). The order row is locked (`SELECT … FOR UPDATE`) while it is checked and saved, so two admins cannot both change it.
 - **No N+1 queries.** An order is loaded with its customer, items and products in 2 queries (`joinedload` + `selectinload`); a test counts them.
-- **POC risk (ADR-003):** there is no login. Anyone who knows a phone number can see that customer's orders, and admin routes (marked `TODO(auth)`) are open.
+- **Who sees what (#89, #90):** ordering needs a logged-in user, and the order is saved with `orders.user_id`. An order is visible only to its owner and to admins; anyone else gets the same `404` as for a missing order. The old phone lookup was removed.
+
+## Subscriptions (#97)
+
+| Endpoint | Does | Errors |
+|---|---|---|
+| `POST /api/v1/subscriptions` | Subscribe for `WEEK` (7), `HALF_MONTH` (15) or `MONTH` (30) days from `start_date` (tomorrow … +30 days) | `401`, `400`, `404`, `409 SUBSCRIPTION_ALREADY_ACTIVE` / `PRODUCT_UNAVAILABLE` / `INSUFFICIENT_STOCK`, `422` |
+| `GET /api/v1/subscriptions/mine` | My subscriptions, newest first | `401` |
+| `GET /api/v1/subscriptions/{id}` | One subscription (owner or ADMIN) | `401`, `404` |
+| `POST /api/v1/subscriptions/{id}/cancel` | Cancel (owner or ADMIN) | `401`, `404`, `409 SUBSCRIPTION_NOT_ACTIVE` |
+| `GET /api/v1/admin/subscriptions?status=` | All subscriptions (ADMIN) | `401`, `403` |
+| `POST /api/v1/admin/subscriptions/generate-orders` | Create today's orders (ADMIN) | `401`, `403` |
+
+- **Daily orders:** there is no scheduler (ADR-015). Once a day, an admin presses *Create today's subscription orders*, or someone runs:
+  ```
+  python -m app.scripts.generate_subscription_orders              # today, India time
+  python -m app.scripts.generate_subscription_orders --date 2026-11-21
+  ```
+  `generate_orders_for(day)` in `app/services/subscription_service.py` creates one normal order per ACTIVE subscription for that day (locked prices, stock reduced). It is safe to run twice: `uq_orders_subscription_day` refuses a second order for the same subscription and day. Each subscription runs in its own SAVEPOINT, so one out-of-stock product only skips that subscription.
+- **"Today"** is the date in India (fixed UTC+05:30 offset, no daylight saving), not the server's time zone.
+- **One active subscription per user** is a partial unique index (`WHERE status = 'ACTIVE'`), so even two requests at the same moment cannot both create one.
+- Shared item checks (duplicates, unavailable, stock) live in `order_service.check_items`, used by both orders and subscriptions.
+- Tests: `tests/test_subscription_service.py` (fixed dates) and `tests/api/test_subscriptions.py`.
+
+## Stock (#92)
+
+- `products.stock_quantity` = bottles left. **Admins only** see the number (`GET /api/v1/admin/products`, admin create/edit responses, and the `stock_quantity` field there). Public product responses only carry `in_stock` (true/false).
+- `create_order` locks the ordered products (`ProductRepository.get_many_for_update`, `SELECT … FOR UPDATE`, always in `product_id` order to avoid deadlocks), refuses a quantity above the stock with `409 INSUFFICIENT_STOCK` (the message never says how many are left), and reduces the stock in the same transaction as the order.
+- `update_status(…, CANCELLED)` adds the quantities back. Delivering does not change stock.
+- The seed gives each catalogue product 100 (`SEED_STOCK`); the migration gave products that already existed 100; new products default to 0 until the admin sets it.
 
 ## CORS (M3-08)
 
 The browser only lets the frontend (`http://localhost:5173`, another origin) call this API because `CORSMiddleware` allows the origins listed in **`CORS_ORIGINS`** (`backend/.env`, comma-separated). `*` is refused when the settings load. A page opened from any other origin, even `http://127.0.0.1:5173`, cannot read the responses. Add an origin there if you open the frontend from another address.
+
+## Login and admin accounts (#89)
+
+| Endpoint | Does | Errors |
+|---|---|---|
+| `POST /api/v1/auth/register` | Sign up → `201`, always role `USER` | `409 USER_ALREADY_EXISTS`, `422` |
+| `POST /api/v1/auth/login` | Username or email + password → `access_token` (JWT) | `401` (one message for unknown user and wrong password) |
+| `GET /api/v1/auth/me` | The logged-in user | `401` |
+| `GET /api/v1/admin/users` | Every user (ADMIN only) | `401`, `403` |
+
+**Every `/api/v1/admin/*` endpoint needs an ADMIN token** (orders, products and users): `401` without one, `403` for a `USER`. In `/docs`, log in with `POST /auth/login`, copy `access_token`, click **Authorize** and paste it.
+
+**Create an admin** (the API never gives the ADMIN role):
+
+```bash
+python -m app.scripts.create_admin --username admin --email admin@example.com --full-name "Dairy Admin"
+#   asks for the password twice (not shown, not saved in your shell history)
+python -m app.scripts.create_admin --promote ravi_k     # make an existing user an admin
+```
+
+**`JWT_SECRET_KEY`** (required, at least 32 characters) signs the tokens. Anyone who knows it can create a token for any user, including an admin, so: random, secret, never committed, different per environment. Make one with:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+How it works (`app/core/security.py`, `app/core/auth.py`):
+
+- **Passwords** are stored as **bcrypt** hashes (salted, deliberately slow, cost 12). Login hashes the typed password and compares. An unknown username still runs one bcrypt check, so response times don't reveal which accounts exist.
+- **Tokens** are signed JWTs with the user id (`sub`) and an expiry (`exp`). Changing any character breaks the signature; only HS256 is accepted (so an unsigned `"alg": "none"` token is refused).
+- **`get_current_user`** reads `Authorization: Bearer …`, checks the token, and loads the user **from the database**. **`require_admin`** then checks the role. A demoted admin loses access at once.
+- **Logout** happens in the browser (the token is deleted). The server keeps no sessions, so a copied token stays valid until it expires (`JWT_EXPIRE_MINUTES`, default 60).
+- Tests use bcrypt cost 4 (faster) and a fixed test secret (`tests/conftest.py`); `admin_client` sends requests as a logged-in admin.
 
 ## Tests (M1-11)
 

@@ -135,14 +135,9 @@ export function getOrder(orderId: number): Promise<Order> {
 }
 
 /** GET /api/v1/orders?phone= — customer order history, newest first (proposed, ADR-005). */
-export function getOrdersByPhone(phone: string): Promise<OrderSummary[]> {
-  if (!PHONE_PATTERN.test(phone)) {
-    return fail(422, "VALIDATION_ERROR", "Request validation failed.", [
-      { field: "phone", issue: "must be a 10-digit Indian mobile number" },
-    ])
-  }
-  const summaries: OrderSummary[] = readDb().orders
-    .filter((o) => o.customer.phone === phone)
+/** GET /orders/mine (#90). The mock has no accounts, so offline every mock order is "mine". */
+export function getMyOrders(): Promise<OrderSummary[]> {
+  const summaries: OrderSummary[] = [...readDb().orders]
     .sort(newestFirst)
     .map((o) => ({
       order_id: o.order_id,
@@ -151,7 +146,7 @@ export function getOrdersByPhone(phone: string): Promise<OrderSummary[]> {
       total_amount: o.total_amount,
       item_count: o.items.length,
     }))
-  return respond(summaries) // unknown phone → [] (not an error), as in the contract
+  return respond(summaries)
 }
 
 /** GET /api/v1/admin/orders — filter by status, paginate, plus dashboard counts. */

@@ -55,12 +55,15 @@ def test_order_status_is_a_string_enum_with_the_five_states() -> None:
     assert OrderStatus.PLACED == "PLACED"
 
 
-def test_all_four_tables_are_registered_for_alembic() -> None:
+def test_all_tables_are_registered_for_alembic() -> None:
     assert set(Base.metadata.tables) == {
         "customers",
         "products",
         "orders",
         "order_items",
+        "users",  # #89
+        "subscriptions",  # #97
+        "subscription_items",  # #97
     }
 
 
@@ -93,6 +96,7 @@ ERD_COLUMNS = {
         "price": ("NUMERIC(10, 2)", False),
         "is_available": ("BOOLEAN", False),
         "created_at": ("TIMESTAMP WITH TIME ZONE", False),
+        "stock_quantity": ("INTEGER", False),  # #92
     },
     "orders": {
         "order_id": ("INTEGER", False),
@@ -100,10 +104,34 @@ ERD_COLUMNS = {
         "order_date": ("TIMESTAMP WITH TIME ZONE", False),
         "total_amount": ("NUMERIC(10, 2)", False),
         "status": ("VARCHAR(20)", False),
+        "user_id": ("INTEGER", True),  # nullable: orders from before #90
+        "subscription_id": ("INTEGER", True),  # #97: null for one-time orders
+        "delivery_date": ("DATE", True),  # #97
     },
     "order_items": {
         "order_item_id": ("INTEGER", False),
         "order_id": ("INTEGER", False),
+        "product_id": ("INTEGER", False),
+        "quantity": ("INTEGER", False),
+        "unit_price": ("NUMERIC(10, 2)", False),
+        "subtotal": ("NUMERIC(10, 2)", False),
+    },
+    # #97
+    "subscriptions": {
+        "subscription_id": ("INTEGER", False),
+        "user_id": ("INTEGER", False),
+        "customer_id": ("INTEGER", False),
+        "plan": ("VARCHAR(20)", False),
+        "start_date": ("DATE", False),
+        "end_date": ("DATE", False),
+        "status": ("VARCHAR(20)", False),
+        "daily_total": ("NUMERIC(10, 2)", False),
+        "created_at": ("TIMESTAMP WITH TIME ZONE", False),
+        "cancelled_at": ("TIMESTAMP WITH TIME ZONE", True),
+    },
+    "subscription_items": {
+        "subscription_item_id": ("INTEGER", False),
+        "subscription_id": ("INTEGER", False),
         "product_id": ("INTEGER", False),
         "quantity": ("INTEGER", False),
         "unit_price": ("NUMERIC(10, 2)", False),
@@ -168,16 +196,27 @@ def test_check_and_unique_constraints_have_readable_names(schema: Engine) -> Non
 
     assert checks == {
         "ck_products_price_positive",
+        "ck_products_stock_quantity_non_negative",  # #92
         "ck_orders_total_amount_non_negative",
         "ck_orders_status_allowed",
         "ck_order_items_quantity_range",
         "ck_order_items_unit_price_positive",
         "ck_order_items_subtotal_non_negative",
+        # #97
+        "ck_subscriptions_plan_allowed",
+        "ck_subscriptions_status_allowed",
+        "ck_subscriptions_end_after_start",
+        "ck_subscriptions_daily_total_non_negative",
+        "ck_subscription_items_quantity_range",
+        "ck_subscription_items_unit_price_positive",
+        "ck_subscription_items_subtotal_non_negative",
     }
     assert uniques == {
         "uq_customers_phone",
         "uq_products_name_size",
         "uq_order_items_order_product",
+        "uq_orders_subscription_day",  # #97: one order per subscription per day
+        "uq_subscription_items_product",  # #97
     }
 
 
@@ -188,14 +227,21 @@ def test_foreign_keys_and_on_delete_rules(schema: Engine) -> None:
             fk["referred_table"],
             fk["options"].get("ondelete"),
         )
-        for t in ("orders", "order_items")
+        for t in ("orders", "order_items", "subscriptions", "subscription_items")
         for fk in inspector.get_foreign_keys(t)
     }
 
     assert fks == {
         ("orders", "customer_id"): ("customers", "RESTRICT"),
+        ("orders", "user_id"): ("users", "RESTRICT"),  # #90
         ("order_items", "order_id"): ("orders", "CASCADE"),
         ("order_items", "product_id"): ("products", "RESTRICT"),
+        # #97
+        ("orders", "subscription_id"): ("subscriptions", "RESTRICT"),
+        ("subscriptions", "user_id"): ("users", "RESTRICT"),
+        ("subscriptions", "customer_id"): ("customers", "RESTRICT"),
+        ("subscription_items", "subscription_id"): ("subscriptions", "CASCADE"),
+        ("subscription_items", "product_id"): ("products", "RESTRICT"),
     }
 
 
@@ -210,6 +256,18 @@ def test_indexes_from_the_erd(schema: Engine) -> None:
     assert ("orders", "idx_orders_customer_id", ("customer_id",)) in indexes
     assert ("orders", "idx_orders_status", ("status",)) in indexes
     assert ("order_items", "idx_order_items_order", ("order_id",)) in indexes
+
+
+def test_one_active_subscription_per_user_index(schema: Engine) -> None:
+    """#97: a UNIQUE index on user_id that only counts rows with status ACTIVE."""
+    index = next(
+        ix
+        for ix in inspect(schema).get_indexes("subscriptions")
+        if ix["name"] == "uq_subscriptions_one_active_per_user"
+    )
+    assert index["unique"] is True
+    assert index["column_names"] == ["user_id"]
+    assert "ACTIVE" in index["dialect_options"]["postgresql_where"]
 
 
 # ---- the database enforces the rules ----

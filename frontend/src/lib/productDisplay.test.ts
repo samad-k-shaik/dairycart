@@ -42,6 +42,26 @@ describe("images and descriptions", () => {
     assert.notEqual(getProductImage({ name: "Cow Milk" }), getProductImage({ name: "Buffalo Milk" }))
   })
 
+  it("gives paneer (also spelled Panner) and ghee their own pictures (#94)", () => {
+    assert.equal(getProductImage({ name: "Paneer" }), "/images/products/paneer.svg")
+    assert.equal(getProductImage({ name: "Panner" }), "/images/products/paneer.svg")
+    assert.equal(getProductImage({ name: "Ghee" }), "/images/products/ghee.svg")
+    assert.match(getProductDescription({ name: "Ghee" }), /ghee/i)
+  })
+
+  it("ignores upper/lower case and extra spaces in the name", () => {
+    assert.equal(getProductImage({ name: "  ghee " }), "/images/products/ghee.svg")
+    assert.equal(getProductImage({ name: "COW MILK" }), getProductImage({ name: "Cow Milk" }))
+  })
+
+  it("shows paneer and ghee under All only, not under Cow or Buffalo", () => {
+    for (const name of ["Panner", "Ghee"]) {
+      assert.equal(matchesCategory({ name }, "all"), true)
+      assert.equal(matchesCategory({ name }, "cow"), false)
+      assert.equal(matchesCategory({ name }, "buffalo"), false)
+    }
+  })
+
   it("falls back safely for an unknown product name", () => {
     assert.ok(getProductImage({ name: "Goat Milk" }))
     assert.ok(getProductDescription({ name: "Goat Milk" }))

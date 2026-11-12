@@ -4,22 +4,24 @@ The key rule: the backend calculates every price and total from the DATABASE (BR
 The request only says which products and how many.
 """
 
+from collections.abc import Sequence
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
 from app.core.errors import (
     DuplicateProductError,
+    InsufficientStockError,
     InvalidStatusTransitionError,
     NotFoundError,
     ProductUnavailableError,
 )
-from app.models import Order, OrderItem, OrderStatus
+from app.models import Order, OrderItem, OrderStatus, Product, User, UserRole
 from app.repositories.customer_repository import CustomerRepository
 from app.repositories.order_repository import OrderRepository, OrderRow
 from app.repositories.product_repository import ProductRepository
 from app.schemas.common import ErrorDetail
-from app.schemas.order import OrderCreate
+from app.schemas.order import OrderCreate, OrderItemIn
 
 # Which status can follow which (functional requirements → Order status lifecycle).
 # DELIVERED and CANCELLED are final: nothing can follow them.
@@ -38,15 +40,17 @@ def _item_field(index: int) -> str:
     return f"items[{index}].product_id"
 
 
-def create_order(db: Session, data: OrderCreate) -> Order:
-    """Place an order. Either everything is saved, or nothing is (one transaction).
+def check_items(db: Session, items: Sequence[OrderItemIn]) -> dict[int, Product]:
+    """Shared by one-time orders and subscriptions (#97). Raises if any item fails:
 
     1. The same product twice → 400 DUPLICATE_PRODUCT (BR-4)
-    2. Unknown product → 404, unavailable product → 409; the whole order fails (BR-3)
-    3. Find the customer by phone, or create them (BR-5)
-    4. unit_price = the product's price NOW (snapshot, BR-1); subtotal and total (BR-2)
+    2. Unknown product → 404, unavailable product → 409 (BR-3)
+    3. More than the stock → 409 INSUFFICIENT_STOCK (#92)
+
+    Returns the products by id, LOCKED until the caller commits or rolls back: another
+    order for the same products waits, so the stock check cannot be outdated.
     """
-    product_ids = [item.product_id for item in data.items]
+    product_ids = [item.product_id for item in items]
     seen: set[int] = set()
     for index, product_id in enumerate(product_ids):
         if product_id in seen:
@@ -56,13 +60,12 @@ def create_order(db: Session, data: OrderCreate) -> Order:
             )
         seen.add(product_id)
 
-    # All products in ONE query, not one query per item.
-    products = ProductRepository(db).get_many(product_ids)
-    for index, product_id in enumerate(product_ids):
-        product = products.get(product_id)
+    products = ProductRepository(db).get_many_for_update(product_ids)
+    for index, requested in enumerate(items):
+        product = products.get(requested.product_id)
         if product is None:
             raise NotFoundError(
-                f"Product {product_id} was not found.",
+                f"Product {requested.product_id} was not found.",
                 details=[ErrorDetail(field=_item_field(index), issue="not found")],
             )
         if not product.is_available:
@@ -70,8 +73,35 @@ def create_order(db: Session, data: OrderCreate) -> Order:
                 f"Product '{product.name} {product.size}' is currently unavailable.",
                 details=[ErrorDetail(field=_item_field(index), issue="unavailable")],
             )
+        if requested.quantity > product.stock_quantity:
+            # No number in the message: stock levels are for admins only.
+            raise InsufficientStockError(
+                f"Only a limited quantity of '{product.name} {product.size}' is "
+                "left. Please reduce the quantity.",
+                details=[
+                    ErrorDetail(
+                        field=f"items[{index}].quantity", issue="more than in stock"
+                    )
+                ],
+            )
+    return products
 
+
+def create_order(db: Session, data: OrderCreate, user: User) -> Order:
+    """Place an order for the logged-in `user` (#90). Either everything is saved, or
+    nothing is (one transaction).
+
+    1-3. check_items: duplicates, unknown/unavailable products, stock (whole order fails)
+    4. Find the customer by phone, or create them (BR-5)
+    5. unit_price = the product's price NOW (snapshot, BR-1); subtotal and total (BR-2)
+    6. Reduce each product's stock by the ordered quantity (#92)
+    """
+    # Read the id now, before building the order: reading it later (after an earlier
+    # commit expired `user`) would make SQLAlchemy save half-built order lines too early.
+    user_id = user.user_id
     try:
+        products = check_items(db, data.items)  # locked until commit (#92)
+
         customers = CustomerRepository(db)
         customer = customers.get_by_phone(data.customer.phone) or customers.create(
             data.customer.name, data.customer.phone
@@ -81,6 +111,7 @@ def create_order(db: Session, data: OrderCreate) -> Order:
         for requested in data.items:
             product = products[requested.product_id]
             unit_price: Decimal = product.price  # snapshot (BR-1)
+            product.stock_quantity -= requested.quantity  # #92 (row is locked)
             items.append(
                 OrderItem(
                     product=product,
@@ -90,7 +121,8 @@ def create_order(db: Session, data: OrderCreate) -> Order:
                 )
             )
         order = Order(
-            customer=customer,
+            customer=customer,  # delivery contact (name + phone from the form)
+            user_id=user_id,  # the account that placed it (#90)
             items=items,
             status=OrderStatus.PLACED,
             total_amount=sum((item.subtotal for item in items), Decimal("0.00")),
@@ -114,12 +146,24 @@ def get_order(db: Session, order_id: int) -> Order:
     return order
 
 
-def list_orders_by_phone(db: Session, phone: str) -> list[OrderRow]:
-    """Customer order history, newest first. Unknown phone → [] (not 404).
+def get_order_for(db: Session, order_id: int, user: User) -> Order:
+    """One order, but only for its owner or an ADMIN (#90).
 
-    POC risk (ADR-003): anyone who knows a phone number can see that customer's orders.
+    Anyone else gets the SAME 404 as for an order that does not exist, so nobody can
+    find out which order ids exist by trying them.
     """
-    return OrderRepository(db).list_by_phone(phone)
+    order = OrderRepository(db).get_with_items(order_id)
+    is_allowed = order is not None and (
+        user.role == UserRole.ADMIN or order.user_id == user.user_id
+    )
+    if not is_allowed:
+        raise NotFoundError(f"Order {order_id} was not found.")
+    return order
+
+
+def list_my_orders(db: Session, user: User) -> list[OrderRow]:
+    """The logged-in user's orders, newest first ("My orders", #90)."""
+    return OrderRepository(db).list_by_user(user.user_id)
 
 
 def list_admin_orders(
@@ -137,6 +181,8 @@ def update_status(db: Session, order_id: int, new_status: OrderStatus) -> Order:
     The order row is locked while we check and save, so two admins cannot both change
     it at the same time. This is the one place future notifications (SMS, WhatsApp)
     would hook in.
+
+    Cancelling puts the ordered quantities back into stock (#92).
     """
     try:
         order = OrderRepository(db).get_for_update(order_id)
@@ -147,8 +193,13 @@ def update_status(db: Session, order_id: int, new_status: OrderStatus) -> Order:
                 f"Cannot change status from {order.status.value} to {new_status.value}.",
                 details=[ErrorDetail(field="status", issue="transition not allowed")],
             )
+        if new_status == OrderStatus.CANCELLED:
+            quantities = {item.product_id: item.quantity for item in order.items}
+            products = ProductRepository(db).get_many_for_update(quantities)
+            for product_id, quantity in quantities.items():
+                products[product_id].stock_quantity += quantity
         order.status = new_status
-        db.commit()  # also releases the row lock
+        db.commit()  # also releases the row locks
     except Exception:
         db.rollback()
         raise

@@ -31,7 +31,7 @@ export function ProductCard({ product, onAdd }: ProductCardProps) {
           width={200}
           height={200}
           loading="lazy"
-          className="size-full object-contain p-2"
+          className="size-full object-cover"
         />
       </div>
 
@@ -52,6 +52,12 @@ export function ProductCard({ product, onAdd }: ProductCardProps) {
 
       <div className="flex items-center justify-between gap-2">
         <span className="text-price font-extrabold">{formatCurrency(product.price)}</span>
+        {/* No stock left (#92): no add button; customers never see how many are left. */}
+        {!product.in_stock ? (
+          <span className="relative z-10 rounded-full bg-muted px-3 py-1.5 text-small font-semibold text-muted-foreground">
+            Out of stock
+          </span>
+        ) : (
         <button
           type="button"
           onClick={() => onAdd(product)}
@@ -60,6 +66,7 @@ export function ProductCard({ product, onAdd }: ProductCardProps) {
         >
           <Plus className="size-5" aria-hidden="true" />
         </button>
+        )}
       </div>
     </article>
   )

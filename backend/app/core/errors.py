@@ -17,6 +17,7 @@ generic message: a stack trace would reveal code, file paths and library version
 
 import logging
 from collections.abc import Sequence
+from typing import ClassVar
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -37,6 +38,8 @@ class DomainError(Exception):
 
     status_code: int = 400
     code: str = "BAD_REQUEST"
+    # Extra response headers, e.g. WWW-Authenticate for a 401.
+    headers: dict[str, str] | None = None
 
     def __init__(self, message: str, details: Sequence[ErrorDetail] = ()) -> None:
         super().__init__(message)
@@ -56,6 +59,14 @@ class ProductUnavailableError(DomainError):
 
     status_code = 409
     code = "PRODUCT_UNAVAILABLE"
+
+
+class InsufficientStockError(DomainError):
+    """The order asks for more bottles than are in stock (#92). The message never says
+    how many are left: stock numbers are for admins only."""
+
+    status_code = 409
+    code = "INSUFFICIENT_STOCK"
 
 
 class InvalidStatusTransitionError(DomainError):
@@ -79,12 +90,58 @@ class ProductAlreadyExistsError(DomainError):
     code = "PRODUCT_ALREADY_EXISTS"
 
 
+class UserAlreadyExistsError(DomainError):
+    """Sign-up: the email address or the username is already used (#89)."""
+
+    status_code = 409
+    code = "USER_ALREADY_EXISTS"
+
+
+class UnauthorizedError(DomainError):
+    """Not logged in: no token, a wrong/expired token, or wrong login details (#89)."""
+
+    status_code = 401
+    code = "UNAUTHORIZED"
+    # The standard header that tells clients to send "Authorization: Bearer <token>".
+    headers: ClassVar[dict[str, str]] = {"WWW-Authenticate": "Bearer"}
+
+
+class ForbiddenError(DomainError):
+    """Logged in, but not allowed: e.g. a USER calling an admin API (#89)."""
+
+    status_code = 403
+    code = "FORBIDDEN"
+
+
 class ProductInUseError(DomainError):
     """Admin: the product appears in an order, so deleting it would break order history
     (issue #86). Mark it unavailable instead."""
 
     status_code = 409
     code = "PRODUCT_IN_USE"
+
+
+class SubscriptionAlreadyActiveError(DomainError):
+    """The user already has an ACTIVE subscription; one at a time (#97)."""
+
+    status_code = 409
+    code = "SUBSCRIPTION_ALREADY_ACTIVE"
+
+
+class SubscriptionNotActiveError(DomainError):
+    """Cancel was asked for a subscription that is already cancelled or completed (#97)."""
+
+    status_code = 409
+    code = "SUBSCRIPTION_NOT_ACTIVE"
+
+
+class InvalidFieldError(DomainError):
+    """A field is well-formed but breaks a rule that needs the database or today's date,
+    e.g. a subscription start date in the past (#97). Same code and shape as pydantic's
+    422, so the frontend shows it under the field in the same way."""
+
+    status_code = 422
+    code = "VALIDATION_ERROR"
 
 
 # ---- Building the response ----
@@ -146,7 +203,14 @@ def field_path(location: Sequence[str | int]) -> str:
 
 async def _domain_error(request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, DomainError)
-    return error_response(request, exc.status_code, exc.code, exc.message, exc.details)
+    return error_response(
+        request,
+        exc.status_code,
+        exc.code,
+        exc.message,
+        exc.details,
+        headers=exc.headers,
+    )
 
 
 async def _validation_error(request: Request, exc: Exception) -> JSONResponse:

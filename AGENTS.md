@@ -73,7 +73,7 @@ For every task, follow these steps in order.
 
 ## Out of scope (do not implement)
 
-OTP authentication, payment gateway, subscriptions, multi-vendor, delivery partner app, Google Maps, WhatsApp notifications, AI chatbot, agentic AI, demand forecasting, advanced analytics. If an issue seems to need one of these, stop and ask.
+OTP authentication, payment gateway, automatic scheduling or prepaid subscriptions (basic daily subscriptions are in scope since #97), multi-vendor, delivery partner app, Google Maps, WhatsApp notifications, AI chatbot, agentic AI, demand forecasting, advanced analytics. If an issue seems to need one of these, stop and ask.
 
 ## Do not
 
