@@ -4,6 +4,7 @@ The key rule: the backend calculates every price and total from the DATABASE (BR
 The request only says which products and how many.
 """
 
+from collections.abc import Sequence
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
@@ -15,12 +16,12 @@ from app.core.errors import (
     NotFoundError,
     ProductUnavailableError,
 )
-from app.models import Order, OrderItem, OrderStatus, User, UserRole
+from app.models import Order, OrderItem, OrderStatus, Product, User, UserRole
 from app.repositories.customer_repository import CustomerRepository
 from app.repositories.order_repository import OrderRepository, OrderRow
 from app.repositories.product_repository import ProductRepository
 from app.schemas.common import ErrorDetail
-from app.schemas.order import OrderCreate
+from app.schemas.order import OrderCreate, OrderItemIn
 
 # Which status can follow which (functional requirements → Order status lifecycle).
 # DELIVERED and CANCELLED are final: nothing can follow them.
@@ -39,21 +40,17 @@ def _item_field(index: int) -> str:
     return f"items[{index}].product_id"
 
 
-def create_order(db: Session, data: OrderCreate, user: User) -> Order:
-    """Place an order for the logged-in `user` (#90). Either everything is saved, or
-    nothing is (one transaction).
+def check_items(db: Session, items: Sequence[OrderItemIn]) -> dict[int, Product]:
+    """Shared by one-time orders and subscriptions (#97). Raises if any item fails:
 
     1. The same product twice → 400 DUPLICATE_PRODUCT (BR-4)
-    2. Unknown product → 404, unavailable product → 409; the whole order fails (BR-3)
+    2. Unknown product → 404, unavailable product → 409 (BR-3)
     3. More than the stock → 409 INSUFFICIENT_STOCK (#92)
-    4. Find the customer by phone, or create them (BR-5)
-    5. unit_price = the product's price NOW (snapshot, BR-1); subtotal and total (BR-2)
-    6. Reduce each product's stock by the ordered quantity (#92)
+
+    Returns the products by id, LOCKED until the caller commits or rolls back: another
+    order for the same products waits, so the stock check cannot be outdated.
     """
-    # Read the id now, before building the order: reading it later (after an earlier
-    # commit expired `user`) would make SQLAlchemy save half-built order lines too early.
-    user_id = user.user_id
-    product_ids = [item.product_id for item in data.items]
+    product_ids = [item.product_id for item in items]
     seen: set[int] = set()
     for index, product_id in enumerate(product_ids):
         if product_id in seen:
@@ -63,35 +60,47 @@ def create_order(db: Session, data: OrderCreate, user: User) -> Order:
             )
         seen.add(product_id)
 
+    products = ProductRepository(db).get_many_for_update(product_ids)
+    for index, requested in enumerate(items):
+        product = products.get(requested.product_id)
+        if product is None:
+            raise NotFoundError(
+                f"Product {requested.product_id} was not found.",
+                details=[ErrorDetail(field=_item_field(index), issue="not found")],
+            )
+        if not product.is_available:
+            raise ProductUnavailableError(
+                f"Product '{product.name} {product.size}' is currently unavailable.",
+                details=[ErrorDetail(field=_item_field(index), issue="unavailable")],
+            )
+        if requested.quantity > product.stock_quantity:
+            # No number in the message: stock levels are for admins only.
+            raise InsufficientStockError(
+                f"Only a limited quantity of '{product.name} {product.size}' is "
+                "left. Please reduce the quantity.",
+                details=[
+                    ErrorDetail(
+                        field=f"items[{index}].quantity", issue="more than in stock"
+                    )
+                ],
+            )
+    return products
+
+
+def create_order(db: Session, data: OrderCreate, user: User) -> Order:
+    """Place an order for the logged-in `user` (#90). Either everything is saved, or
+    nothing is (one transaction).
+
+    1-3. check_items: duplicates, unknown/unavailable products, stock (whole order fails)
+    4. Find the customer by phone, or create them (BR-5)
+    5. unit_price = the product's price NOW (snapshot, BR-1); subtotal and total (BR-2)
+    6. Reduce each product's stock by the ordered quantity (#92)
+    """
+    # Read the id now, before building the order: reading it later (after an earlier
+    # commit expired `user`) would make SQLAlchemy save half-built order lines too early.
+    user_id = user.user_id
     try:
-        # All products in ONE query, LOCKED until commit (#92): another order for the
-        # same products waits here, so the stock check below cannot be outdated.
-        products = ProductRepository(db).get_many_for_update(product_ids)
-        for index, requested in enumerate(data.items):
-            product = products.get(requested.product_id)
-            if product is None:
-                raise NotFoundError(
-                    f"Product {requested.product_id} was not found.",
-                    details=[ErrorDetail(field=_item_field(index), issue="not found")],
-                )
-            if not product.is_available:
-                raise ProductUnavailableError(
-                    f"Product '{product.name} {product.size}' is currently unavailable.",
-                    details=[
-                        ErrorDetail(field=_item_field(index), issue="unavailable")
-                    ],
-                )
-            if requested.quantity > product.stock_quantity:
-                # No number in the message: stock levels are for admins only.
-                raise InsufficientStockError(
-                    f"Only a limited quantity of '{product.name} {product.size}' is "
-                    "left. Please reduce the quantity.",
-                    details=[
-                        ErrorDetail(
-                            field=f"items[{index}].quantity", issue="more than in stock"
-                        )
-                    ],
-                )
+        products = check_items(db, data.items)  # locked until commit (#92)
 
         customers = CustomerRepository(db)
         customer = customers.get_by_phone(data.customer.phone) or customers.create(

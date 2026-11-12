@@ -13,6 +13,7 @@
 | C5 | Place an order |
 | C6 | View order confirmation |
 | C7 | View previous orders |
+| C8 | Choose "order once" or a daily subscription (1 week / 15 days / 1 month) and cancel it *(added by #97, approved scope change)* |
 
 ### Admin application
 
@@ -24,6 +25,7 @@
 | A4 | Update order status |
 | A5 | View available products |
 | A6 | Add, edit and delete products (delete only if never ordered) *(added by #86)* |
+| A7 | View subscriptions and create each day's subscription orders *(added by #97)* |
 
 ## Out of scope
 
@@ -31,7 +33,7 @@
 |---|---|---|
 | OTP authentication | Adds an SMS provider and session security | Customer identified by phone; an `auth` module and `users` table can be added later |
 | Payment gateway | External integration, compliance | `orders` can gain a `payment_status` column and a `payments` table |
-| Subscription management | Scheduling logic | New `subscriptions` module generating orders |
+| Automatic scheduling, pausing/skipping days, editing a running subscription, prepaid plans *(basic subscriptions moved in scope by #97)* | Needs a scheduler and payments | A scheduler can call the same `generate_orders_for(day)` service; the admin button / script does it today |
 | Multi-vendor marketplace | Major domain change | Products can gain a `vendor_id` later |
 | Delivery partner app | Separate user type and app | New route tree and `deliveries` table |
 | Google Maps | External API, cost | Address fields can be added to `customers` |

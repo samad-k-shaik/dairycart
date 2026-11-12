@@ -121,6 +121,29 @@ class ProductInUseError(DomainError):
     code = "PRODUCT_IN_USE"
 
 
+class SubscriptionAlreadyActiveError(DomainError):
+    """The user already has an ACTIVE subscription; one at a time (#97)."""
+
+    status_code = 409
+    code = "SUBSCRIPTION_ALREADY_ACTIVE"
+
+
+class SubscriptionNotActiveError(DomainError):
+    """Cancel was asked for a subscription that is already cancelled or completed (#97)."""
+
+    status_code = 409
+    code = "SUBSCRIPTION_NOT_ACTIVE"
+
+
+class InvalidFieldError(DomainError):
+    """A field is well-formed but breaks a rule that needs the database or today's date,
+    e.g. a subscription start date in the past (#97). Same code and shape as pydantic's
+    422, so the frontend shows it under the field in the same way."""
+
+    status_code = 422
+    code = "VALIDATION_ERROR"
+
+
 # ---- Building the response ----
 
 INTERNAL_ERROR_MESSAGE = "Something went wrong on our side. Please try again."

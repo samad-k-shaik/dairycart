@@ -142,6 +142,28 @@ What makes the order code safe:
 - **No N+1 queries.** An order is loaded with its customer, items and products in 2 queries (`joinedload` + `selectinload`); a test counts them.
 - **Who sees what (#89, #90):** ordering needs a logged-in user, and the order is saved with `orders.user_id`. An order is visible only to its owner and to admins; anyone else gets the same `404` as for a missing order. The old phone lookup was removed.
 
+## Subscriptions (#97)
+
+| Endpoint | Does | Errors |
+|---|---|---|
+| `POST /api/v1/subscriptions` | Subscribe for `WEEK` (7), `HALF_MONTH` (15) or `MONTH` (30) days from `start_date` (tomorrow … +30 days) | `401`, `400`, `404`, `409 SUBSCRIPTION_ALREADY_ACTIVE` / `PRODUCT_UNAVAILABLE` / `INSUFFICIENT_STOCK`, `422` |
+| `GET /api/v1/subscriptions/mine` | My subscriptions, newest first | `401` |
+| `GET /api/v1/subscriptions/{id}` | One subscription (owner or ADMIN) | `401`, `404` |
+| `POST /api/v1/subscriptions/{id}/cancel` | Cancel (owner or ADMIN) | `401`, `404`, `409 SUBSCRIPTION_NOT_ACTIVE` |
+| `GET /api/v1/admin/subscriptions?status=` | All subscriptions (ADMIN) | `401`, `403` |
+| `POST /api/v1/admin/subscriptions/generate-orders` | Create today's orders (ADMIN) | `401`, `403` |
+
+- **Daily orders:** there is no scheduler (ADR-015). Once a day, an admin presses *Create today's subscription orders*, or someone runs:
+  ```
+  python -m app.scripts.generate_subscription_orders              # today, India time
+  python -m app.scripts.generate_subscription_orders --date 2026-11-21
+  ```
+  `generate_orders_for(day)` in `app/services/subscription_service.py` creates one normal order per ACTIVE subscription for that day (locked prices, stock reduced). It is safe to run twice: `uq_orders_subscription_day` refuses a second order for the same subscription and day. Each subscription runs in its own SAVEPOINT, so one out-of-stock product only skips that subscription.
+- **"Today"** is the date in India (fixed UTC+05:30 offset, no daylight saving), not the server's time zone.
+- **One active subscription per user** is a partial unique index (`WHERE status = 'ACTIVE'`), so even two requests at the same moment cannot both create one.
+- Shared item checks (duplicates, unavailable, stock) live in `order_service.check_items`, used by both orders and subscriptions.
+- Tests: `tests/test_subscription_service.py` (fixed dates) and `tests/api/test_subscriptions.py`.
+
 ## Stock (#92)
 
 - `products.stock_quantity` = bottles left. **Admins only** see the number (`GET /api/v1/admin/products`, admin create/edit responses, and the `stock_quantity` field there). Public product responses only carry `in_stock` (true/false).

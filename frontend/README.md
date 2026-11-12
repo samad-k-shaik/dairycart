@@ -162,6 +162,15 @@ Every data screen uses the same three building blocks:
 - **Dev-only mock switch (only with `VITE_USE_MOCKS=true`):** a "Mock: …" button at the bottom-left (development only) sets the mock services to *Normal*, *Slow (3 s)*, *Fail every call (500)* or *Empty lists*, and can crash the current page to test the fallback. The mode is stored in `localStorage` (`dairycart-mock-mode-v1`). It is not included in production builds.
 - With "Fail every call", the error state appears after about 4–7 s because queries retry 5xx errors twice (see `lib/queryClient.ts`).
 
+## Subscriptions (#97)
+
+- **Checkout** has a choice: *Order once* (as before) or *Subscribe*. Subscribing shows plan buttons (1 week / 15 days / 1 month), a *First delivery* date (default tomorrow, allowed up to 30 days ahead) and the daily and plan totals (estimates). It sends only plan, start date, contact, product ids and quantities (`buildCreateSubscriptionRequest`).
+- **`/subscriptions`** ("My subscriptions", login required): each plan with dates, items, totals, deliveries so far and **Cancel subscription** (confirmation dialog). Header link with a repeat icon; also on the Account page.
+- **Admin `/admin/subscriptions`**: list with a status filter and the **Create today's subscription orders** button, which shows what was created, already created or skipped. The phone tab bar calls it "Plans".
+- Orders made from a subscription show a **Subscription** badge in My orders and "Subscription delivery for <date>" on the order page.
+- Code: `services/subscriptionService.ts` (real backend only; with `VITE_USE_MOCKS=true` it answers "needs the real backend"), `hooks/useSubscriptions.ts`, `types/subscription.ts`, and the pure helpers in `lib/subscription.ts` (India-time dates, plan lengths, validation; tested in `lib/subscription.test.ts`).
+- With 5 header links, the "DairyCart" text in the header hides below 420px (the logo icon stays) so everything fits on a 360px phone.
+
 ## Stock (#92)
 
 - **Admin:** Products table has a **Stock** column (0 in red, "Out of stock"); the Add/Edit form has a **Stock (bottles)** field (whole number 0–100000, `validateStock` in `lib/productForm.ts`). Data: `getAdminProducts()` → `GET /admin/products` (ADMIN only), type `AdminProduct`.

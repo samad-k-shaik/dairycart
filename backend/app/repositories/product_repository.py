@@ -5,7 +5,7 @@ from collections.abc import Iterable, Sequence
 from sqlalchemy import exists, func, select
 from sqlalchemy.orm import Session
 
-from app.models import OrderItem, Product
+from app.models import OrderItem, Product, SubscriptionItem
 
 
 class ProductRepository:
@@ -60,9 +60,10 @@ class ProductRepository:
         return self.db.scalars(query.limit(1)).first()
 
     def is_ordered(self, product_id: int) -> bool:
-        """True if any order item points to this product."""
-        query = select(exists().where(OrderItem.product_id == product_id))
-        return bool(self.db.scalar(query))
+        """True if any order item or subscription item (#97) points to this product."""
+        in_orders = exists().where(OrderItem.product_id == product_id)
+        in_subscriptions = exists().where(SubscriptionItem.product_id == product_id)
+        return bool(self.db.scalar(select(in_orders | in_subscriptions)))
 
     def add(self, product: Product) -> Product:
         self.db.add(product)

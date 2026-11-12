@@ -29,6 +29,12 @@
 | POST | `/auth/login` | Log in → token *(#89)* | 200 |
 | GET | `/auth/me` | The logged-in user *(#89)* | 200 |
 | GET | `/admin/users` | All registered users *(#89)* | 200 |
+| POST | `/subscriptions` | Subscribe: 7, 15 or 30 days *(#97)* | 201 |
+| GET | `/subscriptions/mine` | The logged-in user's subscriptions *(#97)* | 200 |
+| GET | `/subscriptions/{id}` | One subscription (owner or ADMIN) *(#97)* | 200 |
+| POST | `/subscriptions/{id}/cancel` | Cancel a subscription *(#97)* | 200 |
+| GET | `/admin/subscriptions` | All subscriptions (`?status=`) *(#97)* | 200 |
+| POST | `/admin/subscriptions/generate-orders` | Create today's subscription orders *(#97)* | 200 |
 
 All `/admin/…` rows need an **ADMIN** token (401 without one, 403 for a `USER`).
 
@@ -161,10 +167,12 @@ Needs a logged-in user (#90). Only the user who placed the order, or an ADMIN, m
 **200 OK**
 ```json
 [
-  { "order_id": 101, "order_date": "2026-11-07T04:30:00Z", "status": "PLACED", "total_amount": "155.00", "item_count": 2 },
-  { "order_id": 88,  "order_date": "2026-11-05T03:10:00Z", "status": "DELIVERED", "total_amount": "60.00", "item_count": 1 }
+  { "order_id": 101, "order_date": "2026-11-07T04:30:00Z", "status": "PLACED", "total_amount": "155.00", "item_count": 2, "subscription_id": null },
+  { "order_id": 88,  "order_date": "2026-11-05T03:10:00Z", "status": "DELIVERED", "total_amount": "60.00", "item_count": 1, "subscription_id": 3 }
 ]
 ```
+
+`subscription_id` *(#97)*: set when the order was created from a subscription, `null` for a one-time order. The same field is in each `GET /admin/orders` row. Full orders (`POST /orders`, `GET /orders/{id}`, the status PATCH) also carry `subscription_id` and `delivery_date` (`"2026-11-21"`, the day a subscription order is for; `null` for one-time orders).
 
 
 ---
@@ -294,6 +302,86 @@ Only a product that was **never ordered** can be deleted (BR-7). An ordered prod
 
 ---
 
+## Subscriptions (#97)
+
+A subscription delivers the **same items every day** for **1 week (`WEEK`, 7 days)**, **15 days (`HALF_MONTH`)** or **1 month (`MONTH`, 30 days)**. Login required for every endpoint. Each day becomes a normal order (it shows in "My orders" and the admin order list), created by `POST /admin/subscriptions/generate-orders`.
+
+Rules:
+- `start_date` must be between **tomorrow and 30 days from today** (India time). `end_date = start_date + days − 1` (the last delivery day, included).
+- Prices are **locked** when subscribing: every day's order uses the subscription's `unit_price`, even if the product price changes later.
+- **One `ACTIVE` subscription per user** (also a database rule: a partial unique index). Cancel it to start a new one. A plan whose `end_date` has passed becomes `COMPLETED` and no longer counts.
+- Statuses: `ACTIVE`, `CANCELLED` (by the owner or an admin), `COMPLETED` (last day passed). Only `ACTIVE` can be cancelled.
+- Cancelling stops all **future** orders. An order already created for today stays (an admin can cancel that order, which restores stock).
+- Payment stays cash on each delivery; there is no prepayment.
+
+### POST /api/v1/subscriptions
+
+**Request** (`extra` fields such as prices → 422):
+```json
+{
+  "plan": "WEEK",
+  "start_date": "2026-11-21",
+  "customer": { "name": "Ravi Kumar", "phone": "9876543210" },
+  "items": [ { "product_id": 2, "quantity": 1 } ]
+}
+```
+`customer` and `items` follow the same rules as `POST /orders` (1–10 items, quantity 1–20, no duplicates; the products must be available and in stock today).
+
+**201 Created** + `Location: /api/v1/subscriptions/{id}`:
+```json
+{
+  "subscription_id": 3, "plan": "WEEK", "days": 7,
+  "start_date": "2026-11-21", "end_date": "2026-11-27", "status": "ACTIVE",
+  "customer": { "customer_id": 12, "name": "Ravi Kumar", "phone": "9876543210" },
+  "items": [ { "product_id": 2, "product_name": "Cow Milk", "size": "1 Litre", "quantity": 1, "unit_price": "60.00", "subtotal": "60.00" } ],
+  "daily_total": "60.00", "plan_total": "420.00", "orders_created": 0,
+  "created_at": "2026-11-20T10:15:00Z", "cancelled_at": null
+}
+```
+
+| Status | Code | When |
+|---|---|---|
+| 400 | `DUPLICATE_PRODUCT` | Same `product_id` twice |
+| 404 | `NOT_FOUND` | A product does not exist |
+| 409 | `SUBSCRIPTION_ALREADY_ACTIVE` | The user already has an ACTIVE subscription. Message: "You already have an active subscription. Cancel it before starting a new one." |
+| 409 | `PRODUCT_UNAVAILABLE` / `INSUFFICIENT_STOCK` | As for `POST /orders` |
+| 422 | `VALIDATION_ERROR` | Bad body, unknown `plan`, or `start_date` out of range (detail `{ "field": "start_date", "issue": "out of range" }`) |
+
+### GET /api/v1/subscriptions/mine
+
+The logged-in user's subscriptions, newest first, each in the shape above (`[]` if none).
+
+### GET /api/v1/subscriptions/{id} and POST /api/v1/subscriptions/{id}/cancel
+
+Owner or ADMIN only; anyone else gets **404** (same answer as a missing id). Cancel returns **200** with the subscription (`status: "CANCELLED"`, `cancelled_at` set), or **409 `SUBSCRIPTION_NOT_ACTIVE`** ("This subscription is already cancelled." / "…completed.").
+
+### GET /api/v1/admin/subscriptions *(ADMIN)*
+
+Optional `?status=ACTIVE|CANCELLED|COMPLETED`. Newest first:
+```json
+[ { "subscription_id": 3, "username": "ravi", "customer_name": "Ravi Kumar", "customer_phone": "9876543210",
+    "plan": "WEEK", "start_date": "2026-11-21", "end_date": "2026-11-27", "status": "ACTIVE",
+    "daily_total": "60.00", "orders_created": 2 } ]
+```
+
+### POST /api/v1/admin/subscriptions/generate-orders *(ADMIN)*
+
+No body. For **today (India time)**: marks finished plans `COMPLETED`, then creates one order (status `PLACED`, locked prices, stock reduced) for every `ACTIVE` subscription whose dates include today. **Safe to call again**: a subscription never gets two orders for the same day (`uq_orders_subscription_day`). A subscription whose product is unavailable or out of stock is **skipped** for that day and keeps going.
+
+**200 OK**
+```json
+{
+  "delivery_date": "2026-11-21",
+  "created": [ { "subscription_id": 3, "order_id": 120 } ],
+  "already_created": 0,
+  "skipped": [ { "subscription_id": 4, "reason": "Not enough stock of 'Cow Milk 1 Litre'." } ],
+  "completed": 1
+}
+```
+The same can be run from the server: `python -m app.scripts.generate_subscription_orders [--date YYYY-MM-DD]`.
+
+---
+
 ## Accounts and login (#89)
 
 Tokens are JWTs (HS256) that expire after `JWT_EXPIRE_MINUTES` (default 60). Send them as `Authorization: Bearer <access_token>`. Logout has no endpoint: the client deletes its token.
@@ -404,7 +492,7 @@ Errors that do not come from a specific endpoint use the same shape: an unknown 
 | 401 | Not logged in, invalid/expired token, or wrong login details |
 | 403 | Logged in, but not allowed (a `USER` on an admin endpoint) |
 | 404 | Resource not found |
-| 409 | Conflicts with current state (unavailable product, illegal transition, duplicate product name + size, deleting an ordered product, email/username already registered) |
+| 409 | Conflicts with current state (unavailable product, illegal transition, duplicate product name + size, deleting an ordered product, email/username already registered, a second active subscription or cancelling one that is not active (#97)) |
 | 422 | Schema validation failed |
 | 500 | Unexpected server error (details only in logs) |
 | 503 | Dependency (database) unavailable |

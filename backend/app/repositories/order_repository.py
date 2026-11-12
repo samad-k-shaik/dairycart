@@ -26,6 +26,7 @@ class OrderRow:
     status: OrderStatus
     total_amount: Decimal
     item_count: int
+    subscription_id: int | None  # #97: set for orders created from a subscription
 
 
 def _with_details(query: Select) -> Select:
@@ -73,6 +74,7 @@ class OrderRepository:
             Order.status,
             Order.total_amount,
             item_count,
+            Order.subscription_id,
         )
         return [OrderRow(*row) for row in self.db.execute(columns).all()]
 

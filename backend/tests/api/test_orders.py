@@ -325,6 +325,7 @@ def test_my_orders_newest_first_with_item_count(
         "status",
         "total_amount",
         "item_count",
+        "subscription_id",  # #97
     }
 
 

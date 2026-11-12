@@ -51,6 +51,10 @@ export type Order = {
   status: OrderStatus
   items: OrderItem[]
   total_amount: Money
+  /** #97: the subscription this order came from; null for a one-time order. */
+  subscription_id?: number | null
+  /** #97: the day ("2026-11-21") a subscription order is for; null for one-time orders. */
+  delivery_date?: string | null
 }
 
 /** "My orders" row: GET /orders/mine (#90). */
@@ -60,6 +64,8 @@ export type OrderSummary = {
   status: OrderStatus
   total_amount: Money
   item_count: number
+  /** #97: set for orders created from a subscription. */
+  subscription_id?: number | null
 }
 
 /** Admin order list row: one entry of GET /admin/orders `items`. */
@@ -71,6 +77,8 @@ export type AdminOrderSummary = {
   status: OrderStatus
   total_amount: Money
   item_count: number
+  /** #97: set for orders created from a subscription. */
+  subscription_id?: number | null
 }
 
 /** GET /admin/orders response (one page plus dashboard counts). */

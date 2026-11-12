@@ -54,6 +54,7 @@ def test_list_newest_first_with_counts_across_all_orders(
         "status",
         "total_amount",
         "item_count",
+        "subscription_id",  # #97
     }
     everything = client.get(URL).json()
     assert [o["order_id"] for o in everything["items"]] == [

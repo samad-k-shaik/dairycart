@@ -18,11 +18,13 @@ from app.core.logging import RequestIdMiddleware, configure_logging
 from app.routers import (
     admin_orders,
     admin_products,
+    admin_subscriptions,
     admin_users,
     auth,
     health,
     orders,
     products,
+    subscriptions,
 )
 
 API_PREFIX = "/api/v1"
@@ -64,3 +66,5 @@ app.include_router(admin_orders.router, prefix=API_PREFIX)
 app.include_router(admin_products.router, prefix=API_PREFIX)
 app.include_router(auth.router, prefix=API_PREFIX)
 app.include_router(admin_users.router, prefix=API_PREFIX)
+app.include_router(subscriptions.router, prefix=API_PREFIX)  # #97
+app.include_router(admin_subscriptions.router, prefix=API_PREFIX)  # #97

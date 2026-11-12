@@ -1,6 +1,6 @@
 /** OrderCard: one order in the customer's history list; opens the order details. */
 import { Link } from "react-router"
-import { ChevronRight } from "lucide-react"
+import { ChevronRight, Repeat } from "lucide-react"
 
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { formatCurrency, formatDateTime } from "@/lib/format"
@@ -16,6 +16,12 @@ export function OrderCard({ order }: { order: OrderSummary }) {
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-h3 font-semibold">Order #{order.order_id}</span>
           <StatusBadge status={order.status} />
+          {order.subscription_id && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2 py-0.5 text-small font-semibold text-primary">
+              <Repeat className="size-3.5" aria-hidden="true" />
+              Subscription
+            </span>
+          )}
         </div>
         <p className="text-small text-muted-foreground">
           {formatDateTime(order.order_date)} · {order.item_count}{" "}

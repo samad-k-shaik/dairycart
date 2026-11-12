@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     CheckConstraint,
+    Date,
     DateTime,
     Enum,
     ForeignKey,
     Index,
     Numeric,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -53,6 +55,11 @@ class Order(Base):
         Index("idx_orders_customer_id", "customer_id"),  # order history by customer
         Index("idx_orders_status", "status"),  # admin filter by status
         Index("idx_orders_user_id", "user_id"),  # "My orders" (#90)
+        # #97: at most ONE order per subscription per day, even if "generate orders" runs
+        # twice at the same moment. One-time orders have NULL here, and NULLs never clash.
+        UniqueConstraint(
+            "subscription_id", "delivery_date", name="uq_orders_subscription_day"
+        ),
     )
 
     order_id: Mapped[int] = mapped_column(primary_key=True)
@@ -66,6 +73,12 @@ class Order(Base):
     user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.user_id", ondelete="RESTRICT"), default=None
     )
+    # #97: set only for orders created from a subscription; NULL for one-time orders.
+    subscription_id: Mapped[int | None] = mapped_column(
+        ForeignKey("subscriptions.subscription_id", ondelete="RESTRICT"), default=None
+    )
+    # #97: the day (India time) this subscription order is for.
+    delivery_date: Mapped[date | None] = mapped_column(Date, default=None)
     # Stored in UTC (TIMESTAMPTZ); shown in IST by the frontend.
     order_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

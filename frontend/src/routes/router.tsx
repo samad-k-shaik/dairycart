@@ -14,6 +14,7 @@ import CustomerLayout from "@/layouts/CustomerLayout"
 import DashboardPage from "@/pages/admin/DashboardPage"
 import OrdersPage from "@/pages/admin/OrdersPage"
 import ProductsPage from "@/pages/admin/ProductsPage"
+import AdminSubscriptionsPage from "@/pages/admin/SubscriptionsPage"
 import UsersPage from "@/pages/admin/UsersPage"
 import LoginPage from "@/pages/auth/LoginPage"
 import SignUpPage from "@/pages/auth/SignUpPage"
@@ -24,6 +25,7 @@ import OrderConfirmationPage from "@/pages/customer/OrderConfirmationPage"
 import OrderDetailsPage from "@/pages/customer/OrderDetailsPage"
 import OrderHistoryPage from "@/pages/customer/OrderHistoryPage"
 import ProductDetailsPage from "@/pages/customer/ProductDetailsPage"
+import SubscriptionsPage from "@/pages/customer/SubscriptionsPage"
 import UserDashboardPage from "@/pages/customer/UserDashboardPage"
 import DesignPage from "@/pages/DesignPage"
 import NotFoundPage from "@/pages/NotFoundPage"
@@ -45,6 +47,8 @@ export const router = createBrowserRouter([
       { path: "orders", element: <RequireAuth><OrderHistoryPage /></RequireAuth> }, // My orders
       { path: "orders/:id", element: <RequireAuth><OrderDetailsPage /></RequireAuth> },
       { path: "orders/:id/confirmation", element: <RequireAuth><OrderConfirmationPage /></RequireAuth> },
+      // Subscriptions (#97): "My subscriptions" with Cancel.
+      { path: "subscriptions", element: <RequireAuth><SubscriptionsPage /></RequireAuth> },
       // Accounts (#89).
       { path: "signup", element: <SignUpPage /> },
       { path: "login", element: <LoginPage /> },
@@ -74,6 +78,7 @@ export const router = createBrowserRouter([
       { path: "orders", element: <OrdersPage /> },
       { path: "products", element: <ProductsPage /> },
       { path: "users", element: <UsersPage /> },
+      { path: "subscriptions", element: <AdminSubscriptionsPage /> }, // #97
       { path: "*", element: <NotFoundPage homePath="/admin" /> },
     ],
   },

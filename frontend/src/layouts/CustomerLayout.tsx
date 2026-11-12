@@ -3,7 +3,7 @@
  * The header is written once here; each page renders inside <Outlet />.
  */
 import { NavLink, Outlet } from "react-router"
-import { House, LogIn, ReceiptText, ShoppingCart, UserRound } from "lucide-react"
+import { House, LogIn, ReceiptText, Repeat, ShoppingCart, UserRound } from "lucide-react"
 
 import { DevCrashProbe } from "@/components/common/DevMockSwitch"
 import { Logo } from "@/components/common/Logo"
@@ -53,7 +53,9 @@ function CustomerLayout() {
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 bg-background/35" />
 
       <header className="sticky top-0 z-40 border-b bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-2 px-4 md:px-6 lg:px-8">
+        {/* #97: with 5 header links, the "DairyCart" text hides below 420px (icon and
+            screen-reader name stay), so every link still fits on a 360px phone. */}
+        <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-2 px-4 md:px-6 lg:px-8 max-[420px]:[&_.brand-name]:sr-only">
           <Logo />
           <nav aria-label="Main" className="ml-auto flex items-center gap-1">
             {/* `end`: "/" is active only on the home page, not on every page under it. */}
@@ -65,6 +67,11 @@ function CustomerLayout() {
             <NavLink to="/orders" end className={navLinkClass}>
               <ReceiptText className="size-5" aria-hidden="true" />
               <span className="sr-only sm:not-sr-only">My orders</span>
+            </NavLink>
+            {/* #97. The label shows from 1024px; below that the icon (and screen-reader text). */}
+            <NavLink to="/subscriptions" className={navLinkClass}>
+              <Repeat className="size-5" aria-hidden="true" />
+              <span className="sr-only lg:not-sr-only">Subscriptions</span>
             </NavLink>
             <NavLink
               to="/cart"

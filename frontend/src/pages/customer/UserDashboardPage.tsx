@@ -3,7 +3,7 @@
  * Shows the account details and links to the shop, order history and (admins) the admin area.
  */
 import { Link, useNavigate } from "react-router"
-import { LayoutDashboard, LogOut, ReceiptText, ShoppingBag, UserRound } from "lucide-react"
+import { LayoutDashboard, LogOut, ReceiptText, Repeat, ShoppingBag, UserRound } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -73,6 +73,12 @@ function UserDashboardPage() {
           <Link to="/orders">
             <ReceiptText aria-hidden="true" />
             My orders
+          </Link>
+        </Button>
+        <Button asChild variant="outline" className="h-12 justify-start sm:col-span-2">
+          <Link to="/subscriptions">
+            <Repeat aria-hidden="true" />
+            My subscriptions
           </Link>
         </Button>
         {isAdmin && (

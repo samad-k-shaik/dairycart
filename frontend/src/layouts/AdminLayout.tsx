@@ -4,7 +4,7 @@
  * Each admin page renders inside <Outlet />.
  */
 import { NavLink, Outlet, useNavigate } from "react-router"
-import { ClipboardList, LayoutDashboard, LogOut, Package, Store, Users } from "lucide-react"
+import { ClipboardList, LayoutDashboard, LogOut, Package, Repeat, Store, Users } from "lucide-react"
 
 import { DevCrashProbe } from "@/components/common/DevMockSwitch"
 import { Logo } from "@/components/common/Logo"
@@ -18,6 +18,8 @@ const adminLinks = [
   { to: "/admin/orders", label: "Orders", Icon: ClipboardList, end: false },
   { to: "/admin/products", label: "Products", Icon: Package, end: false },
   { to: "/admin/users", label: "Users", Icon: Users, end: false }, // #89
+  // #97. `short`: the phone tab bar has room for a short word only.
+  { to: "/admin/subscriptions", label: "Subscriptions", short: "Plans", Icon: Repeat, end: false },
 ]
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -27,8 +29,8 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   )
 
 /**
- * Mobile top bar: the 4 links share the row equally. The icon sits ABOVE the label
- * (like a phone tab bar), so all 4 fit at 360px while staying 44px+ tall to tap.
+ * Mobile top bar: the 5 links share the row equally. The icon sits ABOVE the label
+ * (like a phone tab bar), so all 5 fit at 360px while staying 44px+ tall to tap.
  */
 const compactLinkClass = ({ isActive }: { isActive: boolean }) =>
   cn(linkClass({ isActive }), "h-auto min-h-11 min-w-0 flex-1 flex-col justify-center gap-0.5 px-1 py-1 text-xs")
@@ -36,10 +38,16 @@ const compactLinkClass = ({ isActive }: { isActive: boolean }) =>
 function AdminLinks({ compact = false }: { compact?: boolean }) {
   return (
     <>
-      {adminLinks.map(({ to, label, Icon, end }) => (
-        <NavLink key={to} to={to} end={end} className={compact ? compactLinkClass : linkClass}>
+      {adminLinks.map(({ to, label, short, Icon, end }) => (
+        <NavLink
+          key={to}
+          to={to}
+          end={end}
+          className={compact ? compactLinkClass : linkClass}
+          aria-label={compact && short ? label : undefined}
+        >
           <Icon className={compact ? "size-4" : "size-5"} aria-hidden="true" />
-          {label}
+          {compact && short ? short : label}
         </NavLink>
       ))}
     </>

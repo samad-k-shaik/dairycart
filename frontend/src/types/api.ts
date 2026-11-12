@@ -18,6 +18,9 @@ export type ApiErrorCode =
   | "UNAUTHORIZED" // 401: not logged in, session expired, or wrong login details (#89)
   | "FORBIDDEN" // 403: logged in, but not allowed (e.g. a USER on an admin API) (#89)
   | "USER_ALREADY_EXISTS" // 409: sign-up with an email or username that is taken (#89)
+  | "INSUFFICIENT_STOCK" // 409: more than the stock (#92)
+  | "SUBSCRIPTION_ALREADY_ACTIVE" // 409: the user already has an active subscription (#97)
+  | "SUBSCRIPTION_NOT_ACTIVE" // 409: cancel of a cancelled/completed subscription (#97)
 
 export type ApiErrorDetail = {
   field: string

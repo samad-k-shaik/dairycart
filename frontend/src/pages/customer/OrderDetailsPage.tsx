@@ -12,6 +12,7 @@ import { OrderStatusTimeline } from "@/components/orders/OrderStatusTimeline"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useOrder } from "@/hooks/useOrder"
 import { formatDateTime } from "@/lib/format"
+import { formatDay } from "@/lib/subscription"
 
 function OrderDetailsPage() {
   const { id } = useParams()
@@ -45,6 +46,12 @@ function OrderDetailsPage() {
             <div>
               <h1 className="text-h1 font-bold">Order #{order.order_id}</h1>
               <p className="text-muted-foreground">{formatDateTime(order.order_date)}</p>
+              {/* #97: orders created from a subscription say which day they are for. */}
+              {order.subscription_id && order.delivery_date && (
+                <p className="text-small font-semibold text-primary">
+                  Subscription delivery for {formatDay(order.delivery_date)}
+                </p>
+              )}
             </div>
             {/* text-sm (not our text-body token): cn() would treat "text-body" as a colour
                 and drop the status colour. */}
