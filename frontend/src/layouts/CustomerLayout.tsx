@@ -108,9 +108,8 @@ function CustomerLayout() {
       <footer className="border-t bg-surface">
         <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-2 px-4 py-4 text-small text-muted-foreground md:px-6 lg:px-8">
           <span>DairyCart · Milk Delivery POC</span>
-          <NavLink to="/admin" className="font-semibold hover:text-primary">
-            Admin
-          </NavLink>
+          {/* #96: no "Admin" link for customers. Admins reach the dashboard by logging in
+              (they land on /admin) or from "Open the Admin Dashboard" on the Account page. */}
         </div>
       </footer>
     </div>
