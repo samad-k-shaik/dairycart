@@ -64,6 +64,7 @@ erDiagram
         date start_date
         date end_date
         varchar status
+        int every_n_days
         numeric daily_total
         timestamptz created_at
         timestamptz cancelled_at
@@ -162,7 +163,8 @@ erDiagram
 | start_date | DATE | NOT NULL | First delivery day |
 | end_date | DATE | NOT NULL, CHECK ≥ start_date | Last delivery day, included |
 | status | VARCHAR(20) | NOT NULL, DEFAULT `'ACTIVE'`, CHECK in (`ACTIVE`, `CANCELLED`, `COMPLETED`) | |
-| daily_total | NUMERIC(10,2) | NOT NULL, CHECK ≥ 0 | Sum of the item subtotals (locked prices) |
+| every_n_days | INTEGER | NOT NULL, DEFAULT 1, CHECK in (1, 2, 3) | #99: deliver every day / every 2nd / every 3rd day from start_date |
+| daily_total | NUMERIC(10,2) | NOT NULL, CHECK ≥ 0 | One delivery's total: sum of the item subtotals (locked prices) |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
 | cancelled_at | TIMESTAMPTZ | NULL | Set when cancelled |
 | | | UNIQUE (user_id) WHERE status = 'ACTIVE' | One active subscription per user (partial unique index) |
@@ -229,6 +231,7 @@ Every constraint has an explicit, readable name (set by the naming convention in
 | orders | `uq_orders_subscription_day` | (subscription_id, delivery_date) is unique (#97) |
 | subscriptions | `ck_subscriptions_plan_allowed`, `ck_subscriptions_status_allowed` | allowed values (#97) |
 | subscriptions | `ck_subscriptions_end_after_start`, `ck_subscriptions_daily_total_non_negative` | end_date ≥ start_date, daily_total ≥ 0 (#97) |
+| subscriptions | `ck_subscriptions_every_n_days_allowed` | every_n_days in (1, 2, 3) (#99) |
 | subscription_items | `ck_subscription_items_quantity_range`, `…_unit_price_positive`, `…_subtotal_non_negative` | as for order_items (#97) |
 | subscription_items | `uq_subscription_items_product` | (subscription_id, product_id) is unique (#97) |
 | users | `uq_users_email` | email is unique |

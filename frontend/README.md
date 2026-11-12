@@ -164,9 +164,9 @@ Every data screen uses the same three building blocks:
 
 ## Subscriptions (#97)
 
-- **Checkout** has a choice: *Order once* (as before) or *Subscribe*. Subscribing shows plan buttons (1 week / 15 days / 1 month), a *First delivery* date (default tomorrow, allowed up to 30 days ahead) and the daily and plan totals (estimates). It sends only plan, start date, contact, product ids and quantities (`buildCreateSubscriptionRequest`).
+- **Checkout** has a choice: *Order once* (as before) or *Subscribe*. Subscribing shows plan buttons (1 week / 15 days / 1 month), **How often** (every day / every 2 days / every 3 days, #99), a *First delivery* date (default tomorrow, allowed up to 30 days ahead), the delivery days and the per-delivery and plan totals (estimates). It sends only plan, frequency, start date, contact, product ids and quantities (`buildCreateSubscriptionRequest`).
 - **`/subscriptions`** ("My subscriptions", login required): each plan with dates, items, totals, deliveries so far and **Cancel subscription** (confirmation dialog). Header link with a repeat icon; also on the Account page.
-- **Admin `/admin/subscriptions`**: list with a status filter and the **Create today's subscription orders** button, which shows what was created, already created or skipped. The phone tab bar calls it "Plans".
+- **Admin `/admin/subscriptions`**: list with a status filter and each plan's frequency. Delivery orders are created automatically by the backend (#99), so there is no button. The phone tab bar calls it "Plans".
 - Orders made from a subscription show a **Subscription** badge in My orders and "Subscription delivery for <date>" on the order page.
 - Code: `services/subscriptionService.ts` (real backend only; with `VITE_USE_MOCKS=true` it answers "needs the real backend"), `hooks/useSubscriptions.ts`, `types/subscription.ts`, and the pure helpers in `lib/subscription.ts` (India-time dates, plan lengths, validation; tested in `lib/subscription.test.ts`).
 - With 5 header links, the "DairyCart" text in the header hides below 420px (the logo icon stays) so everything fits on a 360px phone.

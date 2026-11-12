@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import Select, func, select, update
+from sqlalchemy import Date, Select, func, literal, select, update
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.models import (
@@ -30,6 +30,7 @@ class AdminSubscriptionRow:
     customer_name: str
     customer_phone: str
     plan: SubscriptionPlan
+    every_n_days: int
     start_date: date
     end_date: date
     status: SubscriptionStatus
@@ -118,6 +119,7 @@ class SubscriptionRepository:
                 Customer.name,
                 Customer.phone,
                 Subscription.plan,
+                Subscription.every_n_days,
                 Subscription.start_date,
                 Subscription.end_date,
                 Subscription.status,
@@ -148,13 +150,19 @@ class SubscriptionRepository:
 
     def due_on_for_update(self, day: date) -> list[Subscription]:
         """ACTIVE subscriptions that deliver on `day`, LOCKED, in id order (always the
-        same order, so two runs at the same time cannot deadlock)."""
+        same order, so two runs at the same time cannot deadlock).
+
+        #99: "delivers on" = inside the dates AND a whole number of every_n_days after
+        the start. In PostgreSQL, date - date is a number of days, so the test is
+        (day - start_date) % every_n_days = 0."""
+        days_since_start = literal(day, Date) - Subscription.start_date
         query = (
             select(Subscription)
             .where(
                 Subscription.status == SubscriptionStatus.ACTIVE,
                 Subscription.start_date <= day,
                 Subscription.end_date >= day,
+                days_since_start % Subscription.every_n_days == 0,
             )
             .order_by(Subscription.subscription_id)
             .with_for_update(of=Subscription)

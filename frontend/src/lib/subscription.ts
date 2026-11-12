@@ -9,6 +9,7 @@
  */
 import type {
   CreateSubscriptionRequest,
+  EveryNDays,
   IsoDate,
   SubscriptionPlan,
   SubscriptionStatus,
@@ -20,6 +21,27 @@ export const PLAN_OPTIONS: { plan: SubscriptionPlan; days: number; label: string
   { plan: "HALF_MONTH", days: 15, label: "15 days" },
   { plan: "MONTH", days: 30, label: "1 month" },
 ]
+
+/** #99: how often within the plan. The plan keeps its calendar length. */
+export const FREQUENCY_OPTIONS: { everyNDays: EveryNDays; label: string }[] = [
+  { everyNDays: 1, label: "Every day" },
+  { everyNDays: 2, label: "Every 2 days" },
+  { everyNDays: 3, label: "Every 3 days" },
+]
+
+export function frequencyLabel(everyNDays: EveryNDays): string {
+  return FREQUENCY_OPTIONS.find((o) => o.everyNDays === everyNDays)?.label ?? `Every ${everyNDays} days`
+}
+
+/** Deliveries in a plan (same formula as the backend): 7 days every 2 days → 4. */
+export function deliveryCount(plan: SubscriptionPlan, everyNDays: EveryNDays): number {
+  return Math.floor((planDays(plan) - 1) / everyNDays) + 1
+}
+
+/** The delivery days: start, start + n, start + 2n … up to the last day of the plan. */
+export function deliveryDates(start: IsoDate, plan: SubscriptionPlan, everyNDays: EveryNDays): IsoDate[] {
+  return Array.from({ length: deliveryCount(plan, everyNDays) }, (_, k) => addDays(start, k * everyNDays))
+}
 
 /** How far ahead a subscription may start (same rule as the backend). */
 export const MAX_DAYS_AHEAD = 30
@@ -84,9 +106,9 @@ export function formatDay(day: IsoDate): string {
   return dayFormatter.format(new Date(`${day}T00:00:00Z`))
 }
 
-/** Estimated plan total for the checkout summary: "120.00" × 7 → "840.00". */
-export function estimatePlanTotal(dailyTotal: string, plan: SubscriptionPlan): string {
-  return fromPaise(toPaise(dailyTotal) * planDays(plan))
+/** Estimated plan total for the checkout summary: "120.00" × 4 deliveries → "480.00". */
+export function estimatePlanTotal(dailyTotal: string, plan: SubscriptionPlan, everyNDays: EveryNDays = 1): string {
+  return fromPaise(toPaise(dailyTotal) * deliveryCount(plan, everyNDays))
 }
 
 export const STATUS_LABELS: Record<SubscriptionStatus, string> = {
@@ -99,12 +121,14 @@ export const STATUS_LABELS: Record<SubscriptionStatus, string> = {
 export function buildCreateSubscriptionRequest(
   plan: SubscriptionPlan,
   startDate: IsoDate,
+  everyNDays: EveryNDays,
   customer: { name: string; phone: string },
   lines: { product_id: number; quantity: number }[],
 ): CreateSubscriptionRequest {
   return {
     plan,
     start_date: startDate,
+    every_n_days: everyNDays,
     customer: { name: customer.name.trim(), phone: customer.phone },
     // Only the two allowed fields, so cart fields (name, size, price) never leak in.
     items: lines.map(({ product_id, quantity }) => ({ product_id, quantity })),

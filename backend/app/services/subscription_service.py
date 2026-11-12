@@ -4,9 +4,11 @@
   Prices are LOCKED when subscribing; one ACTIVE subscription per user.
 - Cancel: the owner (or an admin) stops it; future days get no orders. An order already
   created for today stays (the admin can still cancel that order, which restores stock).
-- Generate orders (admin button or script, once a day): one normal order per ACTIVE
-  subscription for that day. Never twice for the same day; a day without enough stock
-  is skipped and reported, and the subscription goes on.
+- Delivery frequency (#99): every day, every 2nd or every 3rd day from the start date.
+  The plan keeps its calendar length: 7 days every 2 days = 4 deliveries.
+- Generate orders (#99: automatic, see app/core/background.py; the script is a backup):
+  one normal order per ACTIVE subscription that delivers that day. Never twice for the
+  same day; a day without enough stock is skipped and logged, and the subscription goes on.
 
 "Today" is the date in India (IST, UTC+05:30, no daylight saving), not the server's.
 """
@@ -107,6 +109,7 @@ def create_subscription(
             plan=data.plan,
             start_date=data.start_date,
             end_date=end_date_for(data.start_date, days),
+            every_n_days=data.every_n_days,
             status=SubscriptionStatus.ACTIVE,
             items=items,
             daily_total=sum((item.subtotal for item in items), Decimal("0.00")),
@@ -225,7 +228,8 @@ class GenerateResult:
 
 
 def generate_orders_for(db: Session, day: date) -> GenerateResult:
-    """Create `day`'s order for every ACTIVE subscription that delivers on that day.
+    """Create `day`'s order for every ACTIVE subscription that delivers on that day
+    (inside its dates and on its every-n-days rhythm, #99).
 
     Safe to run again: subscriptions that already have their order for `day` are counted
     in `already_created`, and the database refuses a second order for the same

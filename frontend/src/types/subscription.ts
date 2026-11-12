@@ -10,6 +10,9 @@ import type { Money } from "./product.ts"
 export const SUBSCRIPTION_PLANS = ["WEEK", "HALF_MONTH", "MONTH"] as const
 export type SubscriptionPlan = (typeof SUBSCRIPTION_PLANS)[number]
 
+/** #99: deliver every day (1), every 2nd day (2) or every 3rd day (3). */
+export type EveryNDays = 1 | 2 | 3
+
 export const SUBSCRIPTION_STATUSES = ["ACTIVE", "CANCELLED", "COMPLETED"] as const
 export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number]
 
@@ -31,15 +34,21 @@ export type Subscription = {
   subscription_id: number
   plan: SubscriptionPlan
   days: number
+  /** #99: 1 = every day, 2 = every 2nd day, 3 = every 3rd day. */
+  every_n_days: EveryNDays
+  /** #99: number of deliveries in the plan (7 days every 2 days → 4). */
+  deliveries: number
   start_date: IsoDate
   /** Last delivery day, included. */
   end_date: IsoDate
   status: SubscriptionStatus
   customer: Customer
   items: SubscriptionItem[]
+  /** One delivery's total. */
   daily_total: Money
+  /** daily_total × deliveries. */
   plan_total: Money
-  /** How many daily orders have been created so far. */
+  /** How many delivery orders have been created so far. */
   orders_created: number
   created_at: IsoDateTime
   cancelled_at: IsoDateTime | null
@@ -49,6 +58,7 @@ export type Subscription = {
 export type CreateSubscriptionRequest = {
   plan: SubscriptionPlan
   start_date: IsoDate
+  every_n_days: EveryNDays
   customer: { name: string; phone: string }
   items: { product_id: number; quantity: number }[]
 }
@@ -60,6 +70,7 @@ export type AdminSubscriptionSummary = {
   customer_name: string
   customer_phone: string
   plan: SubscriptionPlan
+  every_n_days: EveryNDays
   start_date: IsoDate
   end_date: IsoDate
   status: SubscriptionStatus
@@ -67,11 +78,3 @@ export type AdminSubscriptionSummary = {
   orders_created: number
 }
 
-/** POST /admin/subscriptions/generate-orders response. */
-export type GenerateOrdersResult = {
-  delivery_date: IsoDate
-  created: { subscription_id: number; order_id: number }[]
-  already_created: number
-  skipped: { subscription_id: number; reason: string }[]
-  completed: number
-}

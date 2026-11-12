@@ -27,7 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useReturnFocus } from "@/hooks/useReturnFocus"
 import { useCancelSubscription, useMySubscriptions } from "@/hooks/useSubscriptions"
 import { formatCurrency } from "@/lib/format"
-import { formatDay, planLabel, STATUS_LABELS } from "@/lib/subscription"
+import { formatDay, frequencyLabel, planLabel, STATUS_LABELS } from "@/lib/subscription"
 import { cn } from "@/lib/utils"
 import { ServiceError } from "@/services/serviceError"
 import type { Subscription, SubscriptionStatus } from "@/types/subscription"
@@ -47,7 +47,7 @@ function SubscriptionsPage() {
       <div className="photo-panel space-y-1 px-4 py-3">
         <h1 className="text-h1 font-bold">My subscriptions</h1>
         <p className="text-muted-foreground">
-          The same items delivered every day. Each day&apos;s delivery also shows in My orders.
+          The same items on a regular schedule. Each delivery also shows in My orders.
         </p>
       </div>
 
@@ -108,7 +108,8 @@ function SubscriptionCard({ subscription, onCancel }: { subscription: Subscripti
           </h2>
           <p className="flex items-center gap-1.5 text-small text-muted-foreground">
             <CalendarDays className="size-4" aria-hidden="true" />
-            {formatDay(subscription.start_date)} – {formatDay(subscription.end_date)} · {subscription.days} days
+            {formatDay(subscription.start_date)} – {formatDay(subscription.end_date)} ·{" "}
+            {frequencyLabel(subscription.every_n_days).toLowerCase()}
           </p>
         </div>
         <Badge className={cn("font-semibold", STATUS_STYLES[status])}>{STATUS_LABELS[status]}</Badge>
@@ -127,9 +128,9 @@ function SubscriptionCard({ subscription, onCancel }: { subscription: Subscripti
       </ul>
 
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Fact label="Each day" value={formatCurrency(subscription.daily_total)} />
+        <Fact label="Each delivery" value={formatCurrency(subscription.daily_total)} />
         <Fact label="Plan total" value={formatCurrency(subscription.plan_total)} />
-        <Fact label="Deliveries so far" value={`${subscription.orders_created} of ${subscription.days}`} />
+        <Fact label="Deliveries so far" value={`${subscription.orders_created} of ${subscription.deliveries}`} />
       </dl>
 
       <p className="text-small text-muted-foreground">
@@ -166,7 +167,7 @@ function CancelDialog({ subscription, onClose }: { subscription: Subscription | 
     if (!subscription) return
     cancel.mutate(subscription.subscription_id, {
       onSuccess: () => {
-        toast.success("Subscription cancelled", { description: "No more deliveries from tomorrow." })
+        toast.success("Subscription cancelled", { description: "No more deliveries after today." })
         onClose()
       },
       onError: (error) => {

@@ -49,6 +49,16 @@ PLAN_DAYS: dict[SubscriptionPlan, int] = {
 }
 
 
+# #99: deliver every day, every 2nd day or every 3rd day.
+DELIVERY_INTERVALS: tuple[int, ...] = (1, 2, 3)
+
+
+def delivery_count(days: int, every_n_days: int) -> int:
+    """Deliveries in a plan: days 1, 1+n, 1+2n, ... up to the last day.
+    7 days every 2 days → days 1, 3, 5, 7 → 4."""
+    return (days - 1) // every_n_days + 1
+
+
 class SubscriptionStatus(StrEnum):
     """ACTIVE: orders are still created. CANCELLED: the user (or an admin) stopped it.
     COMPLETED: the last day has passed."""
@@ -83,6 +93,10 @@ class Subscription(Base):
             f"status IN ({_values_sql(SubscriptionStatus)})", name="status_allowed"
         ),
         CheckConstraint("end_date >= start_date", name="end_after_start"),
+        CheckConstraint(
+            f"every_n_days IN ({','.join(map(str, DELIVERY_INTERVALS))})",
+            name="every_n_days_allowed",
+        ),
         CheckConstraint("daily_total >= 0", name="daily_total_non_negative"),
         Index("idx_subscriptions_user_id", "user_id"),
         Index("idx_subscriptions_status", "status"),
@@ -115,7 +129,9 @@ class Subscription(Base):
         default=SubscriptionStatus.ACTIVE,
         server_default=SubscriptionStatus.ACTIVE.value,
     )
-    # One day's total from the LOCKED prices (sum of the item subtotals).
+    # #99: 1 = every day, 2 = every 2nd day, 3 = every 3rd day (from start_date).
+    every_n_days: Mapped[int] = mapped_column(default=1, server_default="1")
+    # One delivery's total from the LOCKED prices (sum of the item subtotals).
     daily_total: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -134,6 +150,15 @@ class Subscription(Base):
     @property
     def days(self) -> int:
         return PLAN_DAYS[self.plan]
+
+    @property
+    def deliveries(self) -> int:
+        return delivery_count(self.days, self.every_n_days)
+
+    def delivers_on(self, day: date) -> bool:
+        """True if `day` is one of this plan's delivery days (#99)."""
+        offset = (day - self.start_date).days
+        return 0 <= offset and day <= self.end_date and offset % self.every_n_days == 0
 
     def __repr__(self) -> str:
         return (

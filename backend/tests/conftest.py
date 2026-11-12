@@ -37,6 +37,8 @@ if not _test_db_name.endswith("_test"):
 # Force (not setdefault): the app reads DATABASE_URL on import (fail fast, M1-02).
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["APP_ENV"] = "test"
+# #99: tests call the order service themselves; no background job against the test DB.
+os.environ["SUBSCRIPTION_AUTO_ORDERS"] = "false"
 # A fixed secret for tests only (#89), so tokens can be created and checked.
 os.environ.setdefault("JWT_SECRET_KEY", "test-only-secret-key-that-is-long-enough-123")
 

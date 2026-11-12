@@ -46,10 +46,12 @@ def subscribe(
     plan: SubscriptionPlan = SubscriptionPlan.WEEK,
     start: date = TOMORROW,
     today: date = TODAY,
+    every_n_days: int = 1,
 ) -> Subscription:
     data = SubscriptionCreate.model_validate(
         {
             "plan": plan,
+            "every_n_days": every_n_days,
             "start_date": start,
             "customer": {"name": "Ravi Kumar", "phone": "9876543210"},
             "items": [{"product_id": p.product_id, "quantity": q} for p, q in lines],
@@ -354,3 +356,64 @@ def test_the_database_refuses_two_orders_for_the_same_day(
         duplicate.subscription_id = subscription.subscription_id
         duplicate.delivery_date = TOMORROW
         db_session.flush()
+
+
+# ---- delivery frequency (#99) ----
+
+
+@pytest.mark.parametrize(
+    ("plan", "every_n_days", "delivery_days"),
+    [
+        (SubscriptionPlan.WEEK, 2, [21, 23, 25, 27]),
+        (SubscriptionPlan.WEEK, 3, [21, 24, 27]),
+        (SubscriptionPlan.HALF_MONTH, 3, [21, 24, 27, 30, 33]),  # 33 = 3 Dec
+    ],
+)
+def test_orders_only_on_delivery_days(
+    db_session: Session,
+    user: User,
+    milk: Product,
+    plan: SubscriptionPlan,
+    every_n_days: int,
+    delivery_days: list[int],
+) -> None:
+    subscription = subscribe(
+        db_session, user, (milk, 1), plan=plan, every_n_days=every_n_days
+    )
+
+    for offset in range(20):  # 21 Nov to 10 Dec, more than the plan
+        generate_orders_for(db_session, TOMORROW + timedelta(days=offset))
+
+    made = [order.delivery_date for order in orders_of(db_session, subscription)]
+    nov_20 = date(2026, 11, 20)
+    assert made == [nov_20 + timedelta(days=d - 20) for d in delivery_days]
+    assert len(made) == subscription.deliveries
+
+
+def test_delivers_on_matches_the_rhythm(
+    db_session: Session, user: User, milk: Product
+) -> None:
+    subscription = subscribe(db_session, user, (milk, 1), every_n_days=2)
+
+    assert [
+        subscription.delivers_on(TOMORROW + timedelta(days=n)) for n in range(-1, 8)
+    ] == [
+        False,  # the day before the start
+        True,
+        False,
+        True,
+        False,
+        True,
+        False,
+        True,  # 21-27 Nov
+        False,  # after the end
+    ]
+
+
+def test_every_2_days_plan_total_counts_only_deliveries(
+    db_session: Session, user: User, milk: Product
+) -> None:
+    subscription = subscribe(db_session, user, (milk, 2), every_n_days=2)
+
+    assert (subscription.days, subscription.deliveries) == (7, 4)
+    assert subscription.daily_total * subscription.deliveries == Decimal("480.00")

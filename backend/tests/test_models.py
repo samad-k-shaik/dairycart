@@ -125,6 +125,7 @@ ERD_COLUMNS = {
         "start_date": ("DATE", False),
         "end_date": ("DATE", False),
         "status": ("VARCHAR(20)", False),
+        "every_n_days": ("INTEGER", False),  # #99
         "daily_total": ("NUMERIC(10, 2)", False),
         "created_at": ("TIMESTAMP WITH TIME ZONE", False),
         "cancelled_at": ("TIMESTAMP WITH TIME ZONE", True),
@@ -206,6 +207,7 @@ def test_check_and_unique_constraints_have_readable_names(schema: Engine) -> Non
         "ck_subscriptions_plan_allowed",
         "ck_subscriptions_status_allowed",
         "ck_subscriptions_end_after_start",
+        "ck_subscriptions_every_n_days_allowed",  # #99
         "ck_subscriptions_daily_total_non_negative",
         "ck_subscription_items_quantity_range",
         "ck_subscription_items_unit_price_positive",

@@ -4,6 +4,8 @@ import { describe, it } from "node:test"
 import {
   addDays,
   buildCreateSubscriptionRequest,
+  deliveryCount,
+  deliveryDates,
   endDateFor,
   estimatePlanTotal,
   formatDay,
@@ -74,18 +76,42 @@ describe("totals and request", () => {
     assert.equal(estimatePlanTotal("28.50", "MONTH"), "855.00")
   })
 
+  it("counts only delivery days for every 2 / 3 days (#99)", () => {
+    assert.equal(estimatePlanTotal("120.00", "WEEK", 2), "480.00") // 4 deliveries
+    assert.equal(estimatePlanTotal("60.00", "MONTH", 3), "600.00") // 10 deliveries
+  })
+
   it("sends only plan, start date, contact, ids and quantities", () => {
     const request = buildCreateSubscriptionRequest(
       "WEEK",
       "2026-11-21",
+      2,
       { name: "  Ravi Kumar ", phone: "9876543210" },
       [{ product_id: 1, quantity: 2, name: "Cow Milk", price: "60.00" } as never],
     )
     assert.deepEqual(request, {
       plan: "WEEK",
       start_date: "2026-11-21",
+      every_n_days: 2,
       customer: { name: "Ravi Kumar", phone: "9876543210" },
       items: [{ product_id: 1, quantity: 2 }],
     })
+  })
+})
+
+describe("delivery frequency (#99)", () => {
+  it("keeps the plan length and counts the deliveries", () => {
+    assert.equal(deliveryCount("WEEK", 1), 7)
+    assert.equal(deliveryCount("WEEK", 2), 4)
+    assert.equal(deliveryCount("WEEK", 3), 3)
+    assert.equal(deliveryCount("HALF_MONTH", 2), 8)
+    assert.equal(deliveryCount("MONTH", 3), 10)
+  })
+
+  it("lists the delivery days, ending inside the plan", () => {
+    assert.deepEqual(deliveryDates("2026-11-21", "WEEK", 2), ["2026-11-21", "2026-11-23", "2026-11-25", "2026-11-27"])
+    assert.deepEqual(deliveryDates("2026-11-21", "WEEK", 3), ["2026-11-21", "2026-11-24", "2026-11-27"])
+    const month = deliveryDates("2026-11-21", "MONTH", 3)
+    assert.equal(month.at(-1), "2026-12-18") // the plan ends on 20 Dec
   })
 })

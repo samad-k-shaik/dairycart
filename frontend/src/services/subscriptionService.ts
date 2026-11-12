@@ -11,7 +11,6 @@ import { ServiceError } from "@/services/serviceError"
 import type {
   AdminSubscriptionSummary,
   CreateSubscriptionRequest,
-  GenerateOrdersResult,
   Subscription,
   SubscriptionStatus,
 } from "@/types/subscription"
@@ -52,8 +51,3 @@ export function getAdminSubscriptions(status?: SubscriptionStatus): Promise<Admi
   return api.get(`/admin/subscriptions${queryString({ status })}`)
 }
 
-/** POST /api/v1/admin/subscriptions/generate-orders: create today's orders (ADMIN). */
-export function generateSubscriptionOrders(): Promise<GenerateOrdersResult> {
-  if (USE_MOCKS) return needsBackend()
-  return api.post("/admin/subscriptions/generate-orders", undefined)
-}

@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     # How long a login lasts before the user must log in again.
     jwt_expire_minutes: int = Field(default=60, ge=5, le=1440)
 
+    # #99: create subscription delivery orders automatically (at startup, then every
+    # N minutes). Turned off in tests, which call the service themselves.
+    subscription_auto_orders: bool = True
+    subscription_orders_interval_minutes: int = Field(default=15, ge=1, le=1440)
+
     log_level: LogLevel = "INFO"
     app_env: AppEnv = "local"
 

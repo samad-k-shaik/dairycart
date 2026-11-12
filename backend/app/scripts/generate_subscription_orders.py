@@ -1,7 +1,8 @@
 """Create the day's subscription orders from the command line (#97).
 
-Does the same as the admin button "Create today's subscription orders". Safe to run more
-than once a day: a subscription never gets two orders for the same day.
+A manual BACKUP (#99): the backend already does this automatically (app/core/background.py).
+Use it e.g. to catch up a day the server was off. Safe to run more than once a day:
+a subscription never gets two orders for the same day.
 
     cd backend
     python -m app.scripts.generate_subscription_orders              → today (India time)

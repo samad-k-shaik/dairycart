@@ -5,7 +5,7 @@ totals are always calculated by the backend from the database.
 """
 
 from datetime import date
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -24,6 +24,8 @@ class SubscriptionCreate(BaseModel):
 
     plan: SubscriptionPlan
     start_date: date
+    # #99: deliver every day (1), every 2nd day (2) or every 3rd day (3).
+    every_n_days: Literal[1, 2, 3] = 1
     customer: CustomerIn
     items: list[OrderItemIn] = Field(min_length=1, max_length=10)
 
@@ -46,14 +48,19 @@ class SubscriptionRead(BaseModel):
     subscription_id: int
     plan: SubscriptionPlan
     days: int
+    every_n_days: int
+    # How many deliveries the plan has (#99): 7 days every 2 days → 4.
+    deliveries: int
     start_date: date
     end_date: date
     status: SubscriptionStatus
     customer: CustomerRead
     items: list[SubscriptionItemRead]
+    # One delivery's total (named "daily" before #99 added every 2 / 3 days).
     daily_total: Money
+    # daily_total × deliveries.
     plan_total: Money
-    # How many daily orders have been created so far.
+    # How many delivery orders have been created so far.
     orders_created: int
     created_at: UtcDateTime
     cancelled_at: UtcDateTime | None
@@ -64,6 +71,8 @@ class SubscriptionRead(BaseModel):
             subscription_id=subscription.subscription_id,
             plan=subscription.plan,
             days=subscription.days,
+            every_n_days=subscription.every_n_days,
+            deliveries=subscription.deliveries,
             start_date=subscription.start_date,
             end_date=subscription.end_date,
             status=subscription.status,
@@ -82,7 +91,7 @@ class SubscriptionRead(BaseModel):
                 )
             ],
             daily_total=subscription.daily_total,
-            plan_total=subscription.daily_total * subscription.days,
+            plan_total=subscription.daily_total * subscription.deliveries,
             orders_created=orders_created,
             created_at=subscription.created_at,
             cancelled_at=subscription.cancelled_at,
@@ -97,30 +106,9 @@ class AdminSubscriptionSummary(BaseModel):
     customer_name: str
     customer_phone: str
     plan: SubscriptionPlan
+    every_n_days: int
     start_date: date
     end_date: date
     status: SubscriptionStatus
     daily_total: Money
     orders_created: int
-
-
-class GeneratedOrder(BaseModel):
-    subscription_id: int
-    order_id: int
-
-
-class SkippedSubscription(BaseModel):
-    subscription_id: int
-    reason: str
-
-
-class GenerateOrdersResult(BaseModel):
-    """POST /admin/subscriptions/generate-orders: what happened for that day."""
-
-    delivery_date: date
-    created: list[GeneratedOrder]
-    # Already had an order for that day (the button was pressed before).
-    already_created: int
-    skipped: list[SkippedSubscription]
-    # Subscriptions whose last day had passed and are now COMPLETED.
-    completed: int

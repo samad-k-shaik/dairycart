@@ -6,12 +6,9 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { orderKeys } from "@/hooks/orderKeys"
-import { productKeys } from "@/hooks/useProducts"
 import {
   cancelSubscription,
   createSubscription,
-  generateSubscriptionOrders,
   getAdminSubscriptions,
   getMySubscriptions,
 } from "@/services/subscriptionService"
@@ -50,16 +47,3 @@ export function useCancelSubscription() {
   })
 }
 
-/** Admin button: creates today's orders, so order lists AND subscription counts change. */
-export function useGenerateSubscriptionOrders() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: generateSubscriptionOrders,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: subscriptionKeys.all })
-      void queryClient.invalidateQueries({ queryKey: orderKeys.all })
-      // Stock went down, so product lists (admin stock column) are out of date too.
-      void queryClient.invalidateQueries({ queryKey: productKeys.all })
-    },
-  })
-}

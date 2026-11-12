@@ -122,3 +122,8 @@ ALTER TABLE orders
     ADD COLUMN subscription_id INTEGER REFERENCES subscriptions (subscription_id) ON DELETE RESTRICT,
     ADD COLUMN delivery_date DATE,
     ADD CONSTRAINT uq_orders_subscription_day UNIQUE (subscription_id, delivery_date);
+
+-- Delivery frequency (#99, migration add_every_n_days_to_subscriptions): every day (1),
+-- every 2nd day (2) or every 3rd day (3) from start_date.
+ALTER TABLE subscriptions ADD COLUMN every_n_days INTEGER NOT NULL DEFAULT 1
+    CONSTRAINT ck_subscriptions_every_n_days_allowed CHECK (every_n_days IN (1, 2, 3));

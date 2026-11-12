@@ -26,10 +26,12 @@ import { splitCheckoutErrors } from "@/lib/checkoutErrors"
 import { buildCreateOrderRequest } from "@/lib/orderRequest"
 import {
   buildCreateSubscriptionRequest,
+  deliveryCount,
+  deliveryDates,
   endDateFor,
   estimatePlanTotal,
   formatDay,
-  planDays,
+  FREQUENCY_OPTIONS,
   PLAN_OPTIONS,
   startDateRange,
   validateStartDate,
@@ -37,7 +39,7 @@ import {
 import { cn } from "@/lib/utils"
 import { validateName, validatePhone } from "@/lib/validation"
 import { ServiceError } from "@/services/serviceError"
-import type { SubscriptionPlan } from "@/types/subscription"
+import type { EveryNDays, SubscriptionPlan } from "@/types/subscription"
 
 /** Passed to the confirmation page so it can mention a price change (FR-C8). */
 export type ConfirmationState = { estimatedTotal: string }
@@ -54,6 +56,8 @@ function CheckoutPage() {
   // #97: order once, or subscribe. The start date defaults to tomorrow (India time).
   const [mode, setMode] = useState<OrderMode>("once")
   const [plan, setPlan] = useState<SubscriptionPlan>("WEEK")
+  const [everyNDays, setEveryNDays] = useState<EveryNDays>(1) // #99
+  const deliveries = deliveryCount(plan, everyNDays)
   const [startDate, setStartDate] = useState(() => startDateRange().min)
   const startRef = useRef<HTMLInputElement>(null)
   const subscribing = mode === "subscribe"
@@ -102,7 +106,7 @@ function CheckoutPage() {
     if (startError) return startRef.current?.focus()
 
     if (subscribing) {
-      const request = buildCreateSubscriptionRequest(plan, startDate, { name, phone }, lines)
+      const request = buildCreateSubscriptionRequest(plan, startDate, everyNDays, { name, phone }, lines)
       createSubscription.mutate(request, {
         onSuccess: (subscription) => {
           toast.success("Subscription started", {
@@ -159,15 +163,17 @@ function CheckoutPage() {
           </ul>
           <div className="flex items-baseline justify-between border-t pt-3">
             <span className="font-semibold">
-              {subscribing ? "Each day" : "Estimated total"} ({itemCount} {itemCount === 1 ? "item" : "items"})
+              {subscribing ? "Each delivery" : "Estimated total"} ({itemCount} {itemCount === 1 ? "item" : "items"})
             </span>
             <span className="text-price font-extrabold">{formatCurrency(estimatedTotal)}</span>
           </div>
           {subscribing && (
             <div className="flex items-baseline justify-between" data-testid="plan-total">
-              <span className="font-semibold">Plan total ({planDays(plan)} days)</span>
+              <span className="font-semibold">
+                Plan total ({deliveries} {deliveries === 1 ? "delivery" : "deliveries"})
+              </span>
               <span className="text-price font-extrabold">
-                {formatCurrency(estimatePlanTotal(estimatedTotal, plan))}
+                {formatCurrency(estimatePlanTotal(estimatedTotal, plan, everyNDays))}
               </span>
             </div>
           )}
@@ -209,7 +215,7 @@ function CheckoutPage() {
                 }}
                 Icon={Repeat}
                 title="Subscribe"
-                description="The same items every day. Cancel any time."
+                description="The same items on a schedule. Cancel any time."
               />
             </div>
           </fieldset>
@@ -234,6 +240,35 @@ function CheckoutPage() {
                       className={cn(
                         "h-11 rounded-full border px-4 font-semibold transition-colors",
                         plan === option.plan
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "bg-surface hover:bg-muted",
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* #99: how often within the plan */}
+              <div>
+                <p id="checkout-frequency-label" className="mb-2 font-semibold">
+                  How often
+                </p>
+                <div className="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="checkout-frequency-label">
+                  {FREQUENCY_OPTIONS.map((option) => (
+                    <button
+                      key={option.everyNDays}
+                      type="button"
+                      role="radio"
+                      aria-checked={everyNDays === option.everyNDays}
+                      onClick={() => {
+                        setEveryNDays(option.everyNDays)
+                        clearServerError()
+                      }}
+                      className={cn(
+                        "h-11 rounded-full border px-4 font-semibold transition-colors",
+                        everyNDays === option.everyNDays
                           ? "border-primary bg-primary text-primary-foreground"
                           : "bg-surface hover:bg-muted",
                       )}
@@ -270,7 +305,7 @@ function CheckoutPage() {
                     <CalendarDays className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                     {startError
                       ? "Choose a day from tomorrow up to 30 days ahead."
-                      : `Every day from ${formatDay(startDate)} to ${formatDay(endDateFor(startDate, plan))}.`}
+                      : deliveryHint(startDate, plan, everyNDays)}
                   </p>
                 )}
               </div>
@@ -349,7 +384,7 @@ function CheckoutPage() {
                 {subscribing ? "Subscribing…" : "Placing order…"}
               </>
             ) : subscribing ? (
-              `Subscribe for ${planDays(plan)} days`
+              `Subscribe: ${deliveries} ${deliveries === 1 ? "delivery" : "deliveries"}`
             ) : (
               "Place order"
             )}
@@ -393,6 +428,16 @@ function SubmitError({
       </div>
     </div>
   )
+}
+
+/** #99: "Every day from 21 Nov to 27 Nov 2026", or the list of days for every 2 / 3 days
+ *  (short plans) / first and last day (long plans). */
+function deliveryHint(start: string, plan: SubscriptionPlan, everyNDays: EveryNDays): string {
+  const end = formatDay(endDateFor(start, plan))
+  if (everyNDays === 1) return `Every day from ${formatDay(start)} to ${end}.`
+  const days = deliveryDates(start, plan, everyNDays)
+  if (days.length <= 5) return `Deliveries on ${days.map(formatDay).join(", ")}.`
+  return `${days.length} deliveries, every ${everyNDays} days from ${formatDay(start)} to ${formatDay(days[days.length - 1])}.`
 }
 
 /** One of the two big "Order once" / "Subscribe" choices (a styled radio button). */

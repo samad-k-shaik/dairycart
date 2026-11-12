@@ -1,11 +1,14 @@
-"""Subscription API (#97): who may do what, response shapes, and the admin button."""
+"""Subscription API (#97, #99): who may do what, response shapes, delivery frequency
+and the automatic daily orders."""
 
+from contextlib import nullcontext
 from datetime import timedelta
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.core.background import run_subscription_orders_once
 from app.models import Product, SubscriptionPlan, User
 from app.schemas.subscription import SubscriptionCreate
 from app.services import subscription_service
@@ -15,9 +18,16 @@ SUBSCRIPTIONS = "/api/v1/subscriptions"
 ADMIN = "/api/v1/admin/subscriptions"
 
 
-def body(*lines: tuple[Product, int], plan: str = "WEEK", days_ahead: int = 1) -> dict:
+def body(
+    *lines: tuple[Product, int],
+    plan: str = "WEEK",
+    days_ahead: int = 1,
+    every_n_days: int | None = None,
+) -> dict:
     start = subscription_service.today_ist() + timedelta(days=days_ahead)
+    extra = {} if every_n_days is None else {"every_n_days": every_n_days}
     return {
+        **extra,
         "plan": plan,
         "start_date": start.isoformat(),
         "customer": {"name": "Ravi Kumar", "phone": "9876543210"},
@@ -27,7 +37,7 @@ def body(*lines: tuple[Product, int], plan: str = "WEEK", days_ahead: int = 1) -
 
 def starting_today(db: Session, user: User, product: Product) -> int:
     """A subscription that delivers TODAY (the API only allows tomorrow or later), so
-    the admin button has something to do. Returns its id."""
+    the automatic run has something to do. Returns its id."""
     today = subscription_service.today_ist()
     data = SubscriptionCreate.model_validate(
         {
@@ -75,6 +85,8 @@ def test_subscribe_returns_the_plan_with_backend_totals(
     )
     assert created["status"] == "ACTIVE"
     assert (created["plan"], created["days"]) == ("WEEK", 7)
+    # No every_n_days sent → every day: 7 deliveries (#99).
+    assert (created["every_n_days"], created["deliveries"]) == (1, 7)
     assert (created["daily_total"], created["plan_total"]) == ("120.00", "840.00")
     assert created["items"] == [
         {
@@ -99,6 +111,49 @@ def test_longer_plans(
 
     assert created["days"] == days
     assert created["plan_total"] == f"{60 * days}.00"
+
+
+@pytest.mark.parametrize(
+    ("plan", "every_n_days", "deliveries", "last_day"),
+    [
+        ("WEEK", 2, 4, 7),  # days 1, 3, 5, 7
+        ("WEEK", 3, 3, 7),  # days 1, 4, 7
+        ("HALF_MONTH", 2, 8, 15),
+        ("MONTH", 3, 10, 30),
+    ],
+)
+def test_every_2_or_3_days_keeps_the_plan_length(
+    client: TestClient,
+    milk: Product,
+    as_user,
+    plan: str,
+    every_n_days: int,
+    deliveries: int,
+    last_day: int,
+) -> None:
+    """#99: the plan keeps its calendar length; fewer deliveries, lower plan total."""
+    created = client.post(
+        SUBSCRIPTIONS,
+        json=body((milk, 1), plan=plan, every_n_days=every_n_days),
+        headers=as_user,
+    ).json()
+
+    start = subscription_service.today_ist() + timedelta(days=1)
+    assert created["every_n_days"] == every_n_days
+    assert created["deliveries"] == deliveries
+    assert created["plan_total"] == f"{60 * deliveries}.00"
+    assert created["end_date"] == (start + timedelta(days=last_day - 1)).isoformat()
+
+
+@pytest.mark.parametrize("every_n_days", [0, 4, 7, -1])
+def test_other_frequencies_are_refused(
+    client: TestClient, milk: Product, as_user, every_n_days: int
+) -> None:
+    response = client.post(
+        SUBSCRIPTIONS, json=body((milk, 1), every_n_days=every_n_days), headers=as_user
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["details"][0]["field"] == "every_n_days"
 
 
 def test_subscribing_needs_login(client: TestClient, milk: Product) -> None:
@@ -231,7 +286,13 @@ def test_after_cancelling_the_user_can_subscribe_again(
 def test_admin_endpoints_are_admin_only(client: TestClient, as_user) -> None:
     assert client.get(ADMIN).status_code == 401
     assert client.get(ADMIN, headers=as_user).status_code == 403
-    assert client.post(f"{ADMIN}/generate-orders", headers=as_user).status_code == 403
+
+
+def test_the_generate_orders_endpoint_is_gone(client: TestClient, as_admin) -> None:
+    """#99: orders are created automatically; the admin button and its endpoint were
+    removed (POST to /admin/subscriptions/... has no route any more)."""
+    response = client.post(f"{ADMIN}/generate-orders", headers=as_admin)
+    assert response.status_code in {404, 405}
 
 
 def test_admin_list_with_status_filter(
@@ -250,35 +311,37 @@ def test_admin_list_with_status_filter(
         "60.00",
         0,
     )
+    assert row["every_n_days"] == 1  # #99
     assert created["subscription_id"] not in [
         r["subscription_id"] for r in cancelled.json()
     ]
 
 
-def test_generate_button_creates_todays_orders_once(
+def test_automatic_run_creates_todays_orders_once(
     client: TestClient,
     db_session: Session,
     normal_user: User,
     milk: Product,
     as_user,
-    as_admin,
 ) -> None:
+    """#99: the background job's single run, given the test's own session."""
     subscription_id = starting_today(db_session, normal_user, milk)
+    same_session = lambda: nullcontext(db_session)
 
-    first = client.post(f"{ADMIN}/generate-orders", headers=as_admin).json()
-    second = client.post(f"{ADMIN}/generate-orders", headers=as_admin).json()
+    first = run_subscription_orders_once(same_session)
+    second = run_subscription_orders_once(same_session)
 
-    assert first["delivery_date"] == subscription_service.today_ist().isoformat()
-    [made] = [c for c in first["created"] if c["subscription_id"] == subscription_id]
-    assert subscription_id not in [c["subscription_id"] for c in second["created"]]
-    assert second["already_created"] >= 1
+    assert first.delivery_date == subscription_service.today_ist()
+    [order_id] = [o for s, o in first.created if s == subscription_id]
+    assert subscription_id not in [s for s, _ in second.created]
+    assert second.already_created >= 1
 
     # The order is a normal order: in "My orders", marked with its subscription.
     mine = client.get("/api/v1/orders/mine", headers=as_user).json()
     assert [(o["order_id"], o["subscription_id"]) for o in mine] == [
-        (made["order_id"], subscription_id)
+        (order_id, subscription_id)
     ]
-    order = client.get(f"/api/v1/orders/{made['order_id']}", headers=as_user).json()
+    order = client.get(f"/api/v1/orders/{order_id}", headers=as_user).json()
     assert order["delivery_date"] == subscription_service.today_ist().isoformat()
     assert order["total_amount"] == "120.00"
     detail = client.get(f"{SUBSCRIPTIONS}/{subscription_id}", headers=as_user).json()

@@ -9,6 +9,7 @@ from app.models.order import Order, OrderStatus
 from app.models.order_item import OrderItem
 from app.models.product import Product
 from app.models.subscription import (
+    DELIVERY_INTERVALS,
     PLAN_DAYS,
     Subscription,
     SubscriptionItem,
@@ -18,6 +19,7 @@ from app.models.subscription import (
 from app.models.user import User, UserRole
 
 __all__ = [
+    "DELIVERY_INTERVALS",
     "PLAN_DAYS",
     "Customer",
     "Order",

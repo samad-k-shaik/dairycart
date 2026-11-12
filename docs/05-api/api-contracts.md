@@ -34,7 +34,6 @@
 | GET | `/subscriptions/{id}` | One subscription (owner or ADMIN) *(#97)* | 200 |
 | POST | `/subscriptions/{id}/cancel` | Cancel a subscription *(#97)* | 200 |
 | GET | `/admin/subscriptions` | All subscriptions (`?status=`) *(#97)* | 200 |
-| POST | `/admin/subscriptions/generate-orders` | Create today's subscription orders *(#97)* | 200 |
 
 All `/admin/…` rows need an **ADMIN** token (401 without one, 403 for a `USER`).
 
@@ -304,10 +303,11 @@ Only a product that was **never ordered** can be deleted (BR-7). An ordered prod
 
 ## Subscriptions (#97)
 
-A subscription delivers the **same items every day** for **1 week (`WEEK`, 7 days)**, **15 days (`HALF_MONTH`)** or **1 month (`MONTH`, 30 days)**. Login required for every endpoint. Each day becomes a normal order (it shows in "My orders" and the admin order list), created by `POST /admin/subscriptions/generate-orders`.
+A subscription delivers the **same items** for **1 week (`WEEK`, 7 days)**, **15 days (`HALF_MONTH`)** or **1 month (`MONTH`, 30 days)**, **every day, every 2nd day or every 3rd day** (`every_n_days` 1, 2 or 3; #99). Login required for every endpoint. Each delivery day becomes a normal order (it shows in "My orders" and the admin order list), created **automatically** by the backend (see below).
 
 Rules:
-- `start_date` must be between **tomorrow and 30 days from today** (India time). `end_date = start_date + days − 1` (the last delivery day, included).
+- `start_date` must be between **tomorrow and 30 days from today** (India time). `end_date = start_date + days − 1` (the last day of the plan, included).
+- *(#99)* Delivery days are `start_date + k × every_n_days` up to `end_date`; the plan keeps its calendar length. `deliveries = (days − 1) // every_n_days + 1`, e.g. 1 week every 2 days = days 1, 3, 5, 7 = **4 deliveries**. `plan_total = daily_total × deliveries` (`daily_total` = one delivery).
 - Prices are **locked** when subscribing: every day's order uses the subscription's `unit_price`, even if the product price changes later.
 - **One `ACTIVE` subscription per user** (also a database rule: a partial unique index). Cancel it to start a new one. A plan whose `end_date` has passed becomes `COMPLETED` and no longer counts.
 - Statuses: `ACTIVE`, `CANCELLED` (by the owner or an admin), `COMPLETED` (last day passed). Only `ACTIVE` can be cancelled.
@@ -321,20 +321,21 @@ Rules:
 {
   "plan": "WEEK",
   "start_date": "2026-11-21",
+  "every_n_days": 2,
   "customer": { "name": "Ravi Kumar", "phone": "9876543210" },
   "items": [ { "product_id": 2, "quantity": 1 } ]
 }
 ```
-`customer` and `items` follow the same rules as `POST /orders` (1–10 items, quantity 1–20, no duplicates; the products must be available and in stock today).
+`every_n_days` is optional (default `1`); only `1`, `2` or `3` are accepted (otherwise 422). `customer` and `items` follow the same rules as `POST /orders` (1–10 items, quantity 1–20, no duplicates; the products must be available and in stock today).
 
 **201 Created** + `Location: /api/v1/subscriptions/{id}`:
 ```json
 {
-  "subscription_id": 3, "plan": "WEEK", "days": 7,
+  "subscription_id": 3, "plan": "WEEK", "days": 7, "every_n_days": 2, "deliveries": 4,
   "start_date": "2026-11-21", "end_date": "2026-11-27", "status": "ACTIVE",
   "customer": { "customer_id": 12, "name": "Ravi Kumar", "phone": "9876543210" },
   "items": [ { "product_id": 2, "product_name": "Cow Milk", "size": "1 Litre", "quantity": 1, "unit_price": "60.00", "subtotal": "60.00" } ],
-  "daily_total": "60.00", "plan_total": "420.00", "orders_created": 0,
+  "daily_total": "60.00", "plan_total": "240.00", "orders_created": 0,
   "created_at": "2026-11-20T10:15:00Z", "cancelled_at": null
 }
 ```
@@ -360,25 +361,19 @@ Owner or ADMIN only; anyone else gets **404** (same answer as a missing id). Can
 Optional `?status=ACTIVE|CANCELLED|COMPLETED`. Newest first:
 ```json
 [ { "subscription_id": 3, "username": "ravi", "customer_name": "Ravi Kumar", "customer_phone": "9876543210",
-    "plan": "WEEK", "start_date": "2026-11-21", "end_date": "2026-11-27", "status": "ACTIVE",
+    "plan": "WEEK", "every_n_days": 2, "start_date": "2026-11-21", "end_date": "2026-11-27", "status": "ACTIVE",
     "daily_total": "60.00", "orders_created": 2 } ]
 ```
 
-### POST /api/v1/admin/subscriptions/generate-orders *(ADMIN)*
+### Delivery orders are created automatically *(#99)*
 
-No body. For **today (India time)**: marks finished plans `COMPLETED`, then creates one order (status `PLACED`, locked prices, stock reduced) for every `ACTIVE` subscription whose dates include today. **Safe to call again**: a subscription never gets two orders for the same day (`uq_orders_subscription_day`). A subscription whose product is unavailable or out of stock is **skipped** for that day and keeps going.
+There is no endpoint for this. The backend creates the orders itself: once when it starts, then every `SUBSCRIPTION_ORDERS_INTERVAL_MINUTES` (default 15). Each run, for **today (India time)**:
+- marks finished plans `COMPLETED`;
+- creates one order (status `PLACED`, locked prices, stock reduced, `subscription_id` and `delivery_date` set) for every `ACTIVE` subscription that **delivers today**, meaning today is between its dates and `(today − start_date) % every_n_days = 0`.
 
-**200 OK**
-```json
-{
-  "delivery_date": "2026-11-21",
-  "created": [ { "subscription_id": 3, "order_id": 120 } ],
-  "already_created": 0,
-  "skipped": [ { "subscription_id": 4, "reason": "Not enough stock of 'Cow Milk 1 Litre'." } ],
-  "completed": 1
-}
-```
-The same can be run from the server: `python -m app.scripts.generate_subscription_orders [--date YYYY-MM-DD]`.
+It is **safe to run again**: a subscription never gets two orders for the same day (`uq_orders_subscription_day`). A subscription whose product is unavailable or out of stock is **skipped** for that day (logged) and keeps going. Manual backup, e.g. to catch up a day the server was off: `python -m app.scripts.generate_subscription_orders [--date YYYY-MM-DD]`.
+
+*(#97 had `POST /admin/subscriptions/generate-orders` and an admin button for this; both were removed in #99.)*
 
 ---
 
