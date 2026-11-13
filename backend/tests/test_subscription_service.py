@@ -47,11 +47,14 @@ def subscribe(
     start: date = TOMORROW,
     today: date = TODAY,
     every_n_days: int = 1,
+    slot_id: int | None = None,
 ) -> Subscription:
     data = SubscriptionCreate.model_validate(
         {
             "plan": plan,
             "every_n_days": every_n_days,
+            # #100: the standard Morning slot unless the test picks another one.
+            "delivery_slot_id": slot_id or factories.standard_slot(db).delivery_slot_id,
             "start_date": start,
             "customer": {"name": "Ravi Kumar", "phone": "9876543210"},
             "items": [{"product_id": p.product_id, "quantity": q} for p, q in lines],

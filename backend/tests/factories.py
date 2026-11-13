@@ -9,12 +9,23 @@ on UNIQUE constraints. All data disappears when the test's transaction is rolled
 """
 
 import itertools
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, hash_password
-from app.models import Customer, Order, OrderItem, OrderStatus, Product, User, UserRole
+from app.models import (
+    Customer,
+    DeliverySlot,
+    Order,
+    OrderItem,
+    OrderStatus,
+    Product,
+    User,
+    UserRole,
+)
 
 _sequence = itertools.count(1)
 
@@ -114,3 +125,40 @@ def auth_header(user: User) -> dict[str, str]:
     """`Authorization: Bearer <token>` for this user, as the frontend sends it."""
     token, _ = create_access_token(user.user_id, user.role.value)
     return {"Authorization": f"Bearer {token}"}
+
+
+# ---- Delivery slots (#100) ----
+
+
+def standard_slot(db: Session) -> DeliverySlot:
+    """The "Morning" 08:00–09:00 slot that the migration creates (capacity 50)."""
+    query = select(DeliverySlot).where(DeliverySlot.start_time == time(8, 0))
+    return db.scalars(query).one()
+
+
+def make_slot(
+    db: Session,
+    *,
+    name: str = "Test slot",
+    capacity: int = 10,
+    is_active: bool = True,
+    start: time | None = None,
+    minutes: int = 30,
+) -> DeliverySlot:
+    """A slot with unique times (a different start minute for every call)."""
+    if start is None:
+        n = next(_sequence) % 600
+        start = (datetime(2000, 1, 1, 10, 0) + timedelta(minutes=n)).time()
+    end = (
+        datetime.combine(datetime(2000, 1, 1), start) + timedelta(minutes=minutes)
+    ).time()
+    slot = DeliverySlot(
+        name=name,
+        start_time=start,
+        end_time=end,
+        capacity=capacity,
+        is_active=is_active,
+    )
+    db.add(slot)
+    db.flush()
+    return slot

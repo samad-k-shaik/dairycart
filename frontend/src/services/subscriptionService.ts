@@ -45,6 +45,12 @@ export function cancelSubscription(subscriptionId: number): Promise<Subscription
   return api.post(`/subscriptions/${subscriptionId}/cancel`, undefined)
 }
 
+/** PATCH /api/v1/subscriptions/{id}/delivery-slot (#100): change the delivery time. */
+export function changeDeliverySlot(subscriptionId: number, deliverySlotId: number): Promise<Subscription> {
+  if (USE_MOCKS) return needsBackend()
+  return api.patch(`/subscriptions/${subscriptionId}/delivery-slot`, { delivery_slot_id: deliverySlotId })
+}
+
 /** GET /api/v1/admin/subscriptions (ADMIN only), optionally one status. */
 export function getAdminSubscriptions(status?: SubscriptionStatus): Promise<AdminSubscriptionSummary[]> {
   if (USE_MOCKS) return needsBackend()

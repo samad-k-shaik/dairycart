@@ -53,6 +53,8 @@ export type Order = {
   total_amount: Money
   /** #97: the subscription this order came from; null for a one-time order. */
   subscription_id?: number | null
+  /** #100: delivery time of a subscription order, e.g. "Morning, 8:00 AM – 9:00 AM". */
+  delivery_slot?: string | null
   /** #97: the day ("2026-11-21") a subscription order is for; null for one-time orders. */
   delivery_date?: string | null
 }
@@ -66,6 +68,8 @@ export type OrderSummary = {
   item_count: number
   /** #97: set for orders created from a subscription. */
   subscription_id?: number | null
+  /** #100: delivery time of a subscription order, e.g. "Morning, 8:00 AM – 9:00 AM". */
+  delivery_slot?: string | null
 }
 
 /** Admin order list row: one entry of GET /admin/orders `items`. */
@@ -79,6 +83,8 @@ export type AdminOrderSummary = {
   item_count: number
   /** #97: set for orders created from a subscription. */
   subscription_id?: number | null
+  /** #100: delivery time of a subscription order, e.g. "Morning, 8:00 AM – 9:00 AM". */
+  delivery_slot?: string | null
 }
 
 /** GET /admin/orders response (one page plus dashboard counts). */

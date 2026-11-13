@@ -5,6 +5,7 @@ and SQLAlchemy needs all models loaded to resolve relationships by class name.
 """
 
 from app.models.customer import Customer
+from app.models.delivery_slot import MAX_SLOT_CAPACITY, DeliverySlot
 from app.models.order import Order, OrderStatus
 from app.models.order_item import OrderItem
 from app.models.product import Product
@@ -20,8 +21,10 @@ from app.models.user import User, UserRole
 
 __all__ = [
     "DELIVERY_INTERVALS",
+    "MAX_SLOT_CAPACITY",
     "PLAN_DAYS",
     "Customer",
+    "DeliverySlot",
     "Order",
     "OrderItem",
     "OrderStatus",

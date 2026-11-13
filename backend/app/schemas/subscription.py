@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.models import Subscription, SubscriptionPlan, SubscriptionStatus
 from app.schemas.common import Money, UtcDateTime
+from app.schemas.delivery_slot import BookedSlotRead
 from app.schemas.order import CustomerIn, CustomerRead, OrderItemIn
 
 # ---- Requests ----
@@ -26,6 +27,8 @@ class SubscriptionCreate(BaseModel):
     start_date: date
     # #99: deliver every day (1), every 2nd day (2) or every 3rd day (3).
     every_n_days: Literal[1, 2, 3] = 1
+    # #100: the delivery time slot (GET /delivery-slots). Required.
+    delivery_slot_id: int = Field(gt=0)
     customer: CustomerIn
     items: list[OrderItemIn] = Field(min_length=1, max_length=10)
 
@@ -51,6 +54,8 @@ class SubscriptionRead(BaseModel):
     every_n_days: int
     # How many deliveries the plan has (#99): 7 days every 2 days → 4.
     deliveries: int
+    # #100: the booked delivery time (null for subscriptions from before #100).
+    delivery_slot: BookedSlotRead | None
     start_date: date
     end_date: date
     status: SubscriptionStatus
@@ -73,6 +78,11 @@ class SubscriptionRead(BaseModel):
             days=subscription.days,
             every_n_days=subscription.every_n_days,
             deliveries=subscription.deliveries,
+            delivery_slot=(
+                BookedSlotRead.model_validate(subscription.delivery_slot)
+                if subscription.delivery_slot
+                else None
+            ),
             start_date=subscription.start_date,
             end_date=subscription.end_date,
             status=subscription.status,
@@ -107,6 +117,7 @@ class AdminSubscriptionSummary(BaseModel):
     customer_phone: str
     plan: SubscriptionPlan
     every_n_days: int
+    delivery_slot: str | None  # #100: "Morning, 8:00 AM – 9:00 AM"
     start_date: date
     end_date: date
     status: SubscriptionStatus

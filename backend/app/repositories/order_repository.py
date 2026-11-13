@@ -27,6 +27,7 @@ class OrderRow:
     total_amount: Decimal
     item_count: int
     subscription_id: int | None  # #97: set for orders created from a subscription
+    delivery_slot: str | None  # #100: the delivery time of a subscription order
 
 
 def _with_details(query: Select) -> Select:
@@ -75,6 +76,7 @@ class OrderRepository:
             Order.total_amount,
             item_count,
             Order.subscription_id,
+            Order.delivery_slot,
         )
         return [OrderRow(*row) for row in self.db.execute(columns).all()]
 

@@ -71,6 +71,9 @@ function SheetBody({ orderId }: { orderId: number }) {
               <StatusBadge status={order.status} />
               <p className="font-semibold">{order.customer.name}</p>
               <p className="text-small text-muted-foreground">{order.customer.phone} · Cash on delivery</p>
+              {order.delivery_slot && (
+                <p className="text-small font-semibold text-primary">Deliver: {order.delivery_slot}</p>
+              )}
             </div>
             <StatusUpdateControl key={order.status} orderId={order.order_id} status={order.status} />
             <div className="space-y-2">

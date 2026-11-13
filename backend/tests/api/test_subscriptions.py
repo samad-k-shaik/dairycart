@@ -23,11 +23,14 @@ def body(
     plan: str = "WEEK",
     days_ahead: int = 1,
     every_n_days: int | None = None,
+    slot_id: int | None = None,
 ) -> dict:
     start = subscription_service.today_ist() + timedelta(days=days_ahead)
     extra = {} if every_n_days is None else {"every_n_days": every_n_days}
     return {
         **extra,
+        # #100: the standard Morning slot (set by the autouse fixture below).
+        "delivery_slot_id": slot_id or STANDARD_SLOT_ID,
         "plan": plan,
         "start_date": start.isoformat(),
         "customer": {"name": "Ravi Kumar", "phone": "9876543210"},
@@ -42,6 +45,7 @@ def starting_today(db: Session, user: User, product: Product) -> int:
     data = SubscriptionCreate.model_validate(
         {
             "plan": SubscriptionPlan.WEEK,
+            "delivery_slot_id": factories.standard_slot(db).delivery_slot_id,
             "start_date": today,
             "customer": {"name": "Ravi Kumar", "phone": "9876543210"},
             "items": [{"product_id": product.product_id, "quantity": 2}],
@@ -51,6 +55,16 @@ def starting_today(db: Session, user: User, product: Product) -> int:
         db, data, user, today=today - timedelta(days=1)
     )
     return subscription.subscription_id
+
+
+STANDARD_SLOT_ID = 0  # filled in before every test by _standard_slot_id
+
+
+@pytest.fixture(autouse=True)
+def _standard_slot_id(db_session: Session) -> None:
+    """The id of the migration's Morning slot, so body() can use it (#100)."""
+    global STANDARD_SLOT_ID  # a test-only shortcut for body()
+    STANDARD_SLOT_ID = factories.standard_slot(db_session).delivery_slot_id
 
 
 @pytest.fixture
@@ -99,6 +113,15 @@ def test_subscribe_returns_the_plan_with_backend_totals(
         }
     ]
     assert (created["orders_created"], created["cancelled_at"]) == (0, None)
+    # #100: the booked delivery time.
+    assert created["delivery_slot"] == {
+        "delivery_slot_id": STANDARD_SLOT_ID,
+        "name": "Morning",
+        "start_time": "08:00:00",
+        "end_time": "09:00:00",
+        "label": "Morning, 8:00 AM – 9:00 AM",
+        "is_active": True,
+    }
 
 
 @pytest.mark.parametrize(("plan", "days"), [("HALF_MONTH", 15), ("MONTH", 30)])
@@ -312,6 +335,7 @@ def test_admin_list_with_status_filter(
         0,
     )
     assert row["every_n_days"] == 1  # #99
+    assert row["delivery_slot"] == "Morning, 8:00 AM – 9:00 AM"  # #100
     assert created["subscription_id"] not in [
         r["subscription_id"] for r in cancelled.json()
     ]
@@ -344,6 +368,7 @@ def test_automatic_run_creates_todays_orders_once(
     order = client.get(f"/api/v1/orders/{order_id}", headers=as_user).json()
     assert order["delivery_date"] == subscription_service.today_ist().isoformat()
     assert order["total_amount"] == "120.00"
+    assert order["delivery_slot"] == "Morning, 8:00 AM – 9:00 AM"  # #100
     detail = client.get(f"{SUBSCRIPTIONS}/{subscription_id}", headers=as_user).json()
     assert detail["orders_created"] == 1
 
@@ -361,6 +386,7 @@ def test_one_time_orders_have_no_subscription(
     ).json()
 
     assert (order["subscription_id"], order["delivery_date"]) == (None, None)
+    assert order["delivery_slot"] is None  # #100: no time slot for one-time orders
 
 
 def test_product_in_a_subscription_cannot_be_deleted(

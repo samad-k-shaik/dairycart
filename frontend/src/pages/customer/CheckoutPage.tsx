@@ -3,12 +3,13 @@
  * Name + phone form, order summary from the cart, and "Place order".
  * #97: the customer chooses "Order once" (a normal order) or "Subscribe" (the same items
  * every day for 1 week, 15 days or 1 month, from a start date they pick).
+ * #100: subscribers also book a delivery time slot (places are limited per slot).
  * Sends ONLY product ids and quantities; the backend calculates prices and the total.
  * Payment is cash on delivery: no address, shipping or payment fields (out of scope).
  */
 import { useRef, useState, type FormEvent } from "react"
 import { Link, useNavigate } from "react-router"
-import { AlertCircle, Banknote, CalendarDays, Loader2, Repeat, ShoppingBag, ShoppingCart } from "lucide-react"
+import { AlertCircle, Banknote, CalendarDays, Clock, Loader2, Repeat, ShoppingBag, ShoppingCart } from "lucide-react"
 import { toast } from "sonner"
 
 import { EmptyState } from "@/components/common/EmptyState"
@@ -20,7 +21,9 @@ import { lineSubtotal } from "@/hooks/cart/cartReducer"
 import { useAuth } from "@/hooks/useAuth"
 import { useCart } from "@/hooks/useCart"
 import { useCreateOrder } from "@/hooks/useCreateOrder"
+import { useDeliverySlots } from "@/hooks/useDeliverySlots"
 import { useCreateSubscription } from "@/hooks/useSubscriptions"
+import { firstOpenSlot, slotTimeRange, spacesLeftText } from "@/lib/deliverySlot"
 import { formatCurrency } from "@/lib/format"
 import { splitCheckoutErrors } from "@/lib/checkoutErrors"
 import { buildCreateOrderRequest } from "@/lib/orderRequest"
@@ -61,6 +64,13 @@ function CheckoutPage() {
   const [startDate, setStartDate] = useState(() => startDateRange().min)
   const startRef = useRef<HTMLInputElement>(null)
   const subscribing = mode === "subscribe"
+  // #100: delivery time. Loaded only when "Subscribe" is chosen. Until the user picks one
+  // (or if the picked one became full), the first slot with places left is chosen.
+  const slotsQuery = useDeliverySlots({ enabled: subscribing })
+  const slots = slotsQuery.data ?? []
+  const [slotId, setSlotId] = useState<number | null>(null)
+  const chosenSlot = slots.find((s) => s.delivery_slot_id === slotId && !s.is_full) ?? firstOpenSlot(slots)
+  const slotRef = useRef<HTMLDivElement>(null)
   // The request that is in use: errors and "pending" come from it.
   const active = subscribing ? createSubscription : createOrder
 
@@ -83,7 +93,16 @@ function CheckoutPage() {
   // others stay in the error box.
   const allServerDetails = active.error instanceof ServiceError ? active.error.body.error.details : undefined
   const serverStartError = allServerDetails?.some((d) => d.field === "start_date") ?? false
-  const serverErrors = splitCheckoutErrors(allServerDetails?.filter((d) => d.field !== "start_date"))
+  // #100: "slot not available" (422) and "slot full" (409) are shown at the slot picker.
+  const serverSlotError =
+    (allServerDetails?.some((d) => d.field === "delivery_slot_id") ?? false) ||
+    (active.error instanceof ServiceError && active.error.code === "DELIVERY_SLOT_FULL")
+  const serverErrors = splitCheckoutErrors(
+    allServerDetails?.filter((d) => d.field !== "start_date" && d.field !== "delivery_slot_id"),
+  )
+  const slotError = subscribing && slotsQuery.isSuccess && !chosenSlot ? "No delivery time has places left right now." : ""
+  // Shown at once: there is nothing the user can do in the form to fix it.
+  const showSlotError = slotError || (serverSlotError ? (active.error?.message ?? "") : "")
   const showStartError = (submitted && startError) || (serverStartError ? (active.error?.message ?? "") : "")
   const showNameError = ((touched.name || submitted) && nameError) || serverErrors.name
   const showPhoneError = ((touched.phone || submitted) && phoneError) || serverErrors.phone
@@ -106,7 +125,15 @@ function CheckoutPage() {
     if (startError) return startRef.current?.focus()
 
     if (subscribing) {
-      const request = buildCreateSubscriptionRequest(plan, startDate, everyNDays, { name, phone }, lines)
+      if (!chosenSlot) return slotRef.current?.focus()
+      const request = buildCreateSubscriptionRequest(
+        plan,
+        startDate,
+        everyNDays,
+        chosenSlot.delivery_slot_id,
+        { name, phone },
+        lines,
+      )
       createSubscription.mutate(request, {
         onSuccess: (subscription) => {
           toast.success("Subscription started", {
@@ -115,6 +142,8 @@ function CheckoutPage() {
           navigate("/subscriptions", { replace: true })
           clear() // the cart has become the subscription
         },
+        // The slot may have filled up meanwhile: reload the places left (#100).
+        onError: () => void slotsQuery.refetch(),
       })
       return
     }
@@ -309,6 +338,76 @@ function CheckoutPage() {
                   </p>
                 )}
               </div>
+
+              {/* #100: delivery time slot */}
+              <div>
+                <p id="checkout-slot-label" className="mb-2 font-semibold">
+                  Delivery time
+                </p>
+                {slotsQuery.isPending ? (
+                  <p className="flex items-center gap-2 text-small text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                    Loading delivery times…
+                  </p>
+                ) : slotsQuery.isError ? (
+                  <p className="text-small text-danger">
+                    We could not load the delivery times.{" "}
+                    <button type="button" className="font-semibold underline" onClick={() => slotsQuery.refetch()}>
+                      Try again
+                    </button>
+                  </p>
+                ) : (
+                  <div
+                    ref={slotRef}
+                    tabIndex={-1}
+                    className="grid gap-2 sm:grid-cols-2"
+                    role="radiogroup"
+                    aria-labelledby="checkout-slot-label"
+                    aria-describedby={showSlotError ? "checkout-slot-error" : undefined}
+                  >
+                    {slots.map((slot) => {
+                      const checked = chosenSlot?.delivery_slot_id === slot.delivery_slot_id
+                      return (
+                        <button
+                          key={slot.delivery_slot_id}
+                          type="button"
+                          role="radio"
+                          aria-checked={checked}
+                          disabled={slot.is_full}
+                          onClick={() => {
+                            setSlotId(slot.delivery_slot_id)
+                            clearServerError()
+                          }}
+                          className={cn(
+                            "flex min-h-11 items-start gap-2 rounded-xl border p-3 text-left transition-colors",
+                            checked ? "border-primary bg-primary-soft" : "bg-surface hover:bg-muted",
+                            slot.is_full && "cursor-not-allowed opacity-60 hover:bg-surface",
+                          )}
+                        >
+                          <Clock className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+                          <span>
+                            <span className="block font-semibold">{slot.name}</span>
+                            <span className="block text-small">{slotTimeRange(slot)}</span>
+                            <span
+                              className={cn(
+                                "block text-small",
+                                slot.is_full ? "font-semibold text-danger" : "text-muted-foreground",
+                              )}
+                            >
+                              {spacesLeftText(slot)}
+                            </span>
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+                {showSlotError && (
+                  <p id="checkout-slot-error" className="mt-2 text-small text-danger">
+                    {showSlotError}
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
@@ -373,7 +472,7 @@ function CheckoutPage() {
             )}
           </div>
 
-          {active.isError && !serverStartError && (
+          {active.isError && !serverStartError && !serverSlotError && (
             <SubmitError error={active.error} otherDetails={serverErrors.other} subscribing={subscribing} />
           )}
 

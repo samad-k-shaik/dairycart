@@ -81,11 +81,12 @@ describe("totals and request", () => {
     assert.equal(estimatePlanTotal("60.00", "MONTH", 3), "600.00") // 10 deliveries
   })
 
-  it("sends only plan, start date, contact, ids and quantities", () => {
+  it("sends only plan, start date, frequency, slot, contact, ids and quantities", () => {
     const request = buildCreateSubscriptionRequest(
       "WEEK",
       "2026-11-21",
       2,
+      7,
       { name: "  Ravi Kumar ", phone: "9876543210" },
       [{ product_id: 1, quantity: 2, name: "Cow Milk", price: "60.00" } as never],
     )
@@ -93,6 +94,7 @@ describe("totals and request", () => {
       plan: "WEEK",
       start_date: "2026-11-21",
       every_n_days: 2,
+      delivery_slot_id: 7,
       customer: { name: "Ravi Kumar", phone: "9876543210" },
       items: [{ product_id: 1, quantity: 2 }],
     })

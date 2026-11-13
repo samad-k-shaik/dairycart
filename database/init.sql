@@ -127,3 +127,25 @@ ALTER TABLE orders
 -- every 2nd day (2) or every 3rd day (3) from start_date.
 ALTER TABLE subscriptions ADD COLUMN every_n_days INTEGER NOT NULL DEFAULT 1
     CONSTRAINT ck_subscriptions_every_n_days_allowed CHECK (every_n_days IN (1, 2, 3));
+
+-- Delivery time slots (#100, migration add_delivery_slots): managed by the admin; every
+-- subscription books one. Orders keep a text copy of the slot (orders.delivery_slot).
+CREATE TABLE delivery_slots (
+    delivery_slot_id SERIAL PRIMARY KEY,
+    name             VARCHAR(50) NOT NULL,
+    start_time       TIME NOT NULL,
+    end_time         TIME NOT NULL,
+    capacity         INTEGER NOT NULL CONSTRAINT ck_delivery_slots_capacity_range CHECK (capacity BETWEEN 1 AND 1000),
+    is_active        BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT ck_delivery_slots_end_after_start CHECK (end_time > start_time),
+    CONSTRAINT uq_delivery_slots_times UNIQUE (start_time, end_time)
+);
+-- The two standard slots (editable by the admin).
+INSERT INTO delivery_slots (name, start_time, end_time, capacity) VALUES
+    ('Morning', '08:00', '09:00', 50),
+    ('Evening', '17:00', '18:00', 50);
+ALTER TABLE subscriptions ADD COLUMN delivery_slot_id INTEGER
+    REFERENCES delivery_slots (delivery_slot_id) ON DELETE RESTRICT;
+CREATE INDEX idx_subscriptions_delivery_slot_id ON subscriptions (delivery_slot_id);
+ALTER TABLE orders ADD COLUMN delivery_slot VARCHAR(100);

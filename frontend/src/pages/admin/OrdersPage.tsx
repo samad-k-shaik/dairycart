@@ -179,7 +179,13 @@ function OrdersTable({ orders, onOpen }: { orders: AdminOrderSummary[]; onOpen: 
           {orders.map((order) => (
             <TableRow key={order.order_id}>
               <TableCell className="font-bold">#{order.order_id}</TableCell>
-              <TableCell>{order.customer_name}</TableCell>
+              <TableCell>
+                {order.customer_name}
+                {/* #100: subscription orders show their delivery time */}
+                {order.delivery_slot && (
+                  <span className="block text-small text-muted-foreground">{order.delivery_slot}</span>
+                )}
+              </TableCell>
               <TableCell className="tabular-nums">{order.customer_phone}</TableCell>
               <TableCell>{formatDateTime(order.order_date)}</TableCell>
               <TableCell className="text-right font-semibold">{formatCurrency(order.total_amount)}</TableCell>
@@ -220,6 +226,7 @@ function OrderCards({ orders, onOpen }: { orders: AdminOrderSummary[]; onOpen: (
                 <p className="text-small text-muted-foreground">
                   {order.customer_phone} · {formatDateTime(order.order_date)}
                 </p>
+                {order.delivery_slot && <p className="text-small text-muted-foreground">{order.delivery_slot}</p>}
               </div>
               <span className="font-bold">{formatCurrency(order.total_amount)}</span>
             </div>

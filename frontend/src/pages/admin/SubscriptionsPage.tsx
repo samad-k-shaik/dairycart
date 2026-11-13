@@ -101,6 +101,8 @@ function SubscriptionsPage() {
                   <TableCell>
                     <p>{planLabel(row.plan)}</p>
                     <p className="text-small text-muted-foreground">{frequencyLabel(row.every_n_days)}</p>
+                    {/* #100 */}
+                    <p className="text-small text-muted-foreground">{row.delivery_slot ?? "No time chosen"}</p>
                     {/* Phones: the dates move under the plan. */}
                     <p className="text-small text-muted-foreground md:hidden">from {formatDay(row.start_date)}</p>
                   </TableCell>

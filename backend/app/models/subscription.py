@@ -1,8 +1,8 @@
 """SUBSCRIPTIONS and SUBSCRIPTION_ITEMS tables (#97, docs/04-architecture/database-erd.md).
 
-A subscription = the same items delivered every day for 7, 15 or 30 days. It does not
-deliver anything by itself: each day an admin (or a script) runs "generate orders", which
-creates one normal ORDER per active subscription (orders.subscription_id + delivery_date).
+A subscription = the same items delivered for 7, 15 or 30 days (every 1, 2 or 3 days,
+#99) in the delivery time slot the user booked (#100). The backend creates one normal
+ORDER per delivery day automatically (orders.subscription_id + delivery_date).
 """
 
 from __future__ import annotations
@@ -30,6 +30,7 @@ from app.database.base import Base
 
 if TYPE_CHECKING:
     from app.models.customer import Customer
+    from app.models.delivery_slot import DeliverySlot
     from app.models.product import Product
 
 
@@ -100,6 +101,7 @@ class Subscription(Base):
         CheckConstraint("daily_total >= 0", name="daily_total_non_negative"),
         Index("idx_subscriptions_user_id", "user_id"),
         Index("idx_subscriptions_status", "status"),
+        Index("idx_subscriptions_delivery_slot_id", "delivery_slot_id"),  # #100
         # One ACTIVE subscription per user, guaranteed by the DATABASE: a "partial" unique
         # index only looks at rows where status = 'ACTIVE', so old cancelled/completed
         # subscriptions do not count.
@@ -131,6 +133,12 @@ class Subscription(Base):
     )
     # #99: 1 = every day, 2 = every 2nd day, 3 = every 3rd day (from start_date).
     every_n_days: Mapped[int] = mapped_column(default=1, server_default="1")
+    # #100: the booked delivery time. NULL only for subscriptions from before #100.
+    # RESTRICT: a booked slot cannot be deleted (the admin switches it off instead).
+    delivery_slot_id: Mapped[int | None] = mapped_column(
+        ForeignKey("delivery_slots.delivery_slot_id", ondelete="RESTRICT"),
+        default=None,
+    )
     # One delivery's total from the LOCKED prices (sum of the item subtotals).
     daily_total: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     created_at: Mapped[datetime] = mapped_column(
@@ -141,6 +149,7 @@ class Subscription(Base):
     )
 
     customer: Mapped[Customer] = relationship()
+    delivery_slot: Mapped[DeliverySlot | None] = relationship()
     items: Mapped[list[SubscriptionItem]] = relationship(
         back_populates="subscription",
         cascade="all, delete-orphan",

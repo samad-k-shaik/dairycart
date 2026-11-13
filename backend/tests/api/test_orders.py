@@ -326,6 +326,7 @@ def test_my_orders_newest_first_with_item_count(
         "total_amount",
         "item_count",
         "subscription_id",  # #97
+        "delivery_slot",  # #100
     }
 
 

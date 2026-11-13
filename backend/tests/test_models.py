@@ -64,6 +64,7 @@ def test_all_tables_are_registered_for_alembic() -> None:
         "users",  # #89
         "subscriptions",  # #97
         "subscription_items",  # #97
+        "delivery_slots",  # #100
     }
 
 
@@ -107,6 +108,7 @@ ERD_COLUMNS = {
         "user_id": ("INTEGER", True),  # nullable: orders from before #90
         "subscription_id": ("INTEGER", True),  # #97: null for one-time orders
         "delivery_date": ("DATE", True),  # #97
+        "delivery_slot": ("VARCHAR(100)", True),  # #100: copy of the slot's label
     },
     "order_items": {
         "order_item_id": ("INTEGER", False),
@@ -126,6 +128,7 @@ ERD_COLUMNS = {
         "end_date": ("DATE", False),
         "status": ("VARCHAR(20)", False),
         "every_n_days": ("INTEGER", False),  # #99
+        "delivery_slot_id": ("INTEGER", True),  # #100: null before #100
         "daily_total": ("NUMERIC(10, 2)", False),
         "created_at": ("TIMESTAMP WITH TIME ZONE", False),
         "cancelled_at": ("TIMESTAMP WITH TIME ZONE", True),
@@ -137,6 +140,16 @@ ERD_COLUMNS = {
         "quantity": ("INTEGER", False),
         "unit_price": ("NUMERIC(10, 2)", False),
         "subtotal": ("NUMERIC(10, 2)", False),
+    },
+    # #100
+    "delivery_slots": {
+        "delivery_slot_id": ("INTEGER", False),
+        "name": ("VARCHAR(50)", False),
+        "start_time": ("TIME", False),
+        "end_time": ("TIME", False),
+        "capacity": ("INTEGER", False),
+        "is_active": ("BOOLEAN", False),
+        "created_at": ("TIMESTAMP WITH TIME ZONE", False),
     },
 }
 
@@ -212,6 +225,8 @@ def test_check_and_unique_constraints_have_readable_names(schema: Engine) -> Non
         "ck_subscription_items_quantity_range",
         "ck_subscription_items_unit_price_positive",
         "ck_subscription_items_subtotal_non_negative",
+        "ck_delivery_slots_end_after_start",  # #100
+        "ck_delivery_slots_capacity_range",  # #100
     }
     assert uniques == {
         "uq_customers_phone",
@@ -219,6 +234,7 @@ def test_check_and_unique_constraints_have_readable_names(schema: Engine) -> Non
         "uq_order_items_order_product",
         "uq_orders_subscription_day",  # #97: one order per subscription per day
         "uq_subscription_items_product",  # #97
+        "uq_delivery_slots_times",  # #100
     }
 
 
@@ -244,6 +260,7 @@ def test_foreign_keys_and_on_delete_rules(schema: Engine) -> None:
         ("subscriptions", "customer_id"): ("customers", "RESTRICT"),
         ("subscription_items", "subscription_id"): ("subscriptions", "CASCADE"),
         ("subscription_items", "product_id"): ("products", "RESTRICT"),
+        ("subscriptions", "delivery_slot_id"): ("delivery_slots", "RESTRICT"),  # #100
     }
 
 

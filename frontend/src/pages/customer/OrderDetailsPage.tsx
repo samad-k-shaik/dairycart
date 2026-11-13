@@ -50,6 +50,7 @@ function OrderDetailsPage() {
               {order.subscription_id && order.delivery_date && (
                 <p className="text-small font-semibold text-primary">
                   Subscription delivery for {formatDay(order.delivery_date)}
+                  {order.delivery_slot && <>, {order.delivery_slot}</>}
                 </p>
               )}
             </div>

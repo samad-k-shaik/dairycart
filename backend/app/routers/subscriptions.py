@@ -4,6 +4,7 @@
     GET  /api/v1/subscriptions/mine               → my subscriptions, newest first
     GET  /api/v1/subscriptions/{id}               → one subscription (owner or ADMIN)
     POST /api/v1/subscriptions/{id}/cancel        → cancel it (owner or ADMIN)
+    PATCH /api/v1/subscriptions/{id}/delivery-slot → change the delivery time (#100)
 
 The rules are in services/subscription_service.py.
 """
@@ -17,6 +18,7 @@ from app.core.auth import CurrentUser
 from app.database.session import get_db
 from app.models import Subscription
 from app.schemas.common import ErrorResponse
+from app.schemas.delivery_slot import DeliverySlotChange
 from app.schemas.subscription import SubscriptionCreate, SubscriptionRead
 from app.services import subscription_service
 
@@ -48,16 +50,20 @@ def _read(db: Session, subscription: Subscription) -> SubscriptionRead:
         400: _error("DUPLICATE_PRODUCT"),
         404: _error("NOT_FOUND: a product does not exist"),
         409: _error(
-            "SUBSCRIPTION_ALREADY_ACTIVE, PRODUCT_UNAVAILABLE or INSUFFICIENT_STOCK"
+            "SUBSCRIPTION_ALREADY_ACTIVE, DELIVERY_SLOT_FULL, PRODUCT_UNAVAILABLE or "
+            "INSUFFICIENT_STOCK"
         ),
-        422: _error("Invalid body, start date out of range, or prices were sent"),
+        422: _error(
+            "Invalid body, start date out of range, delivery slot not available, "
+            "or prices were sent"
+        ),
     },
 )
 def create_subscription(
     data: SubscriptionCreate, response: Response, db: DbSession, user: CurrentUser
 ) -> SubscriptionRead:
-    """Send only the plan, start date, contact and product ids + quantities. The
-    backend locks today's prices and calculates the daily and plan totals."""
+    """Send only the plan, start date, delivery slot, contact and product ids +
+    quantities. The backend locks today's prices and calculates the totals."""
     subscription = subscription_service.create_subscription(db, data, user)
     response.headers["Location"] = (
         f"/api/v1/subscriptions/{subscription.subscription_id}"
@@ -101,4 +107,27 @@ def cancel_subscription(
 ) -> SubscriptionRead:
     """No more orders from tomorrow on. An order already created for today stays."""
     subscription = subscription_service.cancel_subscription(db, subscription_id, user)
+    return _read(db, subscription)
+
+
+@router.patch(
+    "/{subscription_id}/delivery-slot",
+    response_model=SubscriptionRead,
+    summary="Change the delivery time",
+    responses={
+        404: _error("No such subscription, or it belongs to someone else"),
+        409: _error("SUBSCRIPTION_NOT_ACTIVE or DELIVERY_SLOT_FULL"),
+        422: _error("Delivery slot not available"),
+    },
+)
+def change_delivery_slot(
+    subscription_id: SubscriptionId,
+    data: DeliverySlotChange,
+    db: DbSession,
+    user: CurrentUser,
+) -> SubscriptionRead:
+    """#100: orders already created keep their time; the next ones use the new slot."""
+    subscription = subscription_service.change_delivery_slot(
+        db, subscription_id, data.delivery_slot_id, user
+    )
     return _read(db, subscription)

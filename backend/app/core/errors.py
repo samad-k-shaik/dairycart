@@ -135,6 +135,36 @@ class SubscriptionNotActiveError(DomainError):
     code = "SUBSCRIPTION_NOT_ACTIVE"
 
 
+class DeliverySlotFullError(DomainError):
+    """The chosen delivery slot has no places left (#100)."""
+
+    status_code = 409
+    code = "DELIVERY_SLOT_FULL"
+
+
+class DeliverySlotAlreadyExistsError(DomainError):
+    """Admin: another slot already has exactly these start and end times (#100)."""
+
+    status_code = 409
+    code = "DELIVERY_SLOT_ALREADY_EXISTS"
+
+
+class DeliverySlotInUseError(DomainError):
+    """Admin: the slot was booked by a subscription, so it cannot be deleted (#100).
+    Switch it off instead."""
+
+    status_code = 409
+    code = "DELIVERY_SLOT_IN_USE"
+
+
+class LastActiveDeliverySlotError(DomainError):
+    """Admin: switching off or deleting this slot would leave customers with no delivery
+    time to choose (#100)."""
+
+    status_code = 409
+    code = "LAST_ACTIVE_DELIVERY_SLOT"
+
+
 class InvalidFieldError(DomainError):
     """A field is well-formed but breaks a rule that needs the database or today's date,
     e.g. a subscription start date in the past (#97). Same code and shape as pydantic's

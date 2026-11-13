@@ -122,6 +122,7 @@ export function buildCreateSubscriptionRequest(
   plan: SubscriptionPlan,
   startDate: IsoDate,
   everyNDays: EveryNDays,
+  deliverySlotId: number,
   customer: { name: string; phone: string },
   lines: { product_id: number; quantity: number }[],
 ): CreateSubscriptionRequest {
@@ -129,6 +130,7 @@ export function buildCreateSubscriptionRequest(
     plan,
     start_date: startDate,
     every_n_days: everyNDays,
+    delivery_slot_id: deliverySlotId, // #100
     customer: { name: customer.name.trim(), phone: customer.phone },
     // Only the two allowed fields, so cart fields (name, size, price) never leak in.
     items: lines.map(({ product_id, quantity }) => ({ product_id, quantity })),

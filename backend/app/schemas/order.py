@@ -89,6 +89,8 @@ class OrderRead(BaseModel):
     # #97: set for orders created from a subscription (null for one-time orders).
     subscription_id: int | None = None
     delivery_date: date | None = None
+    # #100: the delivery time, e.g. "Morning, 8:00 AM – 9:00 AM" (null: one-time order).
+    delivery_slot: str | None = None
 
     @classmethod
     def from_order(cls, order: Order) -> Self:
@@ -114,6 +116,7 @@ class OrderRead(BaseModel):
             total_amount=order.total_amount,
             subscription_id=order.subscription_id,
             delivery_date=order.delivery_date,
+            delivery_slot=order.delivery_slot,
         )
 
 
@@ -127,6 +130,7 @@ class OrderSummary(BaseModel):
     item_count: int
     # #97: the subscription this order came from (null for a one-time order).
     subscription_id: int | None = None
+    delivery_slot: str | None = None  # #100
 
 
 class AdminOrderSummary(BaseModel):
@@ -141,6 +145,7 @@ class AdminOrderSummary(BaseModel):
     item_count: int
     # #97: the subscription this order came from (null for a one-time order).
     subscription_id: int | None = None
+    delivery_slot: str | None = None  # #100
 
 
 class AdminOrderPage(BaseModel):

@@ -4,10 +4,13 @@
  *
  * Cancelling stops all FUTURE deliveries. An order already created for today stays
  * (it shows in My orders, where an admin can still cancel it).
+ *
+ * #100: each card shows the booked delivery time, and "Change time" moves an active plan
+ * to another slot that has places left (orders already created keep their time).
  */
 import { useState } from "react"
 import { Link } from "react-router"
-import { CalendarDays, Loader2, Repeat } from "lucide-react"
+import { CalendarDays, Clock, Loader2, Repeat } from "lucide-react"
 import { toast } from "sonner"
 
 import { EmptyState } from "@/components/common/EmptyState"
@@ -24,8 +27,10 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useDeliverySlots } from "@/hooks/useDeliverySlots"
 import { useReturnFocus } from "@/hooks/useReturnFocus"
-import { useCancelSubscription, useMySubscriptions } from "@/hooks/useSubscriptions"
+import { useCancelSubscription, useChangeDeliverySlot, useMySubscriptions } from "@/hooks/useSubscriptions"
+import { slotTimeRange, spacesLeftText } from "@/lib/deliverySlot"
 import { formatCurrency } from "@/lib/format"
 import { formatDay, frequencyLabel, planLabel, STATUS_LABELS } from "@/lib/subscription"
 import { cn } from "@/lib/utils"
@@ -41,6 +46,7 @@ const STATUS_STYLES: Record<SubscriptionStatus, string> = {
 function SubscriptionsPage() {
   const query = useMySubscriptions()
   const [toCancel, setToCancel] = useState<Subscription | null>(null)
+  const [toChange, setToChange] = useState<Subscription | null>(null)
 
   return (
     <div className="space-y-6">
@@ -83,19 +89,32 @@ function SubscriptionsPage() {
         <ul className="space-y-4" aria-label="My subscriptions">
           {query.data.map((subscription) => (
             <li key={subscription.subscription_id}>
-              <SubscriptionCard subscription={subscription} onCancel={() => setToCancel(subscription)} />
+              <SubscriptionCard
+                subscription={subscription}
+                onCancel={() => setToCancel(subscription)}
+                onChangeTime={() => setToChange(subscription)}
+              />
             </li>
           ))}
         </ul>
       )}
 
       <CancelDialog subscription={toCancel} onClose={() => setToCancel(null)} />
+      <ChangeTimeDialog subscription={toChange} onClose={() => setToChange(null)} />
     </div>
   )
 }
 
-function SubscriptionCard({ subscription, onCancel }: { subscription: Subscription; onCancel: () => void }) {
-  const { status } = subscription
+function SubscriptionCard({
+  subscription,
+  onCancel,
+  onChangeTime,
+}: {
+  subscription: Subscription
+  onCancel: () => void
+  onChangeTime: () => void
+}) {
+  const { status, delivery_slot: slot } = subscription
   return (
     <article
       className="space-y-4 rounded-2xl bg-surface p-4 shadow-card md:p-5"
@@ -110,6 +129,11 @@ function SubscriptionCard({ subscription, onCancel }: { subscription: Subscripti
             <CalendarDays className="size-4" aria-hidden="true" />
             {formatDay(subscription.start_date)} – {formatDay(subscription.end_date)} ·{" "}
             {frequencyLabel(subscription.every_n_days).toLowerCase()}
+          </p>
+          {/* #100: the booked delivery time */}
+          <p className="flex items-center gap-1.5 text-small text-muted-foreground" data-testid="delivery-time">
+            <Clock className="size-4" aria-hidden="true" />
+            {slot ? `${slot.name}, ${slotTimeRange(slot)}` : "No delivery time chosen"}
           </p>
         </div>
         <Badge className={cn("font-semibold", STATUS_STYLES[status])}>{STATUS_LABELS[status]}</Badge>
@@ -140,9 +164,15 @@ function SubscriptionCard({ subscription, onCancel }: { subscription: Subscripti
       {status === "ACTIVE" && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
           <p className="text-small text-muted-foreground">Pay cash on each delivery.</p>
-          <Button variant="outline" className="h-11 text-danger hover:text-danger" onClick={onCancel}>
-            Cancel subscription
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" className="h-11" onClick={onChangeTime}>
+              <Clock aria-hidden="true" />
+              {slot ? "Change time" : "Choose time"}
+            </Button>
+            <Button variant="outline" className="h-11 text-danger hover:text-danger" onClick={onCancel}>
+              Cancel subscription
+            </Button>
+          </div>
         </div>
       )}
     </article>
@@ -196,6 +226,116 @@ function CancelDialog({ subscription, onClose }: { subscription: Subscription | 
           <Button variant="destructive" className="h-11" onClick={handleConfirm} disabled={cancel.isPending}>
             {cancel.isPending && <Loader2 className="animate-spin" aria-hidden="true" />}
             Yes, cancel it
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
+/** #100: pick another delivery time. Closed when `subscription` is null. */
+function ChangeTimeDialog({ subscription, onClose }: { subscription: Subscription | null; onClose: () => void }) {
+  const returnFocus = useReturnFocus()
+  const open = subscription !== null
+  const slots = useDeliverySlots({ enabled: open })
+  const change = useChangeDeliverySlot()
+  const currentId = subscription?.delivery_slot?.delivery_slot_id ?? null
+  const [picked, setPicked] = useState<number | null>(null)
+  const chosen = picked ?? currentId
+
+  function close() {
+    setPicked(null)
+    change.reset()
+    onClose()
+  }
+
+  function handleSave() {
+    if (!subscription || chosen === null) return
+    if (chosen === currentId) return close()
+    change.mutate(
+      { subscriptionId: subscription.subscription_id, deliverySlotId: chosen },
+      {
+        onSuccess: (updated) => {
+          toast.success("Delivery time changed", {
+            description: `${updated.delivery_slot?.label ?? ""}. Deliveries already created keep their time.`,
+          })
+          close()
+        },
+        // e.g. the slot filled up meanwhile: show the reason and the fresh places left.
+        onError: () => void slots.refetch(),
+      },
+    )
+  }
+
+  return (
+    <AlertDialog open={open} onOpenChange={(isOpen) => !isOpen && close()}>
+      <AlertDialogContent {...returnFocus}>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Change delivery time</AlertDialogTitle>
+          <AlertDialogDescription>
+            The new time applies to the next deliveries. Deliveries already created keep their time.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        {slots.isPending ? (
+          <p className="flex items-center gap-2 text-small text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            Loading delivery times…
+          </p>
+        ) : slots.isError ? (
+          <p className="text-small text-danger">We could not load the delivery times. Please try again.</p>
+        ) : (
+          <div className="grid gap-2" role="radiogroup" aria-label="Delivery time">
+            {slots.data.map((slot) => {
+              const isCurrent = slot.delivery_slot_id === currentId
+              // Your own slot is never "full" for you: you already have a place in it.
+              const unavailable = slot.is_full && !isCurrent
+              const checked = chosen === slot.delivery_slot_id
+              return (
+                <button
+                  key={slot.delivery_slot_id}
+                  type="button"
+                  role="radio"
+                  aria-checked={checked}
+                  disabled={unavailable}
+                  onClick={() => {
+                    setPicked(slot.delivery_slot_id)
+                    change.reset()
+                  }}
+                  className={cn(
+                    "flex min-h-11 items-center justify-between gap-3 rounded-xl border p-3 text-left transition-colors",
+                    checked ? "border-primary bg-primary-soft" : "hover:bg-muted",
+                    unavailable && "cursor-not-allowed opacity-60 hover:bg-transparent",
+                  )}
+                >
+                  <span>
+                    <span className="block font-semibold">{slot.name}</span>
+                    <span className="block text-small">{slotTimeRange(slot)}</span>
+                  </span>
+                  <span
+                    className={cn("text-small", unavailable ? "font-semibold text-danger" : "text-muted-foreground")}
+                  >
+                    {isCurrent ? "Current" : spacesLeftText(slot)}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {change.isError && (
+          <p role="alert" className="text-small text-danger">
+            {change.error instanceof ServiceError ? change.error.message : "Please try again."}
+          </p>
+        )}
+
+        <AlertDialogFooter>
+          <AlertDialogCancel className="h-11" disabled={change.isPending}>
+            Keep current time
+          </AlertDialogCancel>
+          <Button className="h-11" onClick={handleSave} disabled={change.isPending || chosen === null}>
+            {change.isPending && <Loader2 className="animate-spin" aria-hidden="true" />}
+            Save time
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

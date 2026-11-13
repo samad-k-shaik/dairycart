@@ -3,6 +3,7 @@
  * Field names stay in snake_case exactly as the API sends them.
  * (Relative ".ts" imports so Node's test runner can load this file.)
  */
+import type { BookedSlot } from "./deliverySlot.ts"
 import type { Customer, IsoDateTime } from "./order.ts"
 import type { Money } from "./product.ts"
 
@@ -38,6 +39,8 @@ export type Subscription = {
   every_n_days: EveryNDays
   /** #99: number of deliveries in the plan (7 days every 2 days → 4). */
   deliveries: number
+  /** #100: the booked delivery time (null for subscriptions from before #100). */
+  delivery_slot: BookedSlot | null
   start_date: IsoDate
   /** Last delivery day, included. */
   end_date: IsoDate
@@ -59,6 +62,8 @@ export type CreateSubscriptionRequest = {
   plan: SubscriptionPlan
   start_date: IsoDate
   every_n_days: EveryNDays
+  /** #100: the chosen delivery time (GET /delivery-slots). */
+  delivery_slot_id: number
   customer: { name: string; phone: string }
   items: { product_id: number; quantity: number }[]
 }
@@ -71,6 +76,8 @@ export type AdminSubscriptionSummary = {
   customer_phone: string
   plan: SubscriptionPlan
   every_n_days: EveryNDays
+  /** #100: "Morning, 8:00 AM – 9:00 AM", or null for subscriptions from before #100. */
+  delivery_slot: string | null
   start_date: IsoDate
   end_date: IsoDate
   status: SubscriptionStatus

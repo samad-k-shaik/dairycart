@@ -4,7 +4,7 @@
  * Each admin page renders inside <Outlet />.
  */
 import { NavLink, Outlet, useNavigate } from "react-router"
-import { ClipboardList, LayoutDashboard, LogOut, Package, Repeat, Store, Users } from "lucide-react"
+import { ClipboardList, Clock, LayoutDashboard, LogOut, Package, Repeat, Store, Users } from "lucide-react"
 
 import { DevCrashProbe } from "@/components/common/DevMockSwitch"
 import { Logo } from "@/components/common/Logo"
@@ -14,12 +14,13 @@ import { cn } from "@/lib/utils"
 /** One list drives both the sidebar and the mobile bar, so they never disagree. */
 const adminLinks = [
   // `end`: "/admin" is active only on the dashboard, not on /admin/orders too.
-  { to: "/admin", label: "Dashboard", Icon: LayoutDashboard, end: true },
+  { to: "/admin", label: "Dashboard", short: "Home", Icon: LayoutDashboard, end: true }, // short: 6 tabs at 360px (#100)
   { to: "/admin/orders", label: "Orders", Icon: ClipboardList, end: false },
   { to: "/admin/products", label: "Products", Icon: Package, end: false },
   { to: "/admin/users", label: "Users", Icon: Users, end: false }, // #89
   // #97. `short`: the phone tab bar has room for a short word only.
   { to: "/admin/subscriptions", label: "Subscriptions", short: "Plans", Icon: Repeat, end: false },
+  { to: "/admin/delivery-slots", label: "Delivery slots", short: "Times", Icon: Clock, end: false }, // #100
 ]
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -29,8 +30,8 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   )
 
 /**
- * Mobile top bar: the 5 links share the row equally. The icon sits ABOVE the label
- * (like a phone tab bar), so all 5 fit at 360px while staying 44px+ tall to tap.
+ * Mobile top bar: the 6 links share the row equally. The icon sits ABOVE the label
+ * (like a phone tab bar), so all 6 fit at 360px while staying 44px+ tall to tap.
  */
 const compactLinkClass = ({ isActive }: { isActive: boolean }) =>
   cn(linkClass({ isActive }), "h-auto min-h-11 min-w-0 flex-1 flex-col justify-center gap-0.5 px-1 py-1 text-xs")

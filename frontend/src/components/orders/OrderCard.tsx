@@ -27,6 +27,7 @@ export function OrderCard({ order }: { order: OrderSummary }) {
           {formatDateTime(order.order_date)} · {order.item_count}{" "}
           {order.item_count === 1 ? "item" : "items"}
         </p>
+        {order.delivery_slot && <p className="text-small text-muted-foreground">{order.delivery_slot}</p>}
       </div>
       <span className="text-price font-extrabold">{formatCurrency(order.total_amount)}</span>
       <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />

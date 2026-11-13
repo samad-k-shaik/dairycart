@@ -34,6 +34,12 @@
 | GET | `/subscriptions/{id}` | One subscription (owner or ADMIN) *(#97)* | 200 |
 | POST | `/subscriptions/{id}/cancel` | Cancel a subscription *(#97)* | 200 |
 | GET | `/admin/subscriptions` | All subscriptions (`?status=`) *(#97)* | 200 |
+| PATCH | `/subscriptions/{id}/delivery-slot` | Change the delivery time (owner or ADMIN) *(#100)* | 200 |
+| GET | `/delivery-slots` | Active delivery times with places left *(#100)* | 200 |
+| GET | `/admin/delivery-slots` | All delivery slots with capacity and bookings *(#100)* | 200 |
+| POST | `/admin/delivery-slots` | Add a delivery slot *(#100)* | 201 |
+| PATCH | `/admin/delivery-slots/{id}` | Edit a delivery slot *(#100)* | 200 |
+| DELETE | `/admin/delivery-slots/{id}` | Delete a slot that was never booked *(#100)* | 204 |
 
 All `/admin/…` rows need an **ADMIN** token (401 without one, 403 for a `USER`).
 
@@ -313,6 +319,7 @@ Rules:
 - Statuses: `ACTIVE`, `CANCELLED` (by the owner or an admin), `COMPLETED` (last day passed). Only `ACTIVE` can be cancelled.
 - Cancelling stops all **future** orders. An order already created for today stays (an admin can cancel that order, which restores stock).
 - Payment stays cash on each delivery; there is no prepayment.
+- *(#100)* Every new subscription books a **delivery time slot** (`delivery_slot_id`, see [Delivery slots](#delivery-slots-100)). The slot must be active and have a place left. Subscriptions from before #100 have `delivery_slot: null`.
 
 ### POST /api/v1/subscriptions
 
@@ -322,16 +329,19 @@ Rules:
   "plan": "WEEK",
   "start_date": "2026-11-21",
   "every_n_days": 2,
+  "delivery_slot_id": 1,
   "customer": { "name": "Ravi Kumar", "phone": "9876543210" },
   "items": [ { "product_id": 2, "quantity": 1 } ]
 }
 ```
-`every_n_days` is optional (default `1`); only `1`, `2` or `3` are accepted (otherwise 422). `customer` and `items` follow the same rules as `POST /orders` (1–10 items, quantity 1–20, no duplicates; the products must be available and in stock today).
+`every_n_days` is optional (default `1`); only `1`, `2` or `3` are accepted (otherwise 422). `delivery_slot_id` is **required** *(#100)*. `customer` and `items` follow the same rules as `POST /orders` (1–10 items, quantity 1–20, no duplicates; the products must be available and in stock today).
 
 **201 Created** + `Location: /api/v1/subscriptions/{id}`:
 ```json
 {
   "subscription_id": 3, "plan": "WEEK", "days": 7, "every_n_days": 2, "deliveries": 4,
+  "delivery_slot": { "delivery_slot_id": 1, "name": "Morning", "start_time": "08:00:00", "end_time": "09:00:00",
+                     "label": "Morning, 8:00 AM – 9:00 AM", "is_active": true },
   "start_date": "2026-11-21", "end_date": "2026-11-27", "status": "ACTIVE",
   "customer": { "customer_id": 12, "name": "Ravi Kumar", "phone": "9876543210" },
   "items": [ { "product_id": 2, "product_name": "Cow Milk", "size": "1 Litre", "quantity": 1, "unit_price": "60.00", "subtotal": "60.00" } ],
@@ -346,7 +356,8 @@ Rules:
 | 404 | `NOT_FOUND` | A product does not exist |
 | 409 | `SUBSCRIPTION_ALREADY_ACTIVE` | The user already has an ACTIVE subscription. Message: "You already have an active subscription. Cancel it before starting a new one." |
 | 409 | `PRODUCT_UNAVAILABLE` / `INSUFFICIENT_STOCK` | As for `POST /orders` |
-| 422 | `VALIDATION_ERROR` | Bad body, unknown `plan`, or `start_date` out of range (detail `{ "field": "start_date", "issue": "out of range" }`) |
+| 409 | `DELIVERY_SLOT_FULL` | The chosen slot has no places left *(#100)* |
+| 422 | `VALIDATION_ERROR` | Bad body, unknown `plan`, `start_date` out of range (detail `{ "field": "start_date", "issue": "out of range" }`), or the slot does not exist / is switched off (detail `{ "field": "delivery_slot_id", "issue": "not available" }`, #100) |
 
 ### GET /api/v1/subscriptions/mine
 
@@ -361,7 +372,7 @@ Owner or ADMIN only; anyone else gets **404** (same answer as a missing id). Can
 Optional `?status=ACTIVE|CANCELLED|COMPLETED`. Newest first:
 ```json
 [ { "subscription_id": 3, "username": "ravi", "customer_name": "Ravi Kumar", "customer_phone": "9876543210",
-    "plan": "WEEK", "every_n_days": 2, "start_date": "2026-11-21", "end_date": "2026-11-27", "status": "ACTIVE",
+    "plan": "WEEK", "every_n_days": 2, "delivery_slot": "Morning, 8:00 AM – 9:00 AM", "start_date": "2026-11-21", "end_date": "2026-11-27", "status": "ACTIVE",
     "daily_total": "60.00", "orders_created": 2 } ]
 ```
 
@@ -369,11 +380,72 @@ Optional `?status=ACTIVE|CANCELLED|COMPLETED`. Newest first:
 
 There is no endpoint for this. The backend creates the orders itself: once when it starts, then every `SUBSCRIPTION_ORDERS_INTERVAL_MINUTES` (default 15). Each run, for **today (India time)**:
 - marks finished plans `COMPLETED`;
-- creates one order (status `PLACED`, locked prices, stock reduced, `subscription_id` and `delivery_date` set) for every `ACTIVE` subscription that **delivers today**, meaning today is between its dates and `(today − start_date) % every_n_days = 0`.
+- creates one order (status `PLACED`, locked prices, stock reduced, `subscription_id`, `delivery_date` and *(#100)* `delivery_slot` set) for every `ACTIVE` subscription that **delivers today**, meaning today is between its dates and `(today − start_date) % every_n_days = 0`.
 
 It is **safe to run again**: a subscription never gets two orders for the same day (`uq_orders_subscription_day`). A subscription whose product is unavailable or out of stock is **skipped** for that day (logged) and keeps going. Manual backup, e.g. to catch up a day the server was off: `python -m app.scripts.generate_subscription_orders [--date YYYY-MM-DD]`.
 
 *(#97 had `POST /admin/subscriptions/generate-orders` and an admin button for this; both were removed in #99.)*
+
+### PATCH /api/v1/subscriptions/{id}/delivery-slot *(#100)*
+
+Change the delivery time of an `ACTIVE` subscription. Owner or ADMIN (anyone else: 404). Body `{ "delivery_slot_id": 2 }`. Returns **200** with the subscription. Orders already created keep their time; the next ones use the new slot. Choosing the slot it already has is accepted (even when that slot is full).
+
+| Status | Code | When |
+|---|---|---|
+| 404 | `NOT_FOUND` | No such subscription, or someone else's |
+| 409 | `SUBSCRIPTION_NOT_ACTIVE` | Cancelled or completed |
+| 409 | `DELIVERY_SLOT_FULL` | The new slot has no places left |
+| 422 | `VALIDATION_ERROR` | The slot does not exist or is switched off (`delivery_slot_id`: "not available") |
+
+---
+
+## Delivery slots (#100)
+
+A delivery slot is a daily time window (India time) in which subscription orders are delivered, e.g. **Morning 08:00–09:00**. The admin manages the slots; every subscription books one.
+
+Rules:
+- **Capacity** = how many `ACTIVE` subscriptions can book the slot (1–1000). Cancelled and completed plans free their place. Booking locks the slot row (`SELECT … FOR UPDATE`), so two people can never take the last place at the same time.
+- Lowering the capacity never removes a booking; the slot just shows full (`spaces_left` never goes below 0).
+- A switched-off slot (`is_active: false`) is hidden from customers; subscriptions that booked it keep it.
+- A slot that was ever booked cannot be deleted (switch it off instead). The **last active slot** can neither be switched off nor deleted, so customers always have a time to choose.
+- The migration creates two standard slots, editable like any other: **Morning 08:00–09:00** and **Evening 17:00–18:00**, capacity 50 each.
+- Times are sent as `"HH:MM"` (hours and minutes only) and returned as `"HH:MM:SS"`. `end_time` must be after `start_time`; two slots cannot have exactly the same times.
+- Each subscription order stores a **text copy** of its slot in `delivery_slot` (e.g. `"Morning, 8:00 AM – 9:00 AM"`), so editing a slot later does not change orders already created. One-time orders have `delivery_slot: null`. `GET /orders/{id}`, `GET /orders/mine` and `GET /admin/orders` include it.
+
+### GET /api/v1/delivery-slots
+
+Public (no login), like the product list. Active slots, earliest first; full slots are listed with `is_full: true`.
+```json
+[ { "delivery_slot_id": 1, "name": "Morning", "start_time": "08:00:00", "end_time": "09:00:00",
+    "label": "Morning, 8:00 AM – 9:00 AM", "spaces_left": 48, "is_full": false } ]
+```
+
+### GET /api/v1/admin/delivery-slots *(ADMIN)*
+
+All slots (switched-off ones too), each as above plus `"capacity": 50, "booked": 2, "is_active": true`.
+
+### POST /api/v1/admin/delivery-slots *(ADMIN)*
+
+```json
+{ "name": "Late morning", "start_time": "10:00", "end_time": "11:00", "capacity": 20, "is_active": true }
+```
+`is_active` is optional (default `true`). Name 2–50 characters. **201** with the admin shape.
+
+### PATCH /api/v1/admin/delivery-slots/{id} *(ADMIN)*
+
+Send only the fields that change (at least one, no `null`). **200** with the admin shape.
+
+### DELETE /api/v1/admin/delivery-slots/{id} *(ADMIN)*
+
+**204** when the slot was never booked.
+
+| Status | Code | When |
+|---|---|---|
+| 404 | `NOT_FOUND` | No slot with this id |
+| 409 | `DELIVERY_SLOT_ALREADY_EXISTS` | Another slot has the same start and end time |
+| 409 | `DELIVERY_SLOT_IN_USE` | Delete: the slot was booked by a subscription |
+| 409 | `LAST_ACTIVE_DELIVERY_SLOT` | Switching off or deleting the only active slot |
+| 422 | `VALIDATION_ERROR` | Bad name, time or capacity, or end not after start |
 
 ---
 
@@ -487,7 +559,7 @@ Errors that do not come from a specific endpoint use the same shape: an unknown 
 | 401 | Not logged in, invalid/expired token, or wrong login details |
 | 403 | Logged in, but not allowed (a `USER` on an admin endpoint) |
 | 404 | Resource not found |
-| 409 | Conflicts with current state (unavailable product, illegal transition, duplicate product name + size, deleting an ordered product, email/username already registered, a second active subscription or cancelling one that is not active (#97)) |
+| 409 | Conflicts with current state (unavailable product, illegal transition, duplicate product name + size, deleting an ordered product, email/username already registered, a second active subscription or cancelling one that is not active (#97), a full delivery slot, deleting a booked slot or switching off the last active one (#100)) |
 | 422 | Schema validation failed |
 | 500 | Unexpected server error (details only in logs) |
 | 503 | Dependency (database) unavailable |

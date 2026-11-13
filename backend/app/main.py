@@ -20,11 +20,13 @@ from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.core.logging import RequestIdMiddleware, configure_logging
 from app.routers import (
+    admin_delivery_slots,
     admin_orders,
     admin_products,
     admin_subscriptions,
     admin_users,
     auth,
+    delivery_slots,
     health,
     orders,
     products,
@@ -87,3 +89,5 @@ app.include_router(auth.router, prefix=API_PREFIX)
 app.include_router(admin_users.router, prefix=API_PREFIX)
 app.include_router(subscriptions.router, prefix=API_PREFIX)  # #97
 app.include_router(admin_subscriptions.router, prefix=API_PREFIX)  # #97
+app.include_router(delivery_slots.router, prefix=API_PREFIX)  # #100
+app.include_router(admin_delivery_slots.router, prefix=API_PREFIX)  # #100

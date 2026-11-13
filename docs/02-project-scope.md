@@ -13,7 +13,7 @@
 | C5 | Place an order |
 | C6 | View order confirmation |
 | C7 | View previous orders |
-| C8 | Choose "order once" or a subscription (1 week / 15 days / 1 month; every day, every 2 or every 3 days) and cancel it *(added by #97 and #99, approved scope change)* |
+| C8 | Choose "order once" or a subscription (1 week / 15 days / 1 month; every day, every 2 or every 3 days) in a chosen delivery time slot, change the time, and cancel it *(added by #97, #99 and #100, approved scope change)* |
 
 ### Admin application
 
@@ -26,6 +26,7 @@
 | A5 | View available products |
 | A6 | Add, edit and delete products (delete only if never ordered) *(added by #86)* |
 | A7 | View subscriptions; their delivery orders are created automatically *(added by #97, #99)* |
+| A8 | Manage delivery time slots: add, edit, set capacity, switch off, delete *(added by #100)* |
 
 ## Out of scope
 

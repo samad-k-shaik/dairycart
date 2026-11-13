@@ -146,11 +146,14 @@ What makes the order code safe:
 
 | Endpoint | Does | Errors |
 |---|---|---|
-| `POST /api/v1/subscriptions` | Subscribe for `WEEK` (7), `HALF_MONTH` (15) or `MONTH` (30) days from `start_date` (tomorrow … +30 days), `every_n_days` 1/2/3 (#99) | `401`, `400`, `404`, `409 SUBSCRIPTION_ALREADY_ACTIVE` / `PRODUCT_UNAVAILABLE` / `INSUFFICIENT_STOCK`, `422` |
+| `POST /api/v1/subscriptions` | Subscribe for `WEEK` (7), `HALF_MONTH` (15) or `MONTH` (30) days from `start_date` (tomorrow … +30 days), `every_n_days` 1/2/3 (#99), `delivery_slot_id` (#100) | `401`, `400`, `404`, `409 SUBSCRIPTION_ALREADY_ACTIVE` / `DELIVERY_SLOT_FULL` / `PRODUCT_UNAVAILABLE` / `INSUFFICIENT_STOCK`, `422` |
 | `GET /api/v1/subscriptions/mine` | My subscriptions, newest first | `401` |
 | `GET /api/v1/subscriptions/{id}` | One subscription (owner or ADMIN) | `401`, `404` |
 | `POST /api/v1/subscriptions/{id}/cancel` | Cancel (owner or ADMIN) | `401`, `404`, `409 SUBSCRIPTION_NOT_ACTIVE` |
 | `GET /api/v1/admin/subscriptions?status=` | All subscriptions (ADMIN) | `401`, `403` |
+| `PATCH /api/v1/subscriptions/{id}/delivery-slot` | Change the delivery time (#100) | `401`, `404`, `409 SUBSCRIPTION_NOT_ACTIVE` / `DELIVERY_SLOT_FULL`, `422` |
+| `GET /api/v1/delivery-slots` | Active delivery slots with places left (public, #100) | |
+| `GET/POST /api/v1/admin/delivery-slots`, `PATCH/DELETE …/{id}` | Manage delivery slots (ADMIN, #100) | `401`, `403`, `404`, `409 DELIVERY_SLOT_ALREADY_EXISTS` / `DELIVERY_SLOT_IN_USE` / `LAST_ACTIVE_DELIVERY_SLOT`, `422` |
 
 - **Delivery orders are automatic (#99, ADR-015):** when the server starts, `app/core/background.py` starts an `asyncio` task that runs `generate_orders_for(today)` at once and then every `SUBSCRIPTION_ORDERS_INTERVAL_MINUTES` (default 15). Turn it off with `SUBSCRIPTION_AUTO_ORDERS=false` (tests do). Errors are logged and retried next time. Manual backup, e.g. for a day the server was off:
   ```
@@ -162,7 +165,8 @@ What makes the order code safe:
 - **One active subscription per user** is a partial unique index (`WHERE status = 'ACTIVE'`), so even two requests at the same moment cannot both create one.
 - Shared item checks (duplicates, unavailable, stock) live in `order_service.check_items`, used by both orders and subscriptions.
 - **Frequency (#99):** `every_n_days` 1, 2 or 3; deliveries = `(days − 1) // every_n_days + 1`; `plan_total = daily_total × deliveries`.
-- Tests: `tests/test_subscription_service.py` (fixed dates), `tests/api/test_subscriptions.py` and `tests/test_background.py` (the loop).
+- **Delivery slots (#100):** rules in `app/services/delivery_slot_service.py`. Booking (subscribe or change time) locks the slot row (`SELECT … FOR UPDATE`) and counts its ACTIVE subscriptions against `capacity`, so a slot is never overbooked. Switching off or deleting first locks all active slots in id order (no deadlock) and refuses to leave none. Orders get a text copy of the slot (`orders.delivery_slot`). The migration creates the standard Morning 08:00–09:00 and Evening 17:00–18:00 slots.
+- Tests: `tests/test_subscription_service.py` (fixed dates), `tests/api/test_subscriptions.py`, `tests/test_background.py` (the loop), `tests/test_delivery_slot_service.py` and `tests/api/test_delivery_slots.py` (#100).
 
 ## Stock (#92)
 

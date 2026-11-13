@@ -6,8 +6,10 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
+import { deliverySlotKeys } from "@/hooks/useDeliverySlots"
 import {
   cancelSubscription,
+  changeDeliverySlot,
   createSubscription,
   getAdminSubscriptions,
   getMySubscriptions,
@@ -31,19 +33,39 @@ export function useAdminSubscriptions(status?: SubscriptionStatus) {
   })
 }
 
-export function useCreateSubscription() {
+/** Subscriptions AND delivery slots: a booking changes the slot's places left (#100). */
+function useRefreshAfterChange() {
   const queryClient = useQueryClient()
+  return () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: subscriptionKeys.all }),
+      queryClient.invalidateQueries({ queryKey: deliverySlotKeys.all }),
+    ])
+}
+
+export function useCreateSubscription() {
+  const refresh = useRefreshAfterChange()
   return useMutation({
     mutationFn: (request: CreateSubscriptionRequest) => createSubscription(request),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: subscriptionKeys.all }),
+    onSuccess: refresh,
   })
 }
 
 export function useCancelSubscription() {
-  const queryClient = useQueryClient()
+  const refresh = useRefreshAfterChange()
   return useMutation({
     mutationFn: (subscriptionId: number) => cancelSubscription(subscriptionId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: subscriptionKeys.all }),
+    onSuccess: refresh,
+  })
+}
+
+/** #100: move an active subscription to another delivery time. */
+export function useChangeDeliverySlot() {
+  const refresh = useRefreshAfterChange()
+  return useMutation({
+    mutationFn: ({ subscriptionId, deliverySlotId }: { subscriptionId: number; deliverySlotId: number }) =>
+      changeDeliverySlot(subscriptionId, deliverySlotId),
+    onSuccess: refresh,
   })
 }
 

@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.models import (
     Customer,
+    DeliverySlot,
     Order,
     Subscription,
     SubscriptionItem,
@@ -31,6 +32,7 @@ class AdminSubscriptionRow:
     customer_phone: str
     plan: SubscriptionPlan
     every_n_days: int
+    delivery_slot: str | None  # #100: "Morning, 8:00 AM – 9:00 AM"
     start_date: date
     end_date: date
     status: SubscriptionStatus
@@ -39,9 +41,11 @@ class AdminSubscriptionRow:
 
 
 def _with_details(query: Select) -> Select:
-    """Customer (1 JOIN) and items + their products (1 extra query), loaded eagerly."""
+    """Customer and delivery slot (JOINs) and items + their products (1 extra query),
+    loaded eagerly."""
     return query.options(
         joinedload(Subscription.customer),
+        joinedload(Subscription.delivery_slot),
         selectinload(Subscription.items).joinedload(SubscriptionItem.product),
     )
 
@@ -120,6 +124,7 @@ class SubscriptionRepository:
                 Customer.phone,
                 Subscription.plan,
                 Subscription.every_n_days,
+                DeliverySlot,  # the whole slot (or None), for its label
                 Subscription.start_date,
                 Subscription.end_date,
                 Subscription.status,
@@ -128,11 +133,22 @@ class SubscriptionRepository:
             )
             .join(User, User.user_id == Subscription.user_id)
             .join(Customer, Customer.customer_id == Subscription.customer_id)
+            # LEFT JOIN: subscriptions from before #100 have no slot.
+            .outerjoin(
+                DeliverySlot,
+                DeliverySlot.delivery_slot_id == Subscription.delivery_slot_id,
+            )
             .order_by(Subscription.subscription_id.desc())
         )
         if status is not None:
             query = query.where(Subscription.status == status)
-        return [AdminSubscriptionRow(*row) for row in self.db.execute(query).all()]
+        rows = []
+        for row in self.db.execute(query).all():
+            values = list(row)
+            slot = values[6]
+            values[6] = slot.label if slot is not None else None
+            rows.append(AdminSubscriptionRow(*values))
+        return rows
 
     def complete_finished(self, today: date) -> int:
         """ACTIVE subscriptions whose last day is before `today` → COMPLETED.
@@ -166,7 +182,10 @@ class SubscriptionRepository:
             )
             .order_by(Subscription.subscription_id)
             .with_for_update(of=Subscription)
-            .options(selectinload(Subscription.items))
+            .options(
+                selectinload(Subscription.items),
+                selectinload(Subscription.delivery_slot),  # #100
+            )
         )
         return list(self.db.scalars(query))
 

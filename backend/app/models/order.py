@@ -15,6 +15,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Numeric,
+    String,
     UniqueConstraint,
     func,
 )
@@ -79,6 +80,10 @@ class Order(Base):
     )
     # #97: the day (India time) this subscription order is for.
     delivery_date: Mapped[date | None] = mapped_column(Date, default=None)
+    # #100: the subscription's delivery time when this order was created, as text
+    # ("Morning, 8:00 AM – 9:00 AM"). A copy, like the locked prices: if the admin edits
+    # the slot later, this order still shows the time it was booked for.
+    delivery_slot: Mapped[str | None] = mapped_column(String(100), default=None)
     # Stored in UTC (TIMESTAMPTZ); shown in IST by the frontend.
     order_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
