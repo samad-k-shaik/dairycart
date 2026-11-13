@@ -15,6 +15,13 @@ export type User = {
   created_at: IsoDateTime
 }
 
+/** GET /admin/users/{id} (#101): the user plus their order totals. */
+export type AdminUserDetail = User & {
+  order_count: number
+  /** Sum of the orders that are not cancelled, e.g. "1440.00". */
+  total_spent: string
+}
+
 /** POST /auth/register body. No role: every new account is a USER. */
 export type RegisterRequest = {
   full_name: string

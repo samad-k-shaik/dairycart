@@ -1,8 +1,10 @@
 /**
  * Route: `/admin/users` (#89). Every registered user and their details (ADMIN only).
  * Data: GET /api/v1/admin/users. Password hashes are never sent by the backend.
+ * #101: a user's name opens their page (/admin/users/:id) with all their orders.
  */
 import { useQuery } from "@tanstack/react-query"
+import { Link } from "react-router"
 import { Users } from "lucide-react"
 
 import { EmptyState } from "@/components/common/EmptyState"
@@ -25,7 +27,7 @@ function UsersPage() {
     <div className="space-y-5">
       <div className="space-y-1">
         <h1 className="text-h1 font-bold">Users</h1>
-        <p className="text-muted-foreground">Everyone who has signed up. New accounts are users; admins are created by the team.</p>
+        <p className="text-muted-foreground">Everyone who has signed up. Select a name to see that user's orders.</p>
       </div>
 
       {isPending ? (
@@ -55,7 +57,13 @@ function UsersPage() {
                 <TableRow key={user.user_id}>
                   <TableCell className="hidden text-muted-foreground sm:table-cell">{user.user_id}</TableCell>
                   <TableCell>
-                    <p className="font-semibold">{user.full_name}</p>
+                    <Link
+                      to={`/admin/users/${user.user_id}`}
+                      className="font-semibold text-primary hover:underline"
+                      aria-label={`${user.full_name}: details and orders`}
+                    >
+                      {user.full_name}
+                    </Link>
                     <p className="text-small text-muted-foreground">@{user.username}</p>
                     {/* Phones: the email moves under the name. */}
                     <p className="text-small break-all text-muted-foreground md:hidden">{user.email}</p>

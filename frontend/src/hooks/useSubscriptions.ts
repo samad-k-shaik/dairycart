@@ -20,6 +20,7 @@ export const subscriptionKeys = {
   all: ["subscriptions"] as const,
   mine: ["subscriptions", "mine"] as const,
   admin: (status?: SubscriptionStatus) => ["subscriptions", "admin", status ?? "all"] as const,
+  adminForUser: (userId: number) => ["subscriptions", "admin", "user", userId] as const, // #101
 }
 
 export function useMySubscriptions() {
@@ -41,6 +42,14 @@ function useRefreshAfterChange() {
       queryClient.invalidateQueries({ queryKey: subscriptionKeys.all }),
       queryClient.invalidateQueries({ queryKey: deliverySlotKeys.all }),
     ])
+}
+
+/** #101: one user's subscriptions, for the admin user page. */
+export function useAdminUserSubscriptions(userId: number) {
+  return useQuery({
+    queryKey: subscriptionKeys.adminForUser(userId),
+    queryFn: () => getAdminSubscriptions(undefined, userId),
+  })
 }
 
 export function useCreateSubscription() {

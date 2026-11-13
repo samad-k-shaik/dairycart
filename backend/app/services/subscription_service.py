@@ -190,10 +190,13 @@ def get_subscription_for(
 
 
 def list_admin_subscriptions(
-    db: Session, status: SubscriptionStatus | None, today: date | None = None
+    db: Session,
+    status: SubscriptionStatus | None,
+    today: date | None = None,
+    user_id: int | None = None,
 ) -> list[AdminSubscriptionRow]:
     _refresh_statuses(db, today)
-    return SubscriptionRepository(db).list_admin(status)
+    return SubscriptionRepository(db).list_admin(status, user_id)
 
 
 # ---- Cancel ----

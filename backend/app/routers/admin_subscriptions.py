@@ -1,6 +1,6 @@
 """Admin subscription endpoints (#97). ADMIN only (401 without a token, 403 for a USER).
 
-GET  /api/v1/admin/subscriptions   → all subscriptions (?status=)
+GET  /api/v1/admin/subscriptions   → all subscriptions (?status=, ?user_id= #101)
 
 #99: the "generate orders" endpoint and button were removed. Delivery orders are created
 automatically by the backend (app/core/background.py); the script
@@ -41,7 +41,10 @@ def list_subscriptions(
     status: Annotated[
         SubscriptionStatus | None, Query(description="Only this status")
     ] = None,
+    user_id: Annotated[
+        int | None, Query(gt=0, description="Only this user's subscriptions (#101)")
+    ] = None,
 ) -> list[AdminSubscriptionSummary]:
     """Newest first."""
-    rows = subscription_service.list_admin_subscriptions(db, status)
+    rows = subscription_service.list_admin_subscriptions(db, status, user_id=user_id)
     return [AdminSubscriptionSummary(**asdict(row)) for row in rows]

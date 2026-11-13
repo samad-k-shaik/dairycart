@@ -6,7 +6,8 @@
  * on the Orders page with a "Subscription" mark.
  */
 import { useState } from "react"
-import { Repeat } from "lucide-react"
+import { Link } from "react-router"
+import { Clock, Repeat } from "lucide-react"
 
 import { EmptyState } from "@/components/common/EmptyState"
 import { ErrorState } from "@/components/common/ErrorState"
@@ -36,6 +37,14 @@ function SubscriptionsPage() {
           Plans for 1 week, 15 days or 1 month, delivered every day, every 2 days or every 3 days. Delivery
           orders are created automatically and appear on the Orders page.
         </p>
+        {/* Phones: Delivery slots is not in the tab bar (#101), so link it here. */}
+        <Link
+          to="/admin/delivery-slots"
+          className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-primary hover:underline md:hidden"
+        >
+          <Clock className="size-4" aria-hidden="true" />
+          Manage delivery slots
+        </Link>
       </div>
 
       <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by status">

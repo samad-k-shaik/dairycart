@@ -113,9 +113,10 @@ class SubscriptionRepository:
         return counts
 
     def list_admin(
-        self, status: SubscriptionStatus | None
+        self, status: SubscriptionStatus | None, user_id: int | None = None
     ) -> list[AdminSubscriptionRow]:
-        """Every subscription (newest first), optionally only one status."""
+        """Every subscription (newest first), optionally only one status and/or only
+        one user's (#101)."""
         query = (
             select(
                 Subscription.subscription_id,
@@ -142,6 +143,8 @@ class SubscriptionRepository:
         )
         if status is not None:
             query = query.where(Subscription.status == status)
+        if user_id is not None:
+            query = query.where(Subscription.user_id == user_id)
         rows = []
         for row in self.db.execute(query).all():
             values = list(row)

@@ -6,13 +6,21 @@ extra query per item.
 """
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime, time
 from decimal import Decimal
 
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
-from app.models import Customer, Order, OrderItem, OrderStatus
+from app.models import (
+    Customer,
+    DeliverySlot,
+    Order,
+    OrderItem,
+    OrderStatus,
+    Subscription,
+    User,
+)
 
 
 @dataclass(frozen=True)
@@ -109,6 +117,53 @@ class OrderRepository:
             .offset((page - 1) * page_size)
         )
         return self._rows(page_query), total or 0
+
+    def list_for_day(
+        self, day: date, starts: datetime, ends: datetime
+    ) -> list[tuple[Order, str | None, time | None]]:
+        """#101: the orders to deliver on `day`, each with the account's username and
+        the subscription slot's start time (for sorting; None for one-time orders).
+
+        A day = subscription orders FOR that day (delivery_date) + one-time orders
+        PLACED in [starts, ends) (the day's midnight-to-midnight in India time, in UTC).
+        Customer, items and products are loaded eagerly (no N+1)."""
+        query = _with_details(
+            select(Order, User.username, DeliverySlot.start_time)
+            .outerjoin(User, User.user_id == Order.user_id)
+            .outerjoin(
+                Subscription, Subscription.subscription_id == Order.subscription_id
+            )
+            .outerjoin(
+                DeliverySlot,
+                DeliverySlot.delivery_slot_id == Subscription.delivery_slot_id,
+            )
+            .where(
+                or_(
+                    and_(
+                        Order.subscription_id.is_not(None),
+                        Order.delivery_date == day,
+                    ),
+                    and_(
+                        Order.subscription_id.is_(None),
+                        Order.order_date >= starts,
+                        Order.order_date < ends,
+                    ),
+                )
+            )
+        )
+        rows = self.db.execute(query).unique().all()
+        return [(order, username, start) for order, username, start in rows]
+
+    def user_totals(self, user_id: int) -> tuple[int, Decimal]:
+        """#101: (number of orders, amount of the orders that are not cancelled)."""
+        spent = func.coalesce(
+            func.sum(Order.total_amount).filter(Order.status != OrderStatus.CANCELLED),
+            Decimal("0.00"),
+        )
+        count, total = self.db.execute(
+            select(func.count(Order.order_id), spent).where(Order.user_id == user_id)
+        ).one()
+        return count, total
 
     def count_by_status(self) -> dict[OrderStatus, int]:
         """How many orders have each status; statuses with no orders get 0."""

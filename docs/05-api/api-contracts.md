@@ -40,6 +40,9 @@
 | POST | `/admin/delivery-slots` | Add a delivery slot *(#100)* | 201 |
 | PATCH | `/admin/delivery-slots/{id}` | Edit a delivery slot *(#100)* | 200 |
 | DELETE | `/admin/delivery-slots/{id}` | Delete a slot that was never booked *(#100)* | 204 |
+| GET | `/admin/deliveries?date=` | One day's orders, product totals and status counts *(#101)* | 200 |
+| GET | `/admin/users/{id}` | One user with order count and amount spent *(#101)* | 200 |
+| GET | `/admin/users/{id}/orders` | All orders of one user *(#101)* | 200 |
 
 All `/admin/…` rows need an **ADMIN** token (401 without one, 403 for a `USER`).
 
@@ -369,7 +372,7 @@ Owner or ADMIN only; anyone else gets **404** (same answer as a missing id). Can
 
 ### GET /api/v1/admin/subscriptions *(ADMIN)*
 
-Optional `?status=ACTIVE|CANCELLED|COMPLETED`. Newest first:
+Optional `?status=ACTIVE|CANCELLED|COMPLETED` and *(#101)* `?user_id=` (only that user's subscriptions). Newest first:
 ```json
 [ { "subscription_id": 3, "username": "ravi", "customer_name": "Ravi Kumar", "customer_phone": "9876543210",
     "plan": "WEEK", "every_n_days": 2, "delivery_slot": "Morning, 8:00 AM – 9:00 AM", "start_date": "2026-11-21", "end_date": "2026-11-27", "status": "ACTIVE",
@@ -446,6 +449,42 @@ Send only the fields that change (at least one, no `null`). **200** with the adm
 | 409 | `DELIVERY_SLOT_IN_USE` | Delete: the slot was booked by a subscription |
 | 409 | `LAST_ACTIVE_DELIVERY_SLOT` | Switching off or deleting the only active slot |
 | 422 | `VALIDATION_ERROR` | Bad name, time or capacity, or end not after start |
+
+---
+
+## Admin daily deliveries (#101)
+
+### GET /api/v1/admin/deliveries?date=YYYY-MM-DD *(ADMIN)*
+
+Everything to deliver on one day. `date` is optional (default: **today, India time**); a badly formatted date → 422.
+
+A day's orders are:
+- **subscription orders for that day** (`delivery_date = date`), and
+- **one-time orders placed that day**, India time (`order_date` from 00:00 IST to the next 00:00 IST, i.e. 18:30 UTC the day before to 18:30 UTC).
+
+Sorted by delivery time (the subscription slot's start time), then customer name and order id; orders without a time (one-time orders and subscriptions from before #100) come last. `product_totals` adds up the items of the orders that are **not cancelled** (what to load); `status_counts` has every status (0 when none). Status changes use `PATCH /admin/orders/{id}/status`.
+
+```json
+{
+  "date": "2026-11-21",
+  "status_counts": { "PLACED": 6, "CONFIRMED": 2, "OUT_FOR_DELIVERY": 0, "DELIVERED": 1, "CANCELLED": 0 },
+  "product_totals": [ { "product_id": 2, "product_name": "Cow Milk", "size": "1 Litre", "quantity": 7 } ],
+  "deliveries": [
+    { "order_id": 24, "user_id": 7, "username": "ravi", "customer_name": "Ravi Kumar", "customer_phone": "9876543210",
+      "subscription_id": 3, "delivery_slot": "Morning, 8:00 AM – 9:00 AM", "status": "PLACED", "total_amount": "120.00",
+      "items": [ { "product_id": 2, "product_name": "Cow Milk", "size": "1 Litre", "quantity": 2 } ] }
+  ]
+}
+```
+`user_id` / `username` are `null` only for old guest orders (before #90); `subscription_id` and `delivery_slot` are `null` for one-time orders.
+
+### GET /api/v1/admin/users/{id} *(ADMIN)*
+
+The user (same fields as `GET /admin/users`, never the password hash) plus `"order_count": 12` and `"total_spent": "1440.00"` (the sum of the user's orders that are **not cancelled**). **404 `NOT_FOUND`** for an unknown id.
+
+### GET /api/v1/admin/users/{id}/orders *(ADMIN)*
+
+All of that user's orders, newest first, in the same shape as `GET /orders/mine`. **404 `NOT_FOUND`** for an unknown id (an existing user without orders → `[]`).
 
 ---
 

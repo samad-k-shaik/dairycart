@@ -52,8 +52,11 @@ export function changeDeliverySlot(subscriptionId: number, deliverySlotId: numbe
 }
 
 /** GET /api/v1/admin/subscriptions (ADMIN only), optionally one status. */
-export function getAdminSubscriptions(status?: SubscriptionStatus): Promise<AdminSubscriptionSummary[]> {
+export function getAdminSubscriptions(
+  status?: SubscriptionStatus,
+  userId?: number, // #101: only this user's subscriptions
+): Promise<AdminSubscriptionSummary[]> {
   if (USE_MOCKS) return needsBackend()
-  return api.get(`/admin/subscriptions${queryString({ status })}`)
+  return api.get(`/admin/subscriptions${queryString({ status, user_id: userId })}`)
 }
 

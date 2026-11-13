@@ -168,6 +168,17 @@ What makes the order code safe:
 - **Delivery slots (#100):** rules in `app/services/delivery_slot_service.py`. Booking (subscribe or change time) locks the slot row (`SELECT … FOR UPDATE`) and counts its ACTIVE subscriptions against `capacity`, so a slot is never overbooked. Switching off or deleting first locks all active slots in id order (no deadlock) and refuses to leave none. Orders get a text copy of the slot (`orders.delivery_slot`). The migration creates the standard Morning 08:00–09:00 and Evening 17:00–18:00 slots.
 - Tests: `tests/test_subscription_service.py` (fixed dates), `tests/api/test_subscriptions.py`, `tests/test_background.py` (the loop), `tests/test_delivery_slot_service.py` and `tests/api/test_delivery_slots.py` (#100).
 
+## Admin daily deliveries and user details (#101)
+
+| Endpoint | Does | Errors |
+|---|---|---|
+| `GET /api/v1/admin/deliveries?date=YYYY-MM-DD` | One day's orders (default today, India time) with items, product totals (cancelled not counted) and status counts | `401`, `403`, `422` |
+| `GET /api/v1/admin/users/{id}` | User + `order_count` + `total_spent` (not cancelled) | `401`, `403`, `404` |
+| `GET /api/v1/admin/users/{id}/orders` | All of the user's orders, newest first | `401`, `403`, `404` |
+
+- A day = subscription orders with `delivery_date = day` + one-time orders whose `order_date` falls in that India day (`delivery_service.india_day_range`: 00:00 IST = 18:30 UTC the day before). One query loads the orders with customer, items, products, username and slot start (`OrderRepository.list_for_day`); totals and counts are added up in Python.
+- Rules in `app/services/delivery_service.py` and `app/services/user_service.py`. Tests: `tests/test_delivery_service.py`, `tests/api/test_admin_deliveries_and_users.py`.
+
 ## Stock (#92)
 
 - `products.stock_quantity` = bottles left. **Admins only** see the number (`GET /api/v1/admin/products`, admin create/edit responses, and the `stock_quantity` field there). Public product responses only carry `in_stock` (true/false).

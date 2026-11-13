@@ -27,6 +27,7 @@
 | A6 | Add, edit and delete products (delete only if never ordered) *(added by #86)* |
 | A7 | View subscriptions; their delivery orders are created automatically *(added by #97, #99)* |
 | A8 | Manage delivery time slots: add, edit, set capacity, switch off, delete *(added by #100)* |
+| A9 | Daily deliveries per user with status, and each user's full order list *(added by #101)* |
 
 ## Out of scope
 

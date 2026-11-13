@@ -29,6 +29,8 @@ Priority uses **MoSCoW**: Must / Should / Could. All "Must" items are required f
 | FR-A6 | Manage products *(#86)* | Must | Admin can add a product (name, size, price, availability), edit any of those fields, and delete a product. Delete asks for confirmation and is refused for a product that was already ordered (BR-7); the admin is offered "Mark unavailable" instead. Field rules match the API contract. |
 | FR-A8 | Subscriptions *(#97, #99)* | Must | Admin sees every subscription (customer, plan, frequency, delivery time, dates, per-delivery total, orders created, status; filter by status). Delivery orders are created **automatically** (BR-12) and appear on the Orders page (with their delivery time, #100); there is no button to press. |
 | FR-A9 | Delivery slots *(#100)* | Must | Admin manages the delivery time slots on a **Delivery slots** page: add, edit (name, start/end time, capacity, on/off) and delete. Each slot shows booked / capacity. Two standard slots exist from the start (Morning 08:00–09:00, Evening 17:00–18:00, capacity 50). Rules: BR-13. |
+| FR-A10 | Daily deliveries *(#101)* | Must | A **Deliveries** page shows one day (default today, previous/next day, date picker): the product totals to load (cancelled orders not counted), the status counts, and one card per order with the user, products × quantity, delivery time, Subscription/One-time, total and a status change (same rules as FR-A4). A day = subscription deliveries for that date + one-time orders placed that day (India time). |
+| FR-A11 | User details and orders *(#101)* | Must | On the Users page the admin selects a user to open their page: details, number of orders and amount spent (cancelled orders not counted), their subscriptions, and **all their orders** (newest first); an order opens the order details panel. |
 | FR-A7 | Stock *(#92)* | Must | Admin sets each product's stock (whole number 0–100000) in the add/edit form and sees it in a Stock column (0 shown as "Out of stock"). Only admins see numbers. Customers see "Out of stock" (and cannot add it to the cart) when nothing is left. Orders reduce the stock (BR-9); cancelled orders restore it. |
 
 ## Accounts (#89)
@@ -96,6 +98,8 @@ stateDiagram-v2
 | FR-C9 | `POST /api/v1/subscriptions` | Checkout (Subscribe) |
 | FR-C10 | `GET /api/v1/subscriptions/mine`, `POST /api/v1/subscriptions/{id}/cancel` | My subscriptions |
 | FR-A8 | `GET /api/v1/admin/subscriptions` (orders: automatic background job) | Admin subscriptions |
+| FR-A10 | `GET /api/v1/admin/deliveries?date=`, `PATCH /api/v1/admin/orders/{id}/status` | Admin deliveries |
+| FR-A11 | `GET /api/v1/admin/users/{id}`, `GET /api/v1/admin/users/{id}/orders`, `GET /api/v1/admin/subscriptions?user_id=` | Admin user details |
 | FR-A9 | `GET/POST /api/v1/admin/delivery-slots`, `PATCH/DELETE /api/v1/admin/delivery-slots/{id}`; customers: `GET /api/v1/delivery-slots`, `PATCH /api/v1/subscriptions/{id}/delivery-slot` | Admin delivery slots; checkout; My subscriptions |
 | FR-A1/A2 | `GET /api/v1/admin/orders` | Admin dashboard, Order management |
 | FR-A3 | `GET /api/v1/orders/{id}` | Order management (details panel) |

@@ -11,7 +11,7 @@ from pydantic import (
 )
 
 from app.models import UserRole
-from app.schemas.common import UtcDateTime
+from app.schemas.common import Money, UtcDateTime
 
 PASSWORD_MIN = 8
 PASSWORD_MAX_BYTES = 72  # bcrypt ignores everything after 72 bytes
@@ -98,3 +98,11 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     expires_in: int  # seconds
     user: UserRead
+
+
+class AdminUserDetail(UserRead):
+    """GET /admin/users/{id} (#101): the user plus their order totals."""
+
+    order_count: int
+    # Sum of the user's orders that are not cancelled.
+    total_spent: Money

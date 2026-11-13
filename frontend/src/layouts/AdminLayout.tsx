@@ -4,7 +4,7 @@
  * Each admin page renders inside <Outlet />.
  */
 import { NavLink, Outlet, useNavigate } from "react-router"
-import { ClipboardList, Clock, LayoutDashboard, LogOut, Package, Repeat, Store, Users } from "lucide-react"
+import { ClipboardList, Clock, LayoutDashboard, LogOut, Package, Repeat, Store, Truck, Users } from "lucide-react"
 
 import { DevCrashProbe } from "@/components/common/DevMockSwitch"
 import { Logo } from "@/components/common/Logo"
@@ -16,11 +16,14 @@ const adminLinks = [
   // `end`: "/admin" is active only on the dashboard, not on /admin/orders too.
   { to: "/admin", label: "Dashboard", short: "Home", Icon: LayoutDashboard, end: true }, // short: 6 tabs at 360px (#100)
   { to: "/admin/orders", label: "Orders", Icon: ClipboardList, end: false },
+  { to: "/admin/deliveries", label: "Deliveries", short: "Daily", Icon: Truck, end: false }, // #101
   { to: "/admin/products", label: "Products", Icon: Package, end: false },
   { to: "/admin/users", label: "Users", Icon: Users, end: false }, // #89
   // #97. `short`: the phone tab bar has room for a short word only.
   { to: "/admin/subscriptions", label: "Subscriptions", short: "Plans", Icon: Repeat, end: false },
-  { to: "/admin/delivery-slots", label: "Delivery slots", short: "Times", Icon: Clock, end: false }, // #100
+  // #100. `phone: false`: not in the phone tab bar (6 tabs is the most that fit at 360px);
+  // on phones it is linked from the Subscriptions page instead (#101).
+  { to: "/admin/delivery-slots", label: "Delivery slots", short: "Times", Icon: Clock, end: false, phone: false },
 ]
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -39,7 +42,9 @@ const compactLinkClass = ({ isActive }: { isActive: boolean }) =>
 function AdminLinks({ compact = false }: { compact?: boolean }) {
   return (
     <>
-      {adminLinks.map(({ to, label, short, Icon, end }) => (
+      {adminLinks
+        .filter((link) => !compact || link.phone !== false)
+        .map(({ to, label, short, Icon, end }) => (
         <NavLink
           key={to}
           to={to}
