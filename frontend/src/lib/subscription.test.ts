@@ -87,6 +87,7 @@ describe("totals and request", () => {
       "2026-11-21",
       2,
       7,
+      3,
       { name: "  Ravi Kumar ", phone: "9876543210" },
       [{ product_id: 1, quantity: 2, name: "Cow Milk", price: "60.00" } as never],
     )
@@ -95,6 +96,7 @@ describe("totals and request", () => {
       start_date: "2026-11-21",
       every_n_days: 2,
       delivery_slot_id: 7,
+      address_id: 3,
       customer: { name: "Ravi Kumar", phone: "9876543210" },
       items: [{ product_id: 1, quantity: 2 }],
     })

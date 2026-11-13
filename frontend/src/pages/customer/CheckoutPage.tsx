@@ -4,25 +4,30 @@
  * #97: the customer chooses "Order once" (a normal order) or "Subscribe" (the same items
  * every day for 1 week, 15 days or 1 month, from a start date they pick).
  * #100: subscribers also book a delivery time slot (places are limited per slot).
+ * #102: every order and subscription needs a delivery address: one of the user's saved
+ * addresses (default chosen first) or a new one added here.
  * Sends ONLY product ids and quantities; the backend calculates prices and the total.
- * Payment is cash on delivery: no address, shipping or payment fields (out of scope).
+ * Payment is cash on delivery: no shipping or payment fields (out of scope).
  */
 import { useRef, useState, type FormEvent } from "react"
 import { Link, useNavigate } from "react-router"
 import { AlertCircle, Banknote, CalendarDays, Clock, Loader2, Repeat, ShoppingBag, ShoppingCart } from "lucide-react"
 import { toast } from "sonner"
 
+import { AddressPicker } from "@/components/address/AddressPicker"
 import { EmptyState } from "@/components/common/EmptyState"
 import { userFacingMessage } from "@/components/common/ErrorState"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { lineSubtotal } from "@/hooks/cart/cartReducer"
+import { useAddresses } from "@/hooks/useAddresses"
 import { useAuth } from "@/hooks/useAuth"
 import { useCart } from "@/hooks/useCart"
 import { useCreateOrder } from "@/hooks/useCreateOrder"
 import { useDeliverySlots } from "@/hooks/useDeliverySlots"
 import { useCreateSubscription } from "@/hooks/useSubscriptions"
+import { preferredAddress } from "@/lib/address"
 import { firstOpenSlot, slotTimeRange, spacesLeftText } from "@/lib/deliverySlot"
 import { formatCurrency } from "@/lib/format"
 import { splitCheckoutErrors } from "@/lib/checkoutErrors"
@@ -71,6 +76,13 @@ function CheckoutPage() {
   const [slotId, setSlotId] = useState<number | null>(null)
   const chosenSlot = slots.find((s) => s.delivery_slot_id === slotId && !s.is_full) ?? firstOpenSlot(slots)
   const slotRef = useRef<HTMLDivElement>(null)
+  // #102: delivery address. Until the user picks one, the default (or first) is chosen.
+  const addressesQuery = useAddresses()
+  const addresses = addressesQuery.data ?? []
+  const [addressId, setAddressId] = useState<number | null>(null)
+  const chosenAddress =
+    addresses.find((a) => a.address_id === addressId) ?? preferredAddress(addresses)
+  const addressRef = useRef<HTMLDivElement>(null)
   // The request that is in use: errors and "pending" come from it.
   const active = subscribing ? createSubscription : createOrder
 
@@ -97,9 +109,16 @@ function CheckoutPage() {
   const serverSlotError =
     (allServerDetails?.some((d) => d.field === "delivery_slot_id") ?? false) ||
     (active.error instanceof ServiceError && active.error.code === "DELIVERY_SLOT_FULL")
+  // #102: address problems (none saved, not yours) are shown at the address picker.
+  const serverAddressError = allServerDetails?.some((d) => d.field === "address_id") ?? false
   const serverErrors = splitCheckoutErrors(
-    allServerDetails?.filter((d) => d.field !== "start_date" && d.field !== "delivery_slot_id"),
+    allServerDetails?.filter(
+      (d) => d.field !== "start_date" && d.field !== "delivery_slot_id" && d.field !== "address_id",
+    ),
   )
+  const addressError = addressesQuery.isSuccess && !chosenAddress ? "Please add a delivery address." : ""
+  const showAddressError =
+    (submitted && addressError) || (serverAddressError ? (active.error?.message ?? "") : "")
   const slotError = subscribing && slotsQuery.isSuccess && !chosenSlot ? "No delivery time has places left right now." : ""
   // Shown at once: there is nothing the user can do in the form to fix it.
   const showSlotError = slotError || (serverSlotError ? (active.error?.message ?? "") : "")
@@ -123,6 +142,7 @@ function CheckoutPage() {
     if (nameError) return nameRef.current?.focus()
     if (phoneError) return phoneRef.current?.focus()
     if (startError) return startRef.current?.focus()
+    if (!chosenAddress) return addressRef.current?.focus() // #102
 
     if (subscribing) {
       if (!chosenSlot) return slotRef.current?.focus()
@@ -131,6 +151,7 @@ function CheckoutPage() {
         startDate,
         everyNDays,
         chosenSlot.delivery_slot_id,
+        chosenAddress.address_id,
         { name, phone },
         lines,
       )
@@ -148,7 +169,7 @@ function CheckoutPage() {
       return
     }
 
-    const request = buildCreateOrderRequest({ name, phone }, lines)
+    const request = buildCreateOrderRequest({ name, phone }, lines, chosenAddress.address_id)
     if (import.meta.env.DEV) {
       // Testing requirement: show the payload in dev tools. Only ids and quantities.
       console.info("[checkout] POST /api/v1/orders payload", request)
@@ -411,6 +432,32 @@ function CheckoutPage() {
             </div>
           )}
 
+          {/* #102: delivery address (Order once and Subscribe) */}
+          <div className="space-y-2">
+            <h2 id="checkout-address-label" className="text-h2 font-bold">
+              Delivery address
+            </h2>
+            <AddressPicker
+              addresses={addressesQuery.data}
+              loading={addressesQuery.isPending}
+              loadError={addressesQuery.isError}
+              onRetry={() => addressesQuery.refetch()}
+              chosenId={chosenAddress?.address_id ?? null}
+              onChoose={(id) => {
+                setAddressId(id)
+                clearServerError()
+              }}
+              labelId="checkout-address-label"
+              errorId={showAddressError ? "checkout-address-error" : undefined}
+              groupRef={addressRef}
+            />
+            {showAddressError && (
+              <p id="checkout-address-error" className="text-small text-danger">
+                {showAddressError}
+              </p>
+            )}
+          </div>
+
           <h2 id="checkout-form-heading" className="text-h2 font-bold">
             Your details
           </h2>
@@ -472,7 +519,7 @@ function CheckoutPage() {
             )}
           </div>
 
-          {active.isError && !serverStartError && !serverSlotError && (
+          {active.isError && !serverStartError && !serverSlotError && !serverAddressError && (
             <SubmitError error={active.error} otherDetails={serverErrors.other} subscribing={subscribing} />
           )}
 

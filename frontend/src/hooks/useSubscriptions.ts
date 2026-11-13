@@ -10,6 +10,7 @@ import { deliverySlotKeys } from "@/hooks/useDeliverySlots"
 import {
   cancelSubscription,
   changeDeliverySlot,
+  changeSubscriptionAddress,
   createSubscription,
   getAdminSubscriptions,
   getMySubscriptions,
@@ -45,6 +46,16 @@ function useRefreshAfterChange() {
 }
 
 /** #101: one user's subscriptions, for the admin user page. */
+/** #102: deliver an active subscription to another saved address. */
+export function useChangeSubscriptionAddress() {
+  const refresh = useRefreshAfterChange()
+  return useMutation({
+    mutationFn: ({ subscriptionId, addressId }: { subscriptionId: number; addressId: number }) =>
+      changeSubscriptionAddress(subscriptionId, addressId),
+    onSuccess: refresh,
+  })
+}
+
 export function useAdminUserSubscriptions(userId: number) {
   return useQuery({
     queryKey: subscriptionKeys.adminForUser(userId),

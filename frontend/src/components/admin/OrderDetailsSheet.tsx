@@ -74,6 +74,11 @@ function SheetBody({ orderId }: { orderId: number }) {
               {order.delivery_slot && (
                 <p className="text-small font-semibold text-primary">Deliver: {order.delivery_slot}</p>
               )}
+              {/* #102 */}
+              <p className="text-small" data-testid="sheet-address">
+                <span className="font-semibold">Address: </span>
+                {order.delivery_address ?? "No address recorded"}
+              </p>
             </div>
             <StatusUpdateControl key={order.status} orderId={order.order_id} status={order.status} />
             <div className="space-y-2">

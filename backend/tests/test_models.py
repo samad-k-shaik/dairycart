@@ -65,6 +65,7 @@ def test_all_tables_are_registered_for_alembic() -> None:
         "subscriptions",  # #97
         "subscription_items",  # #97
         "delivery_slots",  # #100
+        "addresses",  # #102
     }
 
 
@@ -109,6 +110,7 @@ ERD_COLUMNS = {
         "subscription_id": ("INTEGER", True),  # #97: null for one-time orders
         "delivery_date": ("DATE", True),  # #97
         "delivery_slot": ("VARCHAR(100)", True),  # #100: copy of the slot's label
+        "delivery_address": ("VARCHAR(500)", True),  # #102: copy of the address
     },
     "order_items": {
         "order_item_id": ("INTEGER", False),
@@ -129,6 +131,7 @@ ERD_COLUMNS = {
         "status": ("VARCHAR(20)", False),
         "every_n_days": ("INTEGER", False),  # #99
         "delivery_slot_id": ("INTEGER", True),  # #100: null before #100
+        "delivery_address": ("VARCHAR(500)", True),  # #102: null before #102
         "daily_total": ("NUMERIC(10, 2)", False),
         "created_at": ("TIMESTAMP WITH TIME ZONE", False),
         "cancelled_at": ("TIMESTAMP WITH TIME ZONE", True),
@@ -149,6 +152,19 @@ ERD_COLUMNS = {
         "end_time": ("TIME", False),
         "capacity": ("INTEGER", False),
         "is_active": ("BOOLEAN", False),
+        "created_at": ("TIMESTAMP WITH TIME ZONE", False),
+    },
+    # #102
+    "addresses": {
+        "address_id": ("INTEGER", False),
+        "user_id": ("INTEGER", False),
+        "label": ("VARCHAR(30)", False),
+        "house": ("VARCHAR(100)", False),
+        "street": ("VARCHAR(150)", False),
+        "landmark": ("VARCHAR(100)", True),
+        "city": ("VARCHAR(50)", False),
+        "pincode": ("VARCHAR(6)", False),
+        "is_default": ("BOOLEAN", False),
         "created_at": ("TIMESTAMP WITH TIME ZONE", False),
     },
 }
@@ -227,6 +243,7 @@ def test_check_and_unique_constraints_have_readable_names(schema: Engine) -> Non
         "ck_subscription_items_subtotal_non_negative",
         "ck_delivery_slots_end_after_start",  # #100
         "ck_delivery_slots_capacity_range",  # #100
+        "ck_addresses_pincode_format",  # #102
     }
     assert uniques == {
         "uq_customers_phone",

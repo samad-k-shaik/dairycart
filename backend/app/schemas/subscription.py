@@ -29,6 +29,8 @@ class SubscriptionCreate(BaseModel):
     every_n_days: Literal[1, 2, 3] = 1
     # #100: the delivery time slot (GET /delivery-slots). Required.
     delivery_slot_id: int = Field(gt=0)
+    # #102: one of the user's saved addresses (not sent → the default address).
+    address_id: int | None = Field(default=None, gt=0)
     customer: CustomerIn
     items: list[OrderItemIn] = Field(min_length=1, max_length=10)
 
@@ -56,6 +58,8 @@ class SubscriptionRead(BaseModel):
     deliveries: int
     # #100: the booked delivery time (null for subscriptions from before #100).
     delivery_slot: BookedSlotRead | None
+    # #102: where to deliver (null for subscriptions from before #102).
+    delivery_address: str | None
     start_date: date
     end_date: date
     status: SubscriptionStatus
@@ -83,6 +87,7 @@ class SubscriptionRead(BaseModel):
                 if subscription.delivery_slot
                 else None
             ),
+            delivery_address=subscription.delivery_address,
             start_date=subscription.start_date,
             end_date=subscription.end_date,
             status=subscription.status,

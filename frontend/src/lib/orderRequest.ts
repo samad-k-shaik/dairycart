@@ -10,9 +10,11 @@ import type { CreateOrderRequest } from "../types/order.ts"
 export function buildCreateOrderRequest(
   customer: { name: string; phone: string },
   lines: { product_id: number; quantity: number }[],
+  addressId: number, // #102: one of the user's saved addresses
 ): CreateOrderRequest {
   return {
     customer: { name: customer.name.trim(), phone: customer.phone },
+    address_id: addressId,
     // Pick the two allowed fields explicitly, so cart snapshot fields (name, size, price)
     // can never leak into the request.
     items: lines.map(({ product_id, quantity }) => ({ product_id, quantity })),

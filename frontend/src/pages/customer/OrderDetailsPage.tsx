@@ -54,6 +54,12 @@ function OrderDetailsPage() {
                 </p>
               )}
             </div>
+            {/* #102: where it goes */}
+            {order.delivery_address && (
+              <p className="w-full text-small text-muted-foreground" data-testid="order-address">
+                Deliver to: {order.delivery_address}
+              </p>
+            )}
             {/* text-sm (not our text-body token): cn() would treat "text-body" as a colour
                 and drop the status colour. */}
             <StatusBadge status={order.status} className="px-3 py-1 text-sm" />

@@ -40,6 +40,12 @@
 | POST | `/admin/delivery-slots` | Add a delivery slot *(#100)* | 201 |
 | PATCH | `/admin/delivery-slots/{id}` | Edit a delivery slot *(#100)* | 200 |
 | DELETE | `/admin/delivery-slots/{id}` | Delete a slot that was never booked *(#100)* | 204 |
+| GET | `/addresses` | My saved addresses (default first) *(#102)* | 200 |
+| POST | `/addresses` | Add an address *(#102)* | 201 |
+| PATCH | `/addresses/{id}` | Edit an address *(#102)* | 200 |
+| POST | `/addresses/{id}/default` | Make it the default *(#102)* | 200 |
+| DELETE | `/addresses/{id}` | Delete an address *(#102)* | 204 |
+| PATCH | `/subscriptions/{id}/address` | Change a subscription's address (owner) *(#102)* | 200 |
 | GET | `/admin/deliveries?date=` | One day's orders, product totals and status counts *(#101)* | 200 |
 | GET | `/admin/users/{id}` | One user with order count and amount spent *(#101)* | 200 |
 | GET | `/admin/users/{id}/orders` | All orders of one user *(#101)* | 200 |
@@ -102,10 +108,13 @@ Returns `[]` (not 404) if there are no products.
 
 Needs a logged-in user (#90): no token → `401 UNAUTHORIZED`. The order is saved with that account; `customer` (name + phone) is the delivery contact.
 
+*(#102)* `address_id` is one of the user's saved addresses ([Addresses](#addresses-102)); if it is left out, the user's **default** address is used. The backend copies the address text onto the order (`delivery_address` in the response). A user with no saved address → **422** with detail `{ "field": "address_id", "issue": "required" }`; someone else's or a missing address → **422** `{ "field": "address_id", "issue": "not available" }`.
+
 **Request**
 ```json
 {
   "customer": { "name": "Ravi Kumar", "phone": "9876543210" },
+  "address_id": 4,
   "items": [
     { "product_id": 2, "quantity": 2 },
     { "product_id": 3, "quantity": 1 }
@@ -337,7 +346,7 @@ Rules:
   "items": [ { "product_id": 2, "quantity": 1 } ]
 }
 ```
-`every_n_days` is optional (default `1`); only `1`, `2` or `3` are accepted (otherwise 422). `delivery_slot_id` is **required** *(#100)*. `customer` and `items` follow the same rules as `POST /orders` (1–10 items, quantity 1–20, no duplicates; the products must be available and in stock today).
+`every_n_days` is optional (default `1`); only `1`, `2` or `3` are accepted (otherwise 422). `delivery_slot_id` is **required** *(#100)*. `address_id` works as for `POST /orders` *(#102)*; the subscription keeps the address text (`delivery_address`) and every delivery order copies it. `customer` and `items` follow the same rules as `POST /orders` (1–10 items, quantity 1–20, no duplicates; the products must be available and in stock today).
 
 **201 Created** + `Location: /api/v1/subscriptions/{id}`:
 ```json
@@ -399,6 +408,41 @@ Change the delivery time of an `ACTIVE` subscription. Owner or ADMIN (anyone els
 | 409 | `SUBSCRIPTION_NOT_ACTIVE` | Cancelled or completed |
 | 409 | `DELIVERY_SLOT_FULL` | The new slot has no places left |
 | 422 | `VALIDATION_ERROR` | The slot does not exist or is switched off (`delivery_slot_id`: "not available") |
+
+### PATCH /api/v1/subscriptions/{id}/address *(#102)*
+
+Owner only (anyone else, admins included: 404, since only the owner's saved addresses can be chosen). Body `{ "address_id": 5 }`. **200** with the subscription and its new `delivery_address`; orders already created keep theirs. **409 `SUBSCRIPTION_NOT_ACTIVE`** for a cancelled or completed plan; **422** on `address_id` for an address that is not yours.
+
+---
+
+## Addresses (#102)
+
+The logged-in user's saved delivery addresses. Login required; another user's address id answers **404** like a missing one.
+
+Rules:
+- Up to **10** per user (**409 `ADDRESS_LIMIT_REACHED`**).
+- The first address becomes the default; exactly one default while the user has addresses (also a database rule: a partial unique index). `is_default: true` on create, or `POST /addresses/{id}/default`, moves the default. Deleting the default makes the oldest remaining address the default.
+- Fields: `label` 2–30, `house` 1–100, `street` 2–150, `landmark` optional ≤ 100 (`null` or `""` removes it), `city` 2–50, `pincode` 6 digits not starting with 0. Text is trimmed.
+- Orders and subscriptions keep a **text copy** (`full_text`), so editing or deleting an address never changes them.
+
+### GET /api/v1/addresses
+
+Default first, then oldest first:
+```json
+[ { "address_id": 4, "label": "Home", "house": "12-3 Sai Residency", "street": "MG Road, Ameerpet",
+    "landmark": null, "city": "Hyderabad", "pincode": "500016", "is_default": true,
+    "full_text": "12-3 Sai Residency, MG Road, Ameerpet, Hyderabad - 500016", "created_at": "2026-11-13T09:00:00Z" } ]
+```
+
+### POST /api/v1/addresses → 201 · PATCH /api/v1/addresses/{id} → 200
+
+```json
+{ "label": "Office", "house": "Plot 5, Cyber Towers", "street": "Hitech City", "landmark": "Opposite metro",
+  "city": "Hyderabad", "pincode": "500081", "is_default": false }
+```
+`label` defaults to `"Home"`, `is_default` to `false`. PATCH: only the fields that change (at least one; not `is_default`).
+
+### POST /api/v1/addresses/{id}/default → 200 · DELETE /api/v1/addresses/{id} → 204
 
 ---
 
@@ -598,7 +642,7 @@ Errors that do not come from a specific endpoint use the same shape: an unknown 
 | 401 | Not logged in, invalid/expired token, or wrong login details |
 | 403 | Logged in, but not allowed (a `USER` on an admin endpoint) |
 | 404 | Resource not found |
-| 409 | Conflicts with current state (unavailable product, illegal transition, duplicate product name + size, deleting an ordered product, email/username already registered, a second active subscription or cancelling one that is not active (#97), a full delivery slot, deleting a booked slot or switching off the last active one (#100)) |
+| 409 | Conflicts with current state (unavailable product, illegal transition, duplicate product name + size, deleting an ordered product, email/username already registered, a second active subscription or cancelling one that is not active (#97), a full delivery slot, deleting a booked slot or switching off the last active one (#100), more than 10 saved addresses (#102)) |
 | 422 | Schema validation failed |
 | 500 | Unexpected server error (details only in logs) |
 | 503 | Dependency (database) unavailable |

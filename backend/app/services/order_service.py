@@ -22,6 +22,7 @@ from app.repositories.order_repository import OrderRepository, OrderRow
 from app.repositories.product_repository import ProductRepository
 from app.schemas.common import ErrorDetail
 from app.schemas.order import OrderCreate, OrderItemIn
+from app.services import address_service
 
 # Which status can follow which (functional requirements → Order status lifecycle).
 # DELIVERED and CANCELLED are final: nothing can follow them.
@@ -100,6 +101,10 @@ def create_order(db: Session, data: OrderCreate, user: User) -> Order:
     # commit expired `user`) would make SQLAlchemy save half-built order lines too early.
     user_id = user.user_id
     try:
+        # #102: the delivery address (text copy); 422 if the user has none.
+        delivery_address = address_service.delivery_text_for(
+            db, user_id, data.address_id
+        )
         products = check_items(db, data.items)  # locked until commit (#92)
 
         customers = CustomerRepository(db)
@@ -123,6 +128,7 @@ def create_order(db: Session, data: OrderCreate, user: User) -> Order:
         order = Order(
             customer=customer,  # delivery contact (name + phone from the form)
             user_id=user_id,  # the account that placed it (#90)
+            delivery_address=delivery_address,  # #102
             items=items,
             status=OrderStatus.PLACED,
             total_amount=sum((item.subtotal for item in items), Decimal("0.00")),

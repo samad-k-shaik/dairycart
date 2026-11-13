@@ -55,6 +55,8 @@ export type Order = {
   subscription_id?: number | null
   /** #100: delivery time of a subscription order, e.g. "Morning, 8:00 AM – 9:00 AM". */
   delivery_slot?: string | null
+  /** #102: where to deliver (copy of the address; null for orders before #102). */
+  delivery_address?: string | null
   /** #97: the day ("2026-11-21") a subscription order is for; null for one-time orders. */
   delivery_date?: string | null
 }
@@ -113,6 +115,8 @@ export type CreateOrderRequest = {
     name: string
     phone: string
   }
+  /** #102: one of the user's saved addresses. */
+  address_id: number
   items: {
     product_id: number
     quantity: number

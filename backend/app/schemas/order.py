@@ -46,6 +46,9 @@ class OrderCreate(BaseModel):
 
     customer: CustomerIn
     items: list[OrderItemIn] = Field(min_length=1, max_length=10)
+    # #102: one of the user's saved addresses. Not sent → the user's default address;
+    # a user with no address at all gets 422 (field "address_id").
+    address_id: int | None = Field(default=None, gt=0)
 
 
 class StatusUpdate(BaseModel):
@@ -91,6 +94,8 @@ class OrderRead(BaseModel):
     delivery_date: date | None = None
     # #100: the delivery time, e.g. "Morning, 8:00 AM – 9:00 AM" (null: one-time order).
     delivery_slot: str | None = None
+    # #102: where to deliver (copy of the address; null for orders from before #102).
+    delivery_address: str | None = None
 
     @classmethod
     def from_order(cls, order: Order) -> Self:
@@ -117,6 +122,7 @@ class OrderRead(BaseModel):
             subscription_id=order.subscription_id,
             delivery_date=order.delivery_date,
             delivery_slot=order.delivery_slot,
+            delivery_address=order.delivery_address,
         )
 
 

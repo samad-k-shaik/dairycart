@@ -41,6 +41,8 @@ export type Subscription = {
   deliveries: number
   /** #100: the booked delivery time (null for subscriptions from before #100). */
   delivery_slot: BookedSlot | null
+  /** #102: where to deliver (null for subscriptions from before #102). */
+  delivery_address: string | null
   start_date: IsoDate
   /** Last delivery day, included. */
   end_date: IsoDate
@@ -64,6 +66,8 @@ export type CreateSubscriptionRequest = {
   every_n_days: EveryNDays
   /** #100: the chosen delivery time (GET /delivery-slots). */
   delivery_slot_id: number
+  /** #102: one of the user's saved addresses. */
+  address_id: number
   customer: { name: string; phone: string }
   items: { product_id: number; quantity: number }[]
 }

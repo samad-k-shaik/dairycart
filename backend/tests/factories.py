@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, hash_password
 from app.models import (
+    Address,
     Customer,
     DeliverySlot,
     Order,
@@ -106,8 +107,11 @@ def make_user(
     full_name: str = "Test User",
     password: str = TEST_PASSWORD,
     role: UserRole = UserRole.USER,
+    with_address: bool = True,
 ) -> User:
-    """A user whose password is `password` (stored hashed, like real sign-ups)."""
+    """A user whose password is `password` (stored hashed, like real sign-ups).
+    #102: with a default delivery address, so they can order (with_address=False for
+    tests about having none)."""
     n = next(_sequence)
     user = User(
         full_name=full_name,
@@ -118,7 +122,37 @@ def make_user(
     )
     db.add(user)
     db.flush()
+    if with_address:
+        make_address(db, user, is_default=True)
     return user
+
+
+def make_address(
+    db: Session,
+    user: User,
+    *,
+    label: str = "Home",
+    house: str = "12-3 Sai Residency",
+    street: str = "MG Road, Ameerpet",
+    landmark: str | None = None,
+    city: str = "Hyderabad",
+    pincode: str = "500016",
+    is_default: bool = False,
+) -> Address:
+    """A saved address (#102). Set is_default only when the user has no default yet."""
+    address = Address(
+        user_id=user.user_id,
+        label=label,
+        house=house,
+        street=street,
+        landmark=landmark,
+        city=city,
+        pincode=pincode,
+        is_default=is_default,
+    )
+    db.add(address)
+    db.flush()
+    return address
 
 
 def auth_header(user: User) -> dict[str, str]:

@@ -5,6 +5,7 @@
     GET  /api/v1/subscriptions/{id}               → one subscription (owner or ADMIN)
     POST /api/v1/subscriptions/{id}/cancel        → cancel it (owner or ADMIN)
     PATCH /api/v1/subscriptions/{id}/delivery-slot → change the delivery time (#100)
+    PATCH /api/v1/subscriptions/{id}/address      → change the address (owner, #102)
 
 The rules are in services/subscription_service.py.
 """
@@ -17,6 +18,7 @@ from sqlalchemy.orm import Session
 from app.core.auth import CurrentUser
 from app.database.session import get_db
 from app.models import Subscription
+from app.schemas.address import AddressChoice
 from app.schemas.common import ErrorResponse
 from app.schemas.delivery_slot import DeliverySlotChange
 from app.schemas.subscription import SubscriptionCreate, SubscriptionRead
@@ -129,5 +131,28 @@ def change_delivery_slot(
     """#100: orders already created keep their time; the next ones use the new slot."""
     subscription = subscription_service.change_delivery_slot(
         db, subscription_id, data.delivery_slot_id, user
+    )
+    return _read(db, subscription)
+
+
+@router.patch(
+    "/{subscription_id}/address",
+    response_model=SubscriptionRead,
+    summary="Change the delivery address",
+    responses={
+        404: _error("No such subscription, or it belongs to someone else"),
+        409: _error("SUBSCRIPTION_NOT_ACTIVE"),
+        422: _error("Not one of your addresses"),
+    },
+)
+def change_address(
+    subscription_id: SubscriptionId,
+    data: AddressChoice,
+    db: DbSession,
+    user: CurrentUser,
+) -> SubscriptionRead:
+    """#102: owner only. Orders already created keep their address."""
+    subscription = subscription_service.change_address(
+        db, subscription_id, data.address_id, user
     )
     return _read(db, subscription)

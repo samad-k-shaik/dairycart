@@ -20,6 +20,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Numeric,
+    String,
     UniqueConstraint,
     func,
     text,
@@ -139,6 +140,9 @@ class Subscription(Base):
         ForeignKey("delivery_slots.delivery_slot_id", ondelete="RESTRICT"),
         default=None,
     )
+    # #102: where to deliver (text copy of a saved address; NULL before #102). Every
+    # delivery order copies it; "Change address" replaces it for the next deliveries.
+    delivery_address: Mapped[str | None] = mapped_column(String(500), default=None)
     # One delivery's total from the LOCKED prices (sum of the item subtotals).
     daily_total: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     created_at: Mapped[datetime] = mapped_column(

@@ -25,6 +25,7 @@ export type ApiErrorCode =
   | "DELIVERY_SLOT_ALREADY_EXISTS" // 409: admin, a slot with the same times exists (#100)
   | "DELIVERY_SLOT_IN_USE" // 409: admin delete of a booked slot (#100)
   | "LAST_ACTIVE_DELIVERY_SLOT" // 409: admin, switching off/deleting the last active slot (#100)
+  | "ADDRESS_LIMIT_REACHED" // 409: already 10 saved addresses (#102)
 
 export type ApiErrorDetail = {
   field: string

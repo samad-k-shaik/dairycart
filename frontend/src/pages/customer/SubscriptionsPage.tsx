@@ -7,12 +7,14 @@
  *
  * #100: each card shows the booked delivery time, and "Change time" moves an active plan
  * to another slot that has places left (orders already created keep their time).
+ * #102: the delivery address, and "Change address" (another saved address).
  */
 import { useState } from "react"
 import { Link } from "react-router"
-import { CalendarDays, Clock, Loader2, Repeat } from "lucide-react"
+import { CalendarDays, Clock, Loader2, MapPin, Repeat } from "lucide-react"
 import { toast } from "sonner"
 
+import { AddressPicker } from "@/components/address/AddressPicker"
 import { EmptyState } from "@/components/common/EmptyState"
 import { ErrorState } from "@/components/common/ErrorState"
 import {
@@ -27,9 +29,15 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useAddresses } from "@/hooks/useAddresses"
 import { useDeliverySlots } from "@/hooks/useDeliverySlots"
 import { useReturnFocus } from "@/hooks/useReturnFocus"
-import { useCancelSubscription, useChangeDeliverySlot, useMySubscriptions } from "@/hooks/useSubscriptions"
+import {
+  useCancelSubscription,
+  useChangeDeliverySlot,
+  useChangeSubscriptionAddress,
+  useMySubscriptions,
+} from "@/hooks/useSubscriptions"
 import { slotTimeRange, spacesLeftText } from "@/lib/deliverySlot"
 import { formatCurrency } from "@/lib/format"
 import { formatDay, frequencyLabel, planLabel, STATUS_LABELS } from "@/lib/subscription"
@@ -47,6 +55,7 @@ function SubscriptionsPage() {
   const query = useMySubscriptions()
   const [toCancel, setToCancel] = useState<Subscription | null>(null)
   const [toChange, setToChange] = useState<Subscription | null>(null)
+  const [toMove, setToMove] = useState<Subscription | null>(null) // #102: change address
 
   return (
     <div className="space-y-6">
@@ -93,6 +102,7 @@ function SubscriptionsPage() {
                 subscription={subscription}
                 onCancel={() => setToCancel(subscription)}
                 onChangeTime={() => setToChange(subscription)}
+                onChangeAddress={() => setToMove(subscription)}
               />
             </li>
           ))}
@@ -101,6 +111,7 @@ function SubscriptionsPage() {
 
       <CancelDialog subscription={toCancel} onClose={() => setToCancel(null)} />
       <ChangeTimeDialog subscription={toChange} onClose={() => setToChange(null)} />
+      <ChangeAddressDialog subscription={toMove} onClose={() => setToMove(null)} />
     </div>
   )
 }
@@ -109,10 +120,12 @@ function SubscriptionCard({
   subscription,
   onCancel,
   onChangeTime,
+  onChangeAddress,
 }: {
   subscription: Subscription
   onCancel: () => void
   onChangeTime: () => void
+  onChangeAddress: () => void
 }) {
   const { status, delivery_slot: slot } = subscription
   return (
@@ -134,6 +147,11 @@ function SubscriptionCard({
           <p className="flex items-center gap-1.5 text-small text-muted-foreground" data-testid="delivery-time">
             <Clock className="size-4" aria-hidden="true" />
             {slot ? `${slot.name}, ${slotTimeRange(slot)}` : "No delivery time chosen"}
+          </p>
+          {/* #102: where to deliver */}
+          <p className="flex items-start gap-1.5 text-small text-muted-foreground" data-testid="delivery-address">
+            <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            {subscription.delivery_address ?? "No address recorded"}
           </p>
         </div>
         <Badge className={cn("font-semibold", STATUS_STYLES[status])}>{STATUS_LABELS[status]}</Badge>
@@ -168,6 +186,10 @@ function SubscriptionCard({
             <Button variant="outline" className="h-11" onClick={onChangeTime}>
               <Clock aria-hidden="true" />
               {slot ? "Change time" : "Choose time"}
+            </Button>
+            <Button variant="outline" className="h-11" onClick={onChangeAddress}>
+              <MapPin aria-hidden="true" />
+              {subscription.delivery_address ? "Change address" : "Choose address"}
             </Button>
             <Button variant="outline" className="h-11 text-danger hover:text-danger" onClick={onCancel}>
               Cancel subscription
@@ -226,6 +248,76 @@ function CancelDialog({ subscription, onClose }: { subscription: Subscription | 
           <Button variant="destructive" className="h-11" onClick={handleConfirm} disabled={cancel.isPending}>
             {cancel.isPending && <Loader2 className="animate-spin" aria-hidden="true" />}
             Yes, cancel it
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
+/** #102: deliver to another saved address. Closed when `subscription` is null. */
+function ChangeAddressDialog({ subscription, onClose }: { subscription: Subscription | null; onClose: () => void }) {
+  const returnFocus = useReturnFocus()
+  const open = subscription !== null
+  const addresses = useAddresses({ enabled: open })
+  const change = useChangeSubscriptionAddress()
+  const [picked, setPicked] = useState<number | null>(null)
+
+  function close() {
+    setPicked(null)
+    change.reset()
+    onClose()
+  }
+
+  function handleSave() {
+    if (!subscription || picked === null) return
+    change.mutate(
+      { subscriptionId: subscription.subscription_id, addressId: picked },
+      {
+        onSuccess: () => {
+          toast.success("Delivery address changed", {
+            description: "Deliveries already created keep their address.",
+          })
+          close()
+        },
+      },
+    )
+  }
+
+  return (
+    <AlertDialog open={open} onOpenChange={(isOpen) => !isOpen && close()}>
+      <AlertDialogContent {...returnFocus} className="max-h-[90vh] overflow-y-auto">
+        <AlertDialogHeader>
+          <AlertDialogTitle id="change-address-title">Change delivery address</AlertDialogTitle>
+          <AlertDialogDescription>
+            Now: {subscription?.delivery_address ?? "no address recorded"}. The new address applies to the next
+            deliveries.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AddressPicker
+          addresses={addresses.data}
+          loading={addresses.isPending}
+          loadError={addresses.isError}
+          onRetry={() => addresses.refetch()}
+          chosenId={picked}
+          onChoose={(id) => {
+            setPicked(id)
+            change.reset()
+          }}
+          labelId="change-address-title"
+        />
+        {change.isError && (
+          <p role="alert" className="text-small text-danger">
+            {change.error instanceof ServiceError ? change.error.message : "Please try again."}
+          </p>
+        )}
+        <AlertDialogFooter>
+          <AlertDialogCancel className="h-11" disabled={change.isPending}>
+            Keep current address
+          </AlertDialogCancel>
+          <Button className="h-11" onClick={handleSave} disabled={change.isPending || picked === null}>
+            {change.isPending && <Loader2 className="animate-spin" aria-hidden="true" />}
+            Save address
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

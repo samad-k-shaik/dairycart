@@ -29,14 +29,15 @@ describe("validatePhone (^[6-9]\\d{9}$)", () => {
 })
 
 describe("buildCreateOrderRequest", () => {
-  it("sends only customer name/phone and product ids + quantities (never prices)", () => {
+  it("sends only customer name/phone, the address id and product ids + quantities (never prices)", () => {
     const cartLines = [
       { product_id: 2, name: "Cow Milk", size: "1 Litre", price: "60.00", quantity: 2 },
       { product_id: 3, name: "Buffalo Milk", size: "500 ml", price: "35.00", quantity: 1 },
     ]
-    const request = buildCreateOrderRequest({ name: "  Ravi Kumar ", phone: "9876543210" }, cartLines)
+    const request = buildCreateOrderRequest({ name: "  Ravi Kumar ", phone: "9876543210" }, cartLines, 4)
     assert.deepEqual(request, {
       customer: { name: "Ravi Kumar", phone: "9876543210" },
+      address_id: 4, // #102: the backend copies the address text itself
       items: [
         { product_id: 2, quantity: 2 },
         { product_id: 3, quantity: 1 },

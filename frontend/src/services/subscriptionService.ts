@@ -51,6 +51,12 @@ export function changeDeliverySlot(subscriptionId: number, deliverySlotId: numbe
   return api.patch(`/subscriptions/${subscriptionId}/delivery-slot`, { delivery_slot_id: deliverySlotId })
 }
 
+/** PATCH /api/v1/subscriptions/{id}/address (#102): deliver to another saved address. */
+export function changeSubscriptionAddress(subscriptionId: number, addressId: number): Promise<Subscription> {
+  if (USE_MOCKS) return needsBackend()
+  return api.patch(`/subscriptions/${subscriptionId}/address`, { address_id: addressId })
+}
+
 /** GET /api/v1/admin/subscriptions (ADMIN only), optionally one status. */
 export function getAdminSubscriptions(
   status?: SubscriptionStatus,

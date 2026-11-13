@@ -78,6 +78,18 @@ erDiagram
         numeric unit_price
         numeric subtotal
     }
+    ADDRESSES {
+        int address_id PK
+        int user_id FK
+        varchar label
+        varchar house
+        varchar street
+        varchar landmark
+        varchar city
+        varchar pincode
+        boolean is_default
+        timestamptz created_at
+    }
     DELIVERY_SLOTS {
         int delivery_slot_id PK
         varchar name
@@ -90,6 +102,8 @@ erDiagram
 ```
 
 `DELIVERY_SLOTS` (#100) → `SUBSCRIPTIONS`: each subscription books one slot (`subscriptions.delivery_slot_id`, NULL only for subscriptions from before #100). Orders keep a **text copy** of the slot (`orders.delivery_slot`), not a foreign key.
+
+`USERS` → `ADDRESSES` (#102): saved delivery addresses, one default per user. Orders and subscriptions keep a **text copy** (`delivery_address`), not a foreign key, so addresses can be edited or deleted freely.
 
 `USERS` (#89) → `ORDERS` (#90): every new order belongs to the account that placed it (`orders.user_id`). Orders placed before #90 (guest checkout) have `user_id = NULL`. `CUSTOMERS` stays the delivery contact (name + phone from checkout).
 
@@ -129,6 +143,7 @@ erDiagram
 | subscription_id | INTEGER | FK → subscriptions, NULL, ON DELETE RESTRICT | #97: the subscription that created this order; NULL for one-time orders |
 | delivery_date | DATE | NULL | #97: the day (India time) a subscription order is for |
 | | | UNIQUE (subscription_id, delivery_date) | #97: one order per subscription per day (NULLs never clash) |
+| delivery_address | VARCHAR(500) | NULL | #102: copy of the chosen address (`full_text`) when the order was made; NULL for orders from before #102 |
 | delivery_slot | VARCHAR(100) | NULL | #100: copy of the subscription's slot label when the order was created, e.g. "Morning, 8:00 AM – 9:00 AM"; NULL for one-time orders |
 
 ### ORDER_ITEMS
@@ -178,6 +193,7 @@ erDiagram
 | status | VARCHAR(20) | NOT NULL, DEFAULT `'ACTIVE'`, CHECK in (`ACTIVE`, `CANCELLED`, `COMPLETED`) | |
 | every_n_days | INTEGER | NOT NULL, DEFAULT 1, CHECK in (1, 2, 3) | #99: deliver every day / every 2nd / every 3rd day from start_date |
 | delivery_slot_id | INTEGER | FK → delivery_slots, NULL, ON DELETE RESTRICT | #100: booked delivery time; NULL only for subscriptions from before #100 |
+| delivery_address | VARCHAR(500) | NULL | #102: copy of the chosen address; each delivery order copies it. NULL before #102 |
 | daily_total | NUMERIC(10,2) | NOT NULL, CHECK ≥ 0 | One delivery's total: sum of the item subtotals (locked prices) |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
 | cancelled_at | TIMESTAMPTZ | NULL | Set when cancelled |
@@ -210,6 +226,22 @@ erDiagram
 
 The migration inserts two standard slots: Morning 08:00–09:00 and Evening 17:00–18:00 (capacity 50).
 
+### ADDRESSES (#102)
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| address_id | SERIAL | PK | |
+| user_id | INTEGER | FK → users, NOT NULL, ON DELETE CASCADE | Orders keep their own copy, so the addresses can go with the account |
+| label | VARCHAR(30) | NOT NULL | "Home", "Office"… |
+| house | VARCHAR(100) | NOT NULL | House / flat number, building |
+| street | VARCHAR(150) | NOT NULL | Street / area |
+| landmark | VARCHAR(100) | NULL | Optional |
+| city | VARCHAR(50) | NOT NULL | |
+| pincode | VARCHAR(6) | NOT NULL, CHECK `^[1-9][0-9]{5}$` | Indian PIN code |
+| is_default | BOOLEAN | NOT NULL, DEFAULT FALSE | |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
+| | | UNIQUE (user_id) WHERE is_default | One default per user (partial unique index) |
+
 ## Normalization notes
 
 - **1NF:** every column holds a single value; order lines are rows in `order_items`, not a list inside `orders`.
@@ -218,6 +250,7 @@ The migration inserts two standard slots: Morning 08:00–09:00 and Evening 17:0
 
 **Deliberate denormalization (and why it's correct):**
 - `order_items.unit_price` copies `products.price` so historical orders keep the price paid even if the product price changes later.
+- `orders.delivery_address` and `subscriptions.delivery_address` (#102) copy the address text for the same reason.
 - `orders.delivery_slot` (#100) copies the slot's label for the same reason: an order keeps the time it was booked for even if the admin edits the slot later.
 - `order_items.subtotal` and `orders.total_amount` are derived values stored for fast reads and auditability. They are written once by the backend service and never edited by clients.
 
@@ -237,6 +270,7 @@ Products and customers that appear in orders cannot be deleted, protecting order
 | `uq_subscriptions_one_active_per_user` (partial, `WHERE status = 'ACTIVE'`) | One active subscription per user (#97) |
 | `uq_orders_subscription_day` (UNIQUE) | No duplicate daily order; finding today's orders (#97) |
 | `subscriptions(delivery_slot_id)` | Counting a slot's bookings (#100) |
+| `addresses(user_id)`, `uq_addresses_one_default_per_user` (partial) | My addresses; one default per user (#102) |
 
 ## Constraint names
 
@@ -266,6 +300,8 @@ Every constraint has an explicit, readable name (set by the naming convention in
 | subscriptions | `subscriptions_delivery_slot_id_fkey` | → delivery_slots, ON DELETE RESTRICT (#100) |
 | delivery_slots | `ck_delivery_slots_end_after_start`, `ck_delivery_slots_capacity_range` | end_time > start_time, capacity 1–1000 (#100) |
 | delivery_slots | `uq_delivery_slots_times` | (start_time, end_time) is unique (#100) |
+| addresses | `addresses_user_id_fkey` | → users, ON DELETE CASCADE (#102) |
+| addresses | `ck_addresses_pincode_format` | 6-digit PIN code not starting with 0 (#102) |
 | subscription_items | `ck_subscription_items_quantity_range`, `…_unit_price_positive`, `…_subtotal_non_negative` | as for order_items (#97) |
 | subscription_items | `uq_subscription_items_product` | (subscription_id, product_id) is unique (#97) |
 | users | `uq_users_email` | email is unique |

@@ -149,3 +149,23 @@ ALTER TABLE subscriptions ADD COLUMN delivery_slot_id INTEGER
     REFERENCES delivery_slots (delivery_slot_id) ON DELETE RESTRICT;
 CREATE INDEX idx_subscriptions_delivery_slot_id ON subscriptions (delivery_slot_id);
 ALTER TABLE orders ADD COLUMN delivery_slot VARCHAR(100);
+
+-- Saved delivery addresses (#102, migration add_addresses). Orders and subscriptions keep
+-- a TEXT COPY of the chosen address (delivery_address), not a foreign key.
+CREATE TABLE addresses (
+    address_id  SERIAL PRIMARY KEY,
+    user_id     INTEGER NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
+    label       VARCHAR(30) NOT NULL,
+    house       VARCHAR(100) NOT NULL,
+    street      VARCHAR(150) NOT NULL,
+    landmark    VARCHAR(100),
+    city        VARCHAR(50) NOT NULL,
+    pincode     VARCHAR(6) NOT NULL CONSTRAINT ck_addresses_pincode_format CHECK (pincode ~ '^[1-9][0-9]{5}$'),
+    is_default  BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_addresses_user_id ON addresses (user_id);
+-- One default address per user: a partial unique index only counts default rows.
+CREATE UNIQUE INDEX uq_addresses_one_default_per_user ON addresses (user_id) WHERE is_default;
+ALTER TABLE orders ADD COLUMN delivery_address VARCHAR(500);
+ALTER TABLE subscriptions ADD COLUMN delivery_address VARCHAR(500);

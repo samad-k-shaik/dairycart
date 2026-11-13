@@ -165,6 +165,13 @@ class LastActiveDeliverySlotError(DomainError):
     code = "LAST_ACTIVE_DELIVERY_SLOT"
 
 
+class AddressLimitReachedError(DomainError):
+    """The user already has the maximum number of saved addresses (#102)."""
+
+    status_code = 409
+    code = "ADDRESS_LIMIT_REACHED"
+
+
 class InvalidFieldError(DomainError):
     """A field is well-formed but breaks a rule that needs the database or today's date,
     e.g. a subscription start date in the past (#97). Same code and shape as pydantic's

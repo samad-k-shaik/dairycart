@@ -13,6 +13,7 @@
 | C5 | Place an order |
 | C6 | View order confirmation |
 | C7 | View previous orders |
+| C9 | Save delivery addresses (Account → Addresses; one default) and choose one for every order and subscription *(added by #102, approved scope change)* |
 | C8 | Choose "order once" or a subscription (1 week / 15 days / 1 month; every day, every 2 or every 3 days) in a chosen delivery time slot, change the time, and cancel it *(added by #97, #99 and #100, approved scope change)* |
 
 ### Admin application
@@ -38,7 +39,7 @@
 | Pausing/skipping single days, choosing weekdays, editing a running subscription, prepaid plans *(basic subscriptions moved in scope by #97/#99)* | More rules and payments | The same `subscriptions` module and `generate_orders_for(day)` service can be extended |
 | Multi-vendor marketplace | Major domain change | Products can gain a `vendor_id` later |
 | Delivery partner app | Separate user type and app | New route tree and `deliveries` table |
-| Google Maps | External API, cost | Address fields can be added to `customers` |
+| Google Maps | External API, cost | Saved addresses exist since #102 (`addresses` table); a map / geocoding could be added on top |
 | WhatsApp notifications | External API | Status changes go through one service function, a natural hook point |
 | AI chatbot / Agentic AI | Not needed to prove the POC | API-first design makes it possible to add later |
 | Demand forecasting / advanced analytics | Needs historical data | Orders are stored in normalized tables, ready for analysis |

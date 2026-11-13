@@ -49,7 +49,7 @@ from app.repositories.subscription_repository import (
 )
 from app.schemas.common import ErrorDetail
 from app.schemas.subscription import SubscriptionCreate
-from app.services import delivery_slot_service
+from app.services import address_service, delivery_slot_service
 from app.services.order_service import check_items
 
 IST = timezone(timedelta(hours=5, minutes=30), "IST")
@@ -93,6 +93,10 @@ def create_subscription(
 
         # #100: the slot must be active and not full; it stays LOCKED until the commit.
         slot = delivery_slot_service.book(db, data.delivery_slot_id)
+        # #102: where to deliver (text copy); 422 if the user has no address.
+        delivery_address = address_service.delivery_text_for(
+            db, user_id, data.address_id
+        )
 
         # Same checks as a one-time order (duplicates, unavailable, stock today).
         products = check_items(db, data.items)
@@ -118,6 +122,7 @@ def create_subscription(
             end_date=end_date_for(data.start_date, days),
             every_n_days=data.every_n_days,
             delivery_slot=slot,
+            delivery_address=delivery_address,
             status=SubscriptionStatus.ACTIVE,
             items=items,
             daily_total=sum((item.subtotal for item in items), Decimal("0.00")),
@@ -259,6 +264,41 @@ def change_delivery_slot(
     return _get(db, subscription_id)
 
 
+# ---- Change the delivery address (#102) ----
+
+
+def change_address(
+    db: Session,
+    subscription_id: int,
+    address_id: int,
+    user: User,
+    today: date | None = None,
+) -> Subscription:
+    """Copy another of the OWNER's saved addresses onto an ACTIVE subscription (owner
+    only: an admin cannot pick from someone else's addresses). Orders already created
+    keep their address; the next ones use the new one."""
+    user_id = user.user_id
+    repository = SubscriptionRepository(db)
+    try:
+        repository.complete_finished(today or today_ist())
+        subscription = repository.get_for_update(subscription_id)  # locked
+        if subscription is None or subscription.user_id != user_id:
+            raise NotFoundError(f"Subscription {subscription_id} was not found.")
+        if subscription.status != SubscriptionStatus.ACTIVE:
+            raise SubscriptionNotActiveError(
+                f"This subscription is {subscription.status.value.lower()}, "
+                "so its address cannot be changed."
+            )
+        subscription.delivery_address = address_service.delivery_text_for(
+            db, user_id, address_id
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return _get(db, subscription_id)
+
+
 # ---- Generate the daily orders ----
 
 
@@ -331,6 +371,7 @@ def _create_daily_order(
             delivery_slot=(
                 subscription.delivery_slot.label if subscription.delivery_slot else None
             ),
+            delivery_address=subscription.delivery_address,  # #102
             status=OrderStatus.PLACED,
             items=[
                 OrderItem(

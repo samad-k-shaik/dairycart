@@ -168,6 +168,19 @@ What makes the order code safe:
 - **Delivery slots (#100):** rules in `app/services/delivery_slot_service.py`. Booking (subscribe or change time) locks the slot row (`SELECT … FOR UPDATE`) and counts its ACTIVE subscriptions against `capacity`, so a slot is never overbooked. Switching off or deleting first locks all active slots in id order (no deadlock) and refuses to leave none. Orders get a text copy of the slot (`orders.delivery_slot`). The migration creates the standard Morning 08:00–09:00 and Evening 17:00–18:00 slots.
 - Tests: `tests/test_subscription_service.py` (fixed dates), `tests/api/test_subscriptions.py`, `tests/test_background.py` (the loop), `tests/test_delivery_slot_service.py` and `tests/api/test_delivery_slots.py` (#100).
 
+## Addresses (#102)
+
+| Endpoint | Does | Errors |
+|---|---|---|
+| `GET /api/v1/addresses` | My saved addresses, default first | `401` |
+| `POST /api/v1/addresses` | Add (the first becomes the default) | `401`, `409 ADDRESS_LIMIT_REACHED`, `422` |
+| `PATCH /api/v1/addresses/{id}`, `POST …/{id}/default`, `DELETE …/{id}` | Edit, make default, delete | `401`, `404`, `422` |
+| `PATCH /api/v1/subscriptions/{id}/address` | Deliver a subscription to another saved address (owner) | `401`, `404`, `409`, `422` |
+
+- `POST /orders` and `POST /subscriptions` take `address_id` (left out → the default). `address_service.delivery_text_for` returns the address text to copy, or raises 422 on `address_id` ("required" when the user has none, "not available" when it is not theirs). Orders, subscriptions and automatic subscription orders store the copy in `delivery_address`.
+- One default per user is a partial unique index; changing the default locks the user's addresses and clears the old default (flush) before setting the new one.
+- Test users from `tests/factories.make_user` get a default address (`with_address=False` for none). Tests: `tests/api/test_addresses.py`.
+
 ## Admin daily deliveries and user details (#101)
 
 | Endpoint | Does | Errors |
