@@ -66,6 +66,8 @@ def test_all_tables_are_registered_for_alembic() -> None:
         "subscription_items",  # #97
         "delivery_slots",  # #100
         "addresses",  # #102
+        "delivery_boys",  # #103
+        "delivery_areas",  # #103
     }
 
 
@@ -111,6 +113,7 @@ ERD_COLUMNS = {
         "delivery_date": ("DATE", True),  # #97
         "delivery_slot": ("VARCHAR(100)", True),  # #100: copy of the slot's label
         "delivery_address": ("VARCHAR(500)", True),  # #102: copy of the address
+        "delivery_pincode": ("VARCHAR(6)", True),  # #103: its PIN code
     },
     "order_items": {
         "order_item_id": ("INTEGER", False),
@@ -132,6 +135,7 @@ ERD_COLUMNS = {
         "every_n_days": ("INTEGER", False),  # #99
         "delivery_slot_id": ("INTEGER", True),  # #100: null before #100
         "delivery_address": ("VARCHAR(500)", True),  # #102: null before #102
+        "delivery_pincode": ("VARCHAR(6)", True),  # #103
         "daily_total": ("NUMERIC(10, 2)", False),
         "created_at": ("TIMESTAMP WITH TIME ZONE", False),
         "cancelled_at": ("TIMESTAMP WITH TIME ZONE", True),
@@ -166,6 +170,20 @@ ERD_COLUMNS = {
         "pincode": ("VARCHAR(6)", False),
         "is_default": ("BOOLEAN", False),
         "created_at": ("TIMESTAMP WITH TIME ZONE", False),
+    },
+    # #103
+    "delivery_boys": {
+        "delivery_boy_id": ("INTEGER", False),
+        "name": ("VARCHAR(100)", False),
+        "phone": ("VARCHAR(10)", False),
+        "is_active": ("BOOLEAN", False),
+        "created_at": ("TIMESTAMP WITH TIME ZONE", False),
+    },
+    "delivery_areas": {
+        "delivery_area_id": ("INTEGER", False),
+        "pincode": ("VARCHAR(6)", False),
+        "area_name": ("VARCHAR(50)", True),
+        "delivery_boy_id": ("INTEGER", False),
     },
 }
 
@@ -244,6 +262,8 @@ def test_check_and_unique_constraints_have_readable_names(schema: Engine) -> Non
         "ck_delivery_slots_end_after_start",  # #100
         "ck_delivery_slots_capacity_range",  # #100
         "ck_addresses_pincode_format",  # #102
+        "ck_delivery_boys_phone_format",  # #103
+        "ck_delivery_areas_pincode_format",  # #103
     }
     assert uniques == {
         "uq_customers_phone",
@@ -252,6 +272,8 @@ def test_check_and_unique_constraints_have_readable_names(schema: Engine) -> Non
         "uq_orders_subscription_day",  # #97: one order per subscription per day
         "uq_subscription_items_product",  # #97
         "uq_delivery_slots_times",  # #100
+        "uq_delivery_boys_phone",  # #103
+        "uq_delivery_areas_pincode",  # #103
     }
 
 

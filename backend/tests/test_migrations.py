@@ -19,6 +19,8 @@ APP_TABLES = {
     "subscription_items",  # #97
     "delivery_slots",  # #100
     "addresses",  # #102
+    "delivery_boys",  # #103
+    "delivery_areas",  # #103
 }
 
 

@@ -21,10 +21,11 @@ function needsBackend(): Promise<never> {
   )
 }
 
-/** GET /api/v1/admin/deliveries?date=YYYY-MM-DD (no date: today, India time). */
-export function getDeliveries(date?: string): Promise<DayDeliveries> {
+/** GET /api/v1/admin/deliveries?date=YYYY-MM-DD (no date: today, India time).
+ *  #103: boy = a delivery boy's id or "unassigned" ("" = everyone). */
+export function getDeliveries(date?: string, boy = ""): Promise<DayDeliveries> {
   if (USE_MOCKS) return needsBackend()
-  return api.get(`/admin/deliveries${queryString({ date })}`)
+  return api.get(`/admin/deliveries${queryString({ date, boy: boy || undefined })}`)
 }
 
 /** GET /api/v1/admin/users/{id}: the user + order count and amount spent. 404 if missing. */

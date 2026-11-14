@@ -55,6 +55,8 @@ def test_deliveries_default_to_today(
         "customer_phone": order.customer.phone,
         "subscription_id": None,
         "delivery_slot": None,
+        "delivery_pincode": None,  # #103: factory orders have no address
+        "delivery_boy": None,
         "status": "PLACED",
         "total_amount": "120.00",
         "items": [

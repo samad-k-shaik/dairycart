@@ -102,9 +102,7 @@ def create_order(db: Session, data: OrderCreate, user: User) -> Order:
     user_id = user.user_id
     try:
         # #102: the delivery address (text copy); 422 if the user has none.
-        delivery_address = address_service.delivery_text_for(
-            db, user_id, data.address_id
-        )
+        address = address_service.delivery_copy_for(db, user_id, data.address_id)
         products = check_items(db, data.items)  # locked until commit (#92)
 
         customers = CustomerRepository(db)
@@ -128,7 +126,8 @@ def create_order(db: Session, data: OrderCreate, user: User) -> Order:
         order = Order(
             customer=customer,  # delivery contact (name + phone from the form)
             user_id=user_id,  # the account that placed it (#90)
-            delivery_address=delivery_address,  # #102
+            delivery_address=address.text,  # #102
+            delivery_pincode=address.pincode,  # #103
             items=items,
             status=OrderStatus.PLACED,
             total_amount=sum((item.subtotal for item in items), Decimal("0.00")),

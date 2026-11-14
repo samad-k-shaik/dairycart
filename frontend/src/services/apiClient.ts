@@ -52,7 +52,8 @@ export const api = {
   get: <T>(path: string) => request<T>("GET", path),
   post: <T>(path: string, body: unknown) => request<T>("POST", path, body),
   patch: <T>(path: string, body: unknown) => request<T>("PATCH", path, body),
-  del: (path: string) => request<void>("DELETE", path),
+  // Usually 204 (no body); #103: removing an area answers 200 with the delivery boy.
+  del: <T = void>(path: string) => request<T>("DELETE", path),
 }
 
 /** Build "?a=1&b=2" from an object, skipping undefined values. "" when nothing is set. */

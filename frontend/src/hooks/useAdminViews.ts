@@ -10,13 +10,17 @@ import { orderKeys } from "@/hooks/orderKeys"
 import { getAdminUser, getAdminUserOrders, getDeliveries } from "@/services/adminService"
 
 export const adminViewKeys = {
-  deliveries: (date: string) => [...orderKeys.all, "deliveries", date] as const,
+  deliveries: (date: string, boy = "") => [...orderKeys.all, "deliveries", date, boy] as const,
   user: (userId: number) => [...orderKeys.all, "admin-user", userId] as const,
   userOrders: (userId: number) => [...orderKeys.all, "admin-user", userId, "orders"] as const,
 }
 
-export function useDeliveries(date: string) {
-  return useQuery({ queryKey: adminViewKeys.deliveries(date), queryFn: () => getDeliveries(date) })
+export function useDeliveries(date: string, boy = "") {
+  return useQuery({
+    queryKey: adminViewKeys.deliveries(date, boy),
+    queryFn: () => getDeliveries(date, boy),
+    placeholderData: (previous) => previous, // keep the page steady while switching filters
+  })
 }
 
 export function useAdminUser(userId: number) {

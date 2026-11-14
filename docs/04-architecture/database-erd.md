@@ -90,6 +90,19 @@ erDiagram
         boolean is_default
         timestamptz created_at
     }
+    DELIVERY_BOYS {
+        int delivery_boy_id PK
+        varchar name
+        varchar phone UK
+        boolean is_active
+        timestamptz created_at
+    }
+    DELIVERY_AREAS {
+        int delivery_area_id PK
+        varchar pincode UK
+        varchar area_name
+        int delivery_boy_id FK
+    }
     DELIVERY_SLOTS {
         int delivery_slot_id PK
         varchar name
@@ -102,6 +115,8 @@ erDiagram
 ```
 
 `DELIVERY_SLOTS` (#100) → `SUBSCRIPTIONS`: each subscription books one slot (`subscriptions.delivery_slot_id`, NULL only for subscriptions from before #100). Orders keep a **text copy** of the slot (`orders.delivery_slot`), not a foreign key.
+
+`DELIVERY_BOYS` → `DELIVERY_AREAS` (#103): each PIN code belongs to at most one delivery boy. Orders are matched to a delivery boy through `orders.delivery_pincode` when the deliveries are shown (no foreign key from orders).
 
 `USERS` → `ADDRESSES` (#102): saved delivery addresses, one default per user. Orders and subscriptions keep a **text copy** (`delivery_address`), not a foreign key, so addresses can be edited or deleted freely.
 
@@ -144,6 +159,7 @@ erDiagram
 | delivery_date | DATE | NULL | #97: the day (India time) a subscription order is for |
 | | | UNIQUE (subscription_id, delivery_date) | #97: one order per subscription per day (NULLs never clash) |
 | delivery_address | VARCHAR(500) | NULL | #102: copy of the chosen address (`full_text`) when the order was made; NULL for orders from before #102 |
+| delivery_pincode | VARCHAR(6) | NULL | #103: that address's PIN code, to match the delivery boy |
 | delivery_slot | VARCHAR(100) | NULL | #100: copy of the subscription's slot label when the order was created, e.g. "Morning, 8:00 AM – 9:00 AM"; NULL for one-time orders |
 
 ### ORDER_ITEMS
@@ -194,6 +210,7 @@ erDiagram
 | every_n_days | INTEGER | NOT NULL, DEFAULT 1, CHECK in (1, 2, 3) | #99: deliver every day / every 2nd / every 3rd day from start_date |
 | delivery_slot_id | INTEGER | FK → delivery_slots, NULL, ON DELETE RESTRICT | #100: booked delivery time; NULL only for subscriptions from before #100 |
 | delivery_address | VARCHAR(500) | NULL | #102: copy of the chosen address; each delivery order copies it. NULL before #102 |
+| delivery_pincode | VARCHAR(6) | NULL | #103: its PIN code (copied onto each delivery order) |
 | daily_total | NUMERIC(10,2) | NOT NULL, CHECK ≥ 0 | One delivery's total: sum of the item subtotals (locked prices) |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
 | cancelled_at | TIMESTAMPTZ | NULL | Set when cancelled |
@@ -241,6 +258,29 @@ The migration inserts two standard slots: Morning 08:00–09:00 and Evening 17:0
 | is_default | BOOLEAN | NOT NULL, DEFAULT FALSE | |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
 | | | UNIQUE (user_id) WHERE is_default | One default per user (partial unique index) |
+
+### DELIVERY_BOYS (#103)
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| delivery_boy_id | SERIAL | PK | |
+| name | VARCHAR(100) | NOT NULL | |
+| phone | VARCHAR(10) | NOT NULL, UNIQUE, CHECK `^[6-9][0-9]{9}$` | 10-digit mobile number |
+| is_active | BOOLEAN | NOT NULL, DEFAULT TRUE | Inactive: areas kept, orders not assigned |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
+
+Admin records only: delivery boys do not log in.
+
+### DELIVERY_AREAS (#103)
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| delivery_area_id | SERIAL | PK | |
+| pincode | VARCHAR(6) | NOT NULL, UNIQUE, CHECK `^[1-9][0-9]{5}$` | One delivery boy per PIN code |
+| area_name | VARCHAR(50) | NULL | Optional locality, e.g. "Ameerpet" |
+| delivery_boy_id | INTEGER | FK → delivery_boys, NOT NULL, ON DELETE CASCADE | Deleting a delivery boy frees his areas |
+
+The migration fills `orders.delivery_pincode` and `subscriptions.delivery_pincode` of existing rows from the end of `delivery_address`.
 
 ## Normalization notes
 
@@ -302,6 +342,9 @@ Every constraint has an explicit, readable name (set by the naming convention in
 | delivery_slots | `uq_delivery_slots_times` | (start_time, end_time) is unique (#100) |
 | addresses | `addresses_user_id_fkey` | → users, ON DELETE CASCADE (#102) |
 | addresses | `ck_addresses_pincode_format` | 6-digit PIN code not starting with 0 (#102) |
+| delivery_boys | `uq_delivery_boys_phone`, `ck_delivery_boys_phone_format` | phone unique and a 10-digit mobile number (#103) |
+| delivery_areas | `uq_delivery_areas_pincode`, `ck_delivery_areas_pincode_format` | one delivery boy per PIN code; PIN format (#103) |
+| delivery_areas | `delivery_areas_delivery_boy_id_fkey` | → delivery_boys, ON DELETE CASCADE (#103) |
 | subscription_items | `ck_subscription_items_quantity_range`, `…_unit_price_positive`, `…_subtotal_non_negative` | as for order_items (#97) |
 | subscription_items | `uq_subscription_items_product` | (subscription_id, product_id) is unique (#97) |
 | users | `uq_users_email` | email is unique |

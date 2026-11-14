@@ -24,6 +24,9 @@ export type DeliveryRow = {
   subscription_id: number | null
   /** "Morning, 8:00 AM – 9:00 AM" (subscriptions only). */
   delivery_slot: string | null
+  /** #103: PIN code of the address, and the delivery boy covering it (null: not assigned). */
+  delivery_pincode: string | null
+  delivery_boy: { delivery_boy_id: number; name: string; phone: string } | null
   status: OrderStatus
   total_amount: Money
   items: DeliveryItem[]
@@ -37,5 +40,8 @@ export type DayDeliveries = {
   date: string
   status_counts: Record<OrderStatus, number>
   product_totals: ProductTotal[]
+  /** #103: orders per active delivery boy for the whole day (ignores the filter). */
+  boy_counts: { delivery_boy_id: number; name: string; orders: number }[]
+  unassigned_count: number
   deliveries: DeliveryRow[]
 }

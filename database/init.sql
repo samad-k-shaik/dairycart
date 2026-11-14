@@ -169,3 +169,25 @@ CREATE INDEX idx_addresses_user_id ON addresses (user_id);
 CREATE UNIQUE INDEX uq_addresses_one_default_per_user ON addresses (user_id) WHERE is_default;
 ALTER TABLE orders ADD COLUMN delivery_address VARCHAR(500);
 ALTER TABLE subscriptions ADD COLUMN delivery_address VARCHAR(500);
+
+-- Delivery boys and their areas (#103, migration add_delivery_boys). Admin records only:
+-- delivery boys do not log in. One delivery boy per PIN code.
+CREATE TABLE delivery_boys (
+    delivery_boy_id SERIAL PRIMARY KEY,
+    name            VARCHAR(100) NOT NULL,
+    phone           VARCHAR(10) NOT NULL CONSTRAINT ck_delivery_boys_phone_format CHECK (phone ~ '^[6-9][0-9]{9}$'),
+    is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT uq_delivery_boys_phone UNIQUE (phone)
+);
+CREATE TABLE delivery_areas (
+    delivery_area_id SERIAL PRIMARY KEY,
+    pincode          VARCHAR(6) NOT NULL CONSTRAINT ck_delivery_areas_pincode_format CHECK (pincode ~ '^[1-9][0-9]{5}$'),
+    area_name        VARCHAR(50),
+    delivery_boy_id  INTEGER NOT NULL REFERENCES delivery_boys (delivery_boy_id) ON DELETE CASCADE,
+    CONSTRAINT uq_delivery_areas_pincode UNIQUE (pincode)
+);
+CREATE INDEX idx_delivery_areas_delivery_boy_id ON delivery_areas (delivery_boy_id);
+-- The address's PIN code on orders and subscriptions, to match the delivery boy.
+ALTER TABLE orders ADD COLUMN delivery_pincode VARCHAR(6);
+ALTER TABLE subscriptions ADD COLUMN delivery_pincode VARCHAR(6);

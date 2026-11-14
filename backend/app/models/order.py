@@ -88,6 +88,9 @@ class Order(Base):
     # (editing or deleting the saved address later does not change it). NULL only for
     # orders from before #102.
     delivery_address: Mapped[str | None] = mapped_column(String(500), default=None)
+    # #103: the PIN code of that address, kept separately so the admin can match the
+    # order to the delivery boy who covers the area. NULL when there is no address.
+    delivery_pincode: Mapped[str | None] = mapped_column(String(6), default=None)
     # Stored in UTC (TIMESTAMPTZ); shown in IST by the frontend.
     order_date: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

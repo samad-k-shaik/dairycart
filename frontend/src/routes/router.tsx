@@ -17,6 +17,7 @@ import ProductsPage from "@/pages/admin/ProductsPage"
 import AdminSubscriptionsPage from "@/pages/admin/SubscriptionsPage"
 import DeliverySlotsPage from "@/pages/admin/DeliverySlotsPage"
 import DeliveriesPage from "@/pages/admin/DeliveriesPage"
+import DeliveryBoysPage from "@/pages/admin/DeliveryBoysPage"
 import UserDetailsPage from "@/pages/admin/UserDetailsPage"
 import UsersPage from "@/pages/admin/UsersPage"
 import LoginPage from "@/pages/auth/LoginPage"
@@ -83,6 +84,7 @@ export const router = createBrowserRouter([
       { path: "users", element: <UsersPage /> },
       { path: "users/:userId", element: <UserDetailsPage /> }, // #101
       { path: "deliveries", element: <DeliveriesPage /> }, // #101
+      { path: "delivery-boys", element: <DeliveryBoysPage /> }, // #103
       { path: "subscriptions", element: <AdminSubscriptionsPage /> }, // #97
       { path: "delivery-slots", element: <DeliverySlotsPage /> }, // #100
       { path: "*", element: <NotFoundPage homePath="/admin" /> },

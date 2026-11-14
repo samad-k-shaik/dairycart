@@ -172,6 +172,21 @@ class AddressLimitReachedError(DomainError):
     code = "ADDRESS_LIMIT_REACHED"
 
 
+class DeliveryBoyAlreadyExistsError(DomainError):
+    """Admin: another delivery boy already has this phone number (#103)."""
+
+    status_code = 409
+    code = "DELIVERY_BOY_ALREADY_EXISTS"
+
+
+class AreaAlreadyAllocatedError(DomainError):
+    """Admin: this PIN code is already allocated to a delivery boy (#103). One delivery
+    boy per PIN code; remove it from him first."""
+
+    status_code = 409
+    code = "AREA_ALREADY_ALLOCATED"
+
+
 class InvalidFieldError(DomainError):
     """A field is well-formed but breaks a rule that needs the database or today's date,
     e.g. a subscription start date in the past (#97). Same code and shape as pydantic's

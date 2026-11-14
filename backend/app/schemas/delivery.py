@@ -15,6 +15,22 @@ class DeliveryItem(BaseModel):
     quantity: int
 
 
+class AssignedBoy(BaseModel):
+    """#103: the delivery boy who covers the order's PIN code."""
+
+    delivery_boy_id: int
+    name: str
+    phone: str
+
+
+class BoyCount(BaseModel):
+    """#103: how many orders a delivery boy has that day."""
+
+    delivery_boy_id: int
+    name: str
+    orders: int
+
+
 class DeliveryRow(BaseModel):
     """One order to deliver that day."""
 
@@ -28,6 +44,9 @@ class DeliveryRow(BaseModel):
     subscription_id: int | None
     # "Morning, 8:00 AM – 9:00 AM" (subscription orders only).
     delivery_slot: str | None
+    # #103: the address's PIN code, and the delivery boy covering it (None: not assigned).
+    delivery_pincode: str | None
+    delivery_boy: AssignedBoy | None
     status: OrderStatus
     total_amount: Money
     items: list[DeliveryItem]
@@ -49,4 +68,8 @@ class DayDeliveries(BaseModel):
     # Every status, 0 when none (like the admin order list).
     status_counts: dict[OrderStatus, int]
     product_totals: list[ProductTotal]
+    # #103: orders per active delivery boy for the WHOLE day (ignores the filter), and
+    # the orders no active delivery boy covers.
+    boy_counts: list[BoyCount]
+    unassigned_count: int
     deliveries: list[DeliveryRow]

@@ -4,12 +4,13 @@
   they have any. The first address becomes the default; deleting the default makes the
   oldest remaining address the default.
 - Users only ever see and change their OWN addresses (someone else's id → 404).
-- Orders and subscriptions get a TEXT COPY of an address (`delivery_text_for`): the
+- Orders and subscriptions get a TEXT COPY of an address (`delivery_copy_for`): the
   chosen one, or the default when none is chosen. A user without any address cannot
   order (422 on `address_id`).
 """
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
@@ -108,8 +109,19 @@ def delete_address(db: Session, user_id: int, address_id: int) -> None:
         raise
 
 
-def delivery_text_for(db: Session, user_id: int, address_id: int | None) -> str:
-    """The one-line address to copy onto an order or subscription.
+@dataclass(frozen=True)
+class DeliveryAddressCopy:
+    """What an order or subscription keeps of an address: the one-line text, and the
+    PIN code on its own (#103: to match the delivery boy who covers that area)."""
+
+    text: str
+    pincode: str
+
+
+def delivery_copy_for(
+    db: Session, user_id: int, address_id: int | None
+) -> DeliveryAddressCopy:
+    """The address to copy onto an order or subscription.
 
     `address_id` given → that address, which must be the user's own. Not given → the
     user's default. No address at all → 422, so nobody orders without an address.
@@ -122,11 +134,11 @@ def delivery_text_for(db: Session, user_id: int, address_id: int | None) -> str:
                 "This address is not available. Please choose another one.",
                 details=[ErrorDetail(field="address_id", issue="not available")],
             )
-        return address.full_text
+        return DeliveryAddressCopy(address.full_text, address.pincode)
     default = repository.get_default(user_id)
     if default is None:
         raise InvalidFieldError(
             "Please add a delivery address first.",
             details=[ErrorDetail(field="address_id", issue="required")],
         )
-    return default.full_text
+    return DeliveryAddressCopy(default.full_text, default.pincode)

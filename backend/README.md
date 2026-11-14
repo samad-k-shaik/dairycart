@@ -168,6 +168,18 @@ What makes the order code safe:
 - **Delivery slots (#100):** rules in `app/services/delivery_slot_service.py`. Booking (subscribe or change time) locks the slot row (`SELECT … FOR UPDATE`) and counts its ACTIVE subscriptions against `capacity`, so a slot is never overbooked. Switching off or deleting first locks all active slots in id order (no deadlock) and refuses to leave none. Orders get a text copy of the slot (`orders.delivery_slot`). The migration creates the standard Morning 08:00–09:00 and Evening 17:00–18:00 slots.
 - Tests: `tests/test_subscription_service.py` (fixed dates), `tests/api/test_subscriptions.py`, `tests/test_background.py` (the loop), `tests/test_delivery_slot_service.py` and `tests/api/test_delivery_slots.py` (#100).
 
+## Delivery boys (#103)
+
+| Endpoint | Does | Errors |
+|---|---|---|
+| `GET/POST /api/v1/admin/delivery-boys` | List (with areas and `today_orders`) / add | `401`, `403`, `409 DELIVERY_BOY_ALREADY_EXISTS`, `422` |
+| `PATCH/DELETE /api/v1/admin/delivery-boys/{id}` | Edit / delete (frees his areas) | `401`, `403`, `404`, `409`, `422` |
+| `POST /api/v1/admin/delivery-boys/{id}/areas`, `DELETE …/areas/{pincode}` | Allocate / remove a PIN code | `401`, `403`, `404`, `409 AREA_ALREADY_ALLOCATED`, `422` |
+
+- One delivery boy per PIN code (`uq_delivery_areas_pincode`). Delivery boys are admin records, not users (no login).
+- Orders and subscriptions copy the address's PIN code (`delivery_pincode`, from `address_service.delivery_copy_for`). `delivery_service.deliveries_for(db, day, boy)` matches each order to the ACTIVE delivery boy for its PIN code (`DeliveryBoyRepository.active_allocation`, one query) and filters by `boy` (id or `"unassigned"`).
+- Rules: `app/services/delivery_boy_service.py`. Tests: `tests/api/test_delivery_boys.py`.
+
 ## Addresses (#102)
 
 | Endpoint | Does | Errors |

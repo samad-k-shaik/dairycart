@@ -46,6 +46,12 @@
 | POST | `/addresses/{id}/default` | Make it the default *(#102)* | 200 |
 | DELETE | `/addresses/{id}` | Delete an address *(#102)* | 204 |
 | PATCH | `/subscriptions/{id}/address` | Change a subscription's address (owner) *(#102)* | 200 |
+| GET | `/admin/delivery-boys` | Delivery boys with areas and today's orders *(#103)* | 200 |
+| POST | `/admin/delivery-boys` | Add a delivery boy *(#103)* | 201 |
+| PATCH | `/admin/delivery-boys/{id}` | Edit a delivery boy *(#103)* | 200 |
+| DELETE | `/admin/delivery-boys/{id}` | Delete (frees his areas) *(#103)* | 204 |
+| POST | `/admin/delivery-boys/{id}/areas` | Allocate a PIN code *(#103)* | 200 |
+| DELETE | `/admin/delivery-boys/{id}/areas/{pincode}` | Remove a PIN code *(#103)* | 200 |
 | GET | `/admin/deliveries?date=` | One day's orders, product totals and status counts *(#101)* | 200 |
 | GET | `/admin/users/{id}` | One user with order count and amount spent *(#101)* | 200 |
 | GET | `/admin/users/{id}/orders` | All orders of one user *(#101)* | 200 |
@@ -500,13 +506,15 @@ Send only the fields that change (at least one, no `null`). **200** with the adm
 
 ### GET /api/v1/admin/deliveries?date=YYYY-MM-DD *(ADMIN)*
 
-Everything to deliver on one day. `date` is optional (default: **today, India time**); a badly formatted date → 422.
+Everything to deliver on one day. `date` is optional (default: **today, India time**); a badly formatted date → 422. *(#103)* `boy` is optional: a delivery boy's id or `unassigned`; anything else → 422 on `boy`.
 
 A day's orders are:
 - **subscription orders for that day** (`delivery_date = date`), and
 - **one-time orders placed that day**, India time (`order_date` from 00:00 IST to the next 00:00 IST, i.e. 18:30 UTC the day before to 18:30 UTC).
 
-Sorted by delivery time (the subscription slot's start time), then customer name and order id; orders without a time (one-time orders and subscriptions from before #100) come last. `product_totals` adds up the items of the orders that are **not cancelled** (what to load); `status_counts` has every status (0 when none). Status changes use `PATCH /admin/orders/{id}/status`.
+Sorted by delivery time (the subscription slot's start time), then customer name and order id; orders without a time (one-time orders and subscriptions from before #100) come last.
+
+*(#103)* Each row has `delivery_pincode` and `delivery_boy` (`{ delivery_boy_id, name, phone }` of the ACTIVE delivery boy covering that PIN code, or `null` = not assigned). `boy_counts` (orders per delivery boy) and `unassigned_count` always cover the whole day; with `boy` set, `deliveries`, `status_counts` and `product_totals` cover only that delivery boy's (or the unassigned) orders, so `product_totals` is his van load. `product_totals` adds up the items of the orders that are **not cancelled** (what to load); `status_counts` has every status (0 when none). Status changes use `PATCH /admin/orders/{id}/status`.
 
 ```json
 {
@@ -521,6 +529,21 @@ Sorted by delivery time (the subscription slot's start time), then customer name
 }
 ```
 `user_id` / `username` are `null` only for old guest orders (before #90); `subscription_id` and `delivery_slot` are `null` for one-time orders.
+
+## Delivery boys (#103) *(ADMIN)*
+
+The admin's list of delivery boys and their areas. Delivery boys do **not** log in.
+
+- Delivery boy: `name` 2–100, `phone` 10-digit Indian mobile number (unique → **409 `DELIVERY_BOY_ALREADY_EXISTS`**), `is_active` (default `true`).
+- Area: `pincode` (6 digits, not starting with 0) + optional `area_name` ≤ 50. **One delivery boy per PIN code**: allocating a PIN code someone has → **409 `AREA_ALREADY_ALLOCATED`** ("500016 is already allocated to Ravi Kumar. Remove it there first.").
+- Inactive delivery boys keep their areas, but their orders are "not assigned". Deleting one frees his areas (orders are not linked to delivery boys).
+
+```json
+{ "delivery_boy_id": 1, "name": "Ravi Kumar", "phone": "9876500001", "is_active": true,
+  "areas": [ { "pincode": "500016", "area_name": "Ameerpet" } ],
+  "created_at": "2026-11-14T10:00:00Z", "today_orders": 3 }
+```
+`today_orders`: today's orders (India time, not cancelled) in his areas. `GET` lists active first, then by name. `POST /admin/delivery-boys/{id}/areas` takes `{ "pincode": "500016", "area_name": "Ameerpet" }` and returns the delivery boy; `DELETE …/areas/{pincode}` returns him too (404 if it is not his area). `PATCH`: only the fields that change.
 
 ### GET /api/v1/admin/users/{id} *(ADMIN)*
 
@@ -642,7 +665,7 @@ Errors that do not come from a specific endpoint use the same shape: an unknown 
 | 401 | Not logged in, invalid/expired token, or wrong login details |
 | 403 | Logged in, but not allowed (a `USER` on an admin endpoint) |
 | 404 | Resource not found |
-| 409 | Conflicts with current state (unavailable product, illegal transition, duplicate product name + size, deleting an ordered product, email/username already registered, a second active subscription or cancelling one that is not active (#97), a full delivery slot, deleting a booked slot or switching off the last active one (#100), more than 10 saved addresses (#102)) |
+| 409 | Conflicts with current state (unavailable product, illegal transition, duplicate product name + size, deleting an ordered product, email/username already registered, a second active subscription or cancelling one that is not active (#97), a full delivery slot, deleting a booked slot or switching off the last active one (#100), more than 10 saved addresses (#102), a delivery boy phone or PIN code already taken (#103)) |
 | 422 | Schema validation failed |
 | 500 | Unexpected server error (details only in logs) |
 | 503 | Dependency (database) unavailable |

@@ -29,6 +29,7 @@
 | A7 | View subscriptions; their delivery orders are created automatically *(added by #97, #99)* |
 | A8 | Manage delivery time slots: add, edit, set capacity, switch off, delete *(added by #100)* |
 | A9 | Daily deliveries per user with status, and each user's full order list *(added by #101)* |
+| A10 | Keep a list of delivery boys and allocate areas (PIN codes) to them; deliveries are split per delivery boy *(added by #103; delivery boys do not log in, so the delivery partner app stays out of scope)* |
 
 ## Out of scope
 
