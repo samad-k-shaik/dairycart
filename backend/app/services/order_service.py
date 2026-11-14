@@ -5,6 +5,7 @@ The request only says which products and how many.
 """
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
@@ -16,9 +17,22 @@ from app.core.errors import (
     NotFoundError,
     ProductUnavailableError,
 )
-from app.models import Order, OrderItem, OrderStatus, Product, User, UserRole
+from app.models import (
+    DeliveryBoy,
+    Order,
+    OrderItem,
+    OrderStatus,
+    Product,
+    User,
+    UserRole,
+)
 from app.repositories.customer_repository import CustomerRepository
-from app.repositories.order_repository import OrderRepository, OrderRow
+from app.repositories.delivery_boy_repository import DeliveryBoyRepository
+from app.repositories.order_repository import (
+    AdminOrderFilters,
+    OrderRepository,
+    OrderRow,
+)
 from app.repositories.product_repository import ProductRepository
 from app.schemas.common import ErrorDetail
 from app.schemas.order import OrderCreate, OrderItemIn
@@ -171,13 +185,50 @@ def list_my_orders(db: Session, user: User) -> list[OrderRow]:
     return OrderRepository(db).list_by_user(user.user_id)
 
 
+@dataclass(frozen=True)
+class AdminOrderBoard:
+    """#104: one page of the admin Orders board."""
+
+    rows: list[tuple[Order, str | None, DeliveryBoy | None]]  # order, username, boy
+    total: int
+    status_counts: dict[OrderStatus, int]
+    boy_counts: list[tuple[DeliveryBoy, int]]
+    unassigned_count: int
+
+
 def list_admin_orders(
-    db: Session, *, status: OrderStatus | None, page: int, page_size: int
-) -> tuple[list[OrderRow], int, dict[OrderStatus, int]]:
-    """One page of orders, the total matching the filter, and counts for ALL orders."""
+    db: Session,
+    *,
+    status: OrderStatus | None,
+    page: int,
+    page_size: int,
+    filters: AdminOrderFilters | None = None,
+) -> AdminOrderBoard:
+    """One page of orders (newest first), the total matching every filter, the status
+    counts (every filter except the status) and the per-boy counts (#104)."""
+    filters = filters or AdminOrderFilters()
     repository = OrderRepository(db)
-    rows, total = repository.list_admin(status, page, page_size)
-    return rows, total, repository.count_by_status()
+    orders, total = repository.list_admin(status, page, page_size, filters)
+    allocation = DeliveryBoyRepository(db).active_allocation()  # PIN → active boy
+    per_boy, unassigned = repository.boy_counts(filters)
+    boys = {boy.delivery_boy_id: boy for boy in allocation.values()}
+    return AdminOrderBoard(
+        rows=[
+            (order, username, allocation.get(order.delivery_pincode or ""))
+            for order, username in orders
+        ],
+        total=total,
+        status_counts=repository.count_by_status(filters),
+        boy_counts=sorted(
+            (
+                (boys[boy_id], count)
+                for boy_id, count in per_boy.items()
+                if boy_id in boys
+            ),
+            key=lambda pair: pair[0].name.lower(),
+        ),
+        unassigned_count=unassigned,
+    )
 
 
 def update_status(db: Session, order_id: int, new_status: OrderStatus) -> Order:

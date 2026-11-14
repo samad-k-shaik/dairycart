@@ -1,4 +1,4 @@
-"""#101 API: GET /admin/deliveries, GET /admin/users/{id}, GET /admin/users/{id}/orders,
+"""#101 / #104 API: the admin Orders board's day view (GET /admin/orders?date=), GET /admin/users/{id}, GET /admin/users/{id}/orders,
 and GET /admin/subscriptions?user_id=. ADMIN only."""
 
 from datetime import UTC, datetime, timedelta
@@ -11,7 +11,7 @@ from app.models import OrderStatus, Product, User
 from app.services.subscription_service import today_ist
 from tests import factories
 
-DELIVERIES = "/api/v1/admin/deliveries"
+ORDERS = "/api/v1/admin/orders"
 USERS = "/api/v1/admin/users"
 
 
@@ -25,7 +25,7 @@ def milk(db_session: Session) -> Product:
     return factories.make_product(db_session, name="Cow Milk", price="60.00")
 
 
-@pytest.mark.parametrize("path", [DELIVERIES, f"{USERS}/1", f"{USERS}/1/orders"])
+@pytest.mark.parametrize("path", [ORDERS, f"{USERS}/1", f"{USERS}/1/orders"])
 def test_admin_only(client: TestClient, normal_user: User, path: str) -> None:
     assert client.get(path).status_code == 401
     assert (
@@ -33,71 +33,90 @@ def test_admin_only(client: TestClient, normal_user: User, path: str) -> None:
     )
 
 
-# ---- deliveries ----
+# ---- the Orders board's day view (#101 Deliveries, moved to /admin/orders in #104) ----
 
 
-def test_deliveries_default_to_today(
+def test_board_card_shape(
     client: TestClient, db_session: Session, milk: Product, normal_user: User, as_admin
 ) -> None:
     order = factories.make_order(db_session, items=[(milk, 2)], user=normal_user)
 
-    response = client.get(DELIVERIES, headers=as_admin)
+    response = client.get(
+        ORDERS, params={"date": today_ist().isoformat()}, headers=as_admin
+    )
 
     assert response.status_code == 200
     body = response.json()
-    assert body["date"] == today_ist().isoformat()
-    row = next(r for r in body["deliveries"] if r["order_id"] == order.order_id)
+    row = next(r for r in body["items"] if r["order_id"] == order.order_id)
     assert row == {
         "order_id": order.order_id,
-        "user_id": normal_user.user_id,
-        "username": normal_user.username,
         "customer_name": order.customer.name,
         "customer_phone": order.customer.phone,
-        "subscription_id": None,
-        "delivery_slot": None,
-        "delivery_pincode": None,  # #103: factory orders have no address
-        "delivery_boy": None,
+        "order_date": row["order_date"],
         "status": "PLACED",
         "total_amount": "120.00",
+        "item_count": 1,
+        "subscription_id": None,
+        "delivery_slot": None,
+        "user_id": normal_user.user_id,
+        "username": normal_user.username,
+        "delivery_date": None,
+        "delivery_pincode": None,  # #103: factory orders have no address
+        "delivery_boy": None,
         "items": [
             {
                 "product_id": milk.product_id,
                 "product_name": "Cow Milk",
                 "size": "1 Litre",
                 "quantity": 2,
+                "unit_price": "60.00",
+                "subtotal": "120.00",
             }
         ],
     }
-    assert {
-        "product_id": milk.product_id,
-        "product_name": "Cow Milk",
-        "size": "1 Litre",
-        "quantity": 2,
-    } in body["product_totals"]
     assert set(body["status_counts"]) == {s.value for s in OrderStatus}
+    assert body["unassigned_count"] >= 1
 
 
-def test_deliveries_for_another_date(
+def test_board_for_another_date(
     client: TestClient, db_session: Session, milk: Product, as_admin
 ) -> None:
     order = factories.make_order(db_session, items=[(milk, 1)])
     order.order_date = datetime(2026, 1, 15, 6, 0, tzinfo=UTC)  # 11:30 IST, 15 Jan
     db_session.flush()
 
-    on_day = client.get(
-        DELIVERIES, params={"date": "2026-01-15"}, headers=as_admin
-    ).json()
+    on_day = client.get(ORDERS, params={"date": "2026-01-15"}, headers=as_admin).json()
     next_day = client.get(
-        DELIVERIES, params={"date": "2026-01-16"}, headers=as_admin
+        ORDERS, params={"date": "2026-01-16"}, headers=as_admin
     ).json()
 
-    assert order.order_id in [r["order_id"] for r in on_day["deliveries"]]
-    assert order.order_id not in [r["order_id"] for r in next_day["deliveries"]]
+    assert order.order_id in [r["order_id"] for r in on_day["items"]]
+    assert order.order_id not in [r["order_id"] for r in next_day["items"]]
+    assert on_day["status_counts"]["PLACED"] == on_day["total"]
 
 
-def test_deliveries_bad_date(client: TestClient, as_admin) -> None:
-    response = client.get(DELIVERIES, params={"date": "15-01-2026"}, headers=as_admin)
-    assert response.status_code == 422
+def test_board_search(
+    client: TestClient, db_session: Session, milk: Product, as_admin
+) -> None:
+    customer = factories.make_customer(
+        db_session, name="Meena Iyer", phone="9876512399"
+    )
+    order = factories.make_order(db_session, customer=customer, items=[(milk, 1)])
+
+    by_name = client.get(ORDERS, params={"q": "meena"}, headers=as_admin).json()
+    by_number = client.get(
+        ORDERS, params={"q": f"#{order.order_id}"}, headers=as_admin
+    ).json()
+
+    assert order.order_id in [r["order_id"] for r in by_name["items"]]
+    assert [r["order_id"] for r in by_number["items"]] == [order.order_id]
+
+
+@pytest.mark.parametrize(
+    "params", [{"date": "15-01-2026"}, {"boy": "abc"}, {"boy": "0"}, {"q": "x" * 101}]
+)
+def test_board_bad_filters(client: TestClient, as_admin, params: dict) -> None:
+    assert client.get(ORDERS, params=params, headers=as_admin).status_code == 422
 
 
 # ---- one user ----

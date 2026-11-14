@@ -74,7 +74,17 @@ export type OrderSummary = {
   delivery_slot?: string | null
 }
 
-/** Admin order list row: one entry of GET /admin/orders `items`. */
+/** #104: one item on an Orders board card. */
+export type AdminOrderLine = {
+  product_id: number
+  product_name: string
+  size: string
+  quantity: number
+  unit_price: Money
+  subtotal: Money
+}
+
+/** Admin order list row / Orders board card: one entry of GET /admin/orders `items`. */
 export type AdminOrderSummary = {
   order_id: number
   customer_name: string
@@ -87,6 +97,13 @@ export type AdminOrderSummary = {
   subscription_id?: number | null
   /** #100: delivery time of a subscription order, e.g. "Morning, 8:00 AM – 9:00 AM". */
   delivery_slot?: string | null
+  /** #104: card details (optional: the offline M2 mocks do not send them). */
+  user_id?: number | null
+  username?: string | null
+  delivery_date?: string | null
+  delivery_pincode?: string | null
+  delivery_boy?: { delivery_boy_id: number; name: string; phone: string } | null
+  items?: AdminOrderLine[]
 }
 
 /** GET /admin/orders response (one page plus dashboard counts). */
@@ -95,8 +112,12 @@ export type AdminOrderPage = {
   page: number
   page_size: number
   total: number
-  /** Counts across ALL orders, ignoring filters. Feeds the admin dashboard. */
+  /** Counts ignoring the status filter; they follow date / boy / q (#104). Without
+   *  those filters: all orders (feeds the admin dashboard). */
   status_counts: Record<OrderStatus, number>
+  /** #104: orders per active delivery boy and unassigned ones (ignores boy + status). */
+  boy_counts?: { delivery_boy_id: number; name: string; orders: number }[]
+  unassigned_count?: number
 }
 
 /** Query options for GET /admin/orders. */
@@ -104,6 +125,12 @@ export type AdminOrderQuery = {
   status?: OrderStatus
   page?: number
   page_size?: number
+  /** #104: India delivery day "YYYY-MM-DD" (no value = all dates). */
+  date?: string
+  /** #104: a delivery boy's id, or "unassigned". */
+  boy?: string
+  /** #104: customer name, phone or order number. */
+  q?: string
 }
 
 /**

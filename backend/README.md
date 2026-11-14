@@ -177,7 +177,7 @@ What makes the order code safe:
 | `POST /api/v1/admin/delivery-boys/{id}/areas`, `DELETE …/areas/{pincode}` | Allocate / remove a PIN code | `401`, `403`, `404`, `409 AREA_ALREADY_ALLOCATED`, `422` |
 
 - One delivery boy per PIN code (`uq_delivery_areas_pincode`). Delivery boys are admin records, not users (no login).
-- Orders and subscriptions copy the address's PIN code (`delivery_pincode`, from `address_service.delivery_copy_for`). `delivery_service.deliveries_for(db, day, boy)` matches each order to the ACTIVE delivery boy for its PIN code (`DeliveryBoyRepository.active_allocation`, one query) and filters by `boy` (id or `"unassigned"`).
+- Orders and subscriptions copy the address's PIN code (`delivery_pincode`, from `address_service.delivery_copy_for`). The Orders board (`GET /admin/orders`, #104) matches each order to the ACTIVE delivery boy for its PIN code (`DeliveryBoyRepository.active_allocation`, one query) and filters by `boy` (id or `"unassigned"`); `delivery_service.todays_orders_per_boy` feeds the cards' "Today" count.
 - Rules: `app/services/delivery_boy_service.py`. Tests: `tests/api/test_delivery_boys.py`.
 
 ## Addresses (#102)
@@ -193,16 +193,16 @@ What makes the order code safe:
 - One default per user is a partial unique index; changing the default locks the user's addresses and clears the old default (flush) before setting the new one.
 - Test users from `tests/factories.make_user` get a default address (`with_address=False` for none). Tests: `tests/api/test_addresses.py`.
 
-## Admin daily deliveries and user details (#101)
+## Admin Orders board and user details (#101, #104)
 
 | Endpoint | Does | Errors |
 |---|---|---|
-| `GET /api/v1/admin/deliveries?date=YYYY-MM-DD` | One day's orders (default today, India time) with items, product totals (cancelled not counted) and status counts | `401`, `403`, `422` |
+| `GET /api/v1/admin/orders?status=&date=&boy=&q=&page=&page_size=` | *(#104)* Orders board: cards with items, delivery boy and PIN; status counts (ignore `status`), per-boy counts | `401`, `403`, `422` |
 | `GET /api/v1/admin/users/{id}` | User + `order_count` + `total_spent` (not cancelled) | `401`, `403`, `404` |
 | `GET /api/v1/admin/users/{id}/orders` | All of the user's orders, newest first | `401`, `403`, `404` |
 
-- A day = subscription orders with `delivery_date = day` + one-time orders whose `order_date` falls in that India day (`delivery_service.india_day_range`: 00:00 IST = 18:30 UTC the day before). One query loads the orders with customer, items, products, username and slot start (`OrderRepository.list_for_day`); totals and counts are added up in Python.
-- Rules in `app/services/delivery_service.py` and `app/services/user_service.py`. Tests: `tests/test_delivery_service.py`, `tests/api/test_admin_deliveries_and_users.py`.
+- A day = subscription orders with `delivery_date = day` + one-time orders whose `order_date` falls in that India day (`app/core/india_time.india_day_range`: 00:00 IST = 18:30 UTC the day before). The filters are SQL conditions in `OrderRepository._admin_query` (`AdminOrderFilters`); a page loads customer, items and products eagerly plus the username; `count_by_status(filters)` and `boy_counts(filters)` are grouped queries. `GET /admin/deliveries` (#101) was removed in #104.
+- Rules in `app/services/order_service.list_admin_orders` and `app/services/user_service.py`. Tests: `tests/test_admin_order_board.py`, `tests/api/test_admin_deliveries_and_users.py`.
 
 ## Stock (#92)
 

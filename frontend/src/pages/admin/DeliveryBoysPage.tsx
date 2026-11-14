@@ -49,7 +49,7 @@ function DeliveryBoysPage() {
             their address.
           </p>
           <Link
-            to="/admin/deliveries"
+            to="/admin/orders"
             className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-primary hover:underline"
           >
             <Truck className="size-4" aria-hidden="true" />

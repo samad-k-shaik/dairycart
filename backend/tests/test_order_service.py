@@ -208,6 +208,6 @@ def test_order_repository_lists(db_session: Session) -> None:
     rows, total = repository.list_admin(OrderStatus.CANCELLED, page=1, page_size=10)
 
     assert [r.order_id for r in history] == [second.order_id, first.order_id]
-    assert ([r.order_id for r in rows], total) == ([second.order_id], 1)
+    assert ([order.order_id for order, _ in rows], total) == ([second.order_id], 1)
     assert repository.count_by_status()[OrderStatus.PLACED] == 1
     assert repository.get_for_update(first.order_id) is first

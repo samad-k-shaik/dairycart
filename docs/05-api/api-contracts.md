@@ -19,7 +19,7 @@
 | POST | `/orders` | Place an order | 201 |
 | GET | `/orders/{id}` | Order details | 200 |
 | GET | `/orders/mine` | The logged-in user's orders *(#90)* | 200 |
-| GET | `/admin/orders` | All orders (filter, paginate) | 200 |
+| GET | `/admin/orders` | Orders board: filter (status, day, delivery boy, search), paginate *(#104)* | 200 |
 | PATCH | `/admin/orders/{id}/status` | Update order status | 200 |
 | POST | `/admin/products` | Add a product *(#86)* | 201 |
 | GET | `/admin/products` | All products **with stock numbers** *(#92)* | 200 |
@@ -52,7 +52,6 @@
 | DELETE | `/admin/delivery-boys/{id}` | Delete (frees his areas) *(#103)* | 204 |
 | POST | `/admin/delivery-boys/{id}/areas` | Allocate a PIN code *(#103)* | 200 |
 | DELETE | `/admin/delivery-boys/{id}/areas/{pincode}` | Remove a PIN code *(#103)* | 200 |
-| GET | `/admin/deliveries?date=` | One day's orders, product totals and status counts *(#101)* | 200 |
 | GET | `/admin/users/{id}` | One user with order count and amount spent *(#101)* | 200 |
 | GET | `/admin/users/{id}/orders` | All orders of one user *(#101)* | 200 |
 
@@ -202,27 +201,42 @@ Needs a logged-in user (#90). Only the user who placed the order, or an ADMIN, m
 
 ## GET /api/v1/admin/orders
 
+The admin Orders board (#104; it replaced the #101 `GET /admin/deliveries`, which was removed).
+
 | Query param | Type | Default | Description |
 |---|---|---|---|
 | `status` | enum | – | Filter by one status |
 | `page` | int ≥ 1 | 1 | Page number |
 | `page_size` | int 1–100 | 20 | Items per page |
+| `date` | `YYYY-MM-DD` | – (all dates) | *(#104)* An India delivery day: subscription orders **for** that day (`delivery_date`) + one-time orders **placed** that day (`order_date` from 00:00 IST to the next 00:00 IST, i.e. 18:30 UTC the day before) |
+| `boy` | id or `unassigned` | – | *(#103/#104)* Orders in a delivery boy's areas (by PIN code, active delivery boys only), or the ones no active delivery boy covers |
+| `q` | text ≤ 100 | – | *(#104)* Customer name or phone contains it, or the order number ("42" or "#42"; "#42" matches the number only) |
+
+Newest first. Bad `date`, `boy` (not an id / `unassigned`) or `q` → 422.
 
 **200 OK**
 ```json
 {
   "items": [
     { "order_id": 101, "customer_name": "Ravi Kumar", "customer_phone": "9876543210",
-      "order_date": "2026-11-07T04:30:00Z", "status": "PLACED", "total_amount": "155.00", "item_count": 2 }
+      "order_date": "2026-11-07T04:30:00Z", "status": "PLACED", "total_amount": "155.00", "item_count": 2,
+      "subscription_id": 3, "delivery_slot": "Morning, 8:00 AM – 9:00 AM",
+      "user_id": 7, "username": "ravi", "delivery_date": "2026-11-07", "delivery_pincode": "500016",
+      "delivery_boy": { "delivery_boy_id": 1, "name": "Kiran", "phone": "9876500001" },
+      "items": [ { "product_id": 2, "product_name": "Cow Milk", "size": "1 Litre", "quantity": 2, "unit_price": "60.00", "subtotal": "120.00" } ] }
   ],
   "page": 1,
   "page_size": 20,
   "total": 1,
-  "status_counts": { "PLACED": 1, "CONFIRMED": 0, "OUT_FOR_DELIVERY": 0, "DELIVERED": 0, "CANCELLED": 0 }
+  "status_counts": { "PLACED": 1, "CONFIRMED": 0, "OUT_FOR_DELIVERY": 0, "DELIVERED": 0, "CANCELLED": 0 },
+  "boy_counts": [ { "delivery_boy_id": 1, "name": "Kiran", "orders": 1 } ],
+  "unassigned_count": 0
 }
 ```
 
-`status_counts` (counts across all orders, ignoring filters) feeds the admin dashboard.
+- `status_counts` follow `date`, `boy` and `q` but **ignore `status`** (so the status chips keep their numbers); without those filters they count **all** orders and feed the admin dashboard.
+- *(#104)* `boy_counts` (per active delivery boy) and `unassigned_count` follow `date` and `q`, ignoring `boy` and `status`.
+- `delivery_boy` is the ACTIVE delivery boy covering `delivery_pincode` (looked up when read), or `null`. `user_id` / `username` are `null` only for old guest orders (before #90).
 
 ---
 
@@ -501,34 +515,6 @@ Send only the fields that change (at least one, no `null`). **200** with the adm
 | 422 | `VALIDATION_ERROR` | Bad name, time or capacity, or end not after start |
 
 ---
-
-## Admin daily deliveries (#101)
-
-### GET /api/v1/admin/deliveries?date=YYYY-MM-DD *(ADMIN)*
-
-Everything to deliver on one day. `date` is optional (default: **today, India time**); a badly formatted date → 422. *(#103)* `boy` is optional: a delivery boy's id or `unassigned`; anything else → 422 on `boy`.
-
-A day's orders are:
-- **subscription orders for that day** (`delivery_date = date`), and
-- **one-time orders placed that day**, India time (`order_date` from 00:00 IST to the next 00:00 IST, i.e. 18:30 UTC the day before to 18:30 UTC).
-
-Sorted by delivery time (the subscription slot's start time), then customer name and order id; orders without a time (one-time orders and subscriptions from before #100) come last.
-
-*(#103)* Each row has `delivery_pincode` and `delivery_boy` (`{ delivery_boy_id, name, phone }` of the ACTIVE delivery boy covering that PIN code, or `null` = not assigned). `boy_counts` (orders per delivery boy) and `unassigned_count` always cover the whole day; with `boy` set, `deliveries`, `status_counts` and `product_totals` cover only that delivery boy's (or the unassigned) orders, so `product_totals` is his van load. `product_totals` adds up the items of the orders that are **not cancelled** (what to load); `status_counts` has every status (0 when none). Status changes use `PATCH /admin/orders/{id}/status`.
-
-```json
-{
-  "date": "2026-11-21",
-  "status_counts": { "PLACED": 6, "CONFIRMED": 2, "OUT_FOR_DELIVERY": 0, "DELIVERED": 1, "CANCELLED": 0 },
-  "product_totals": [ { "product_id": 2, "product_name": "Cow Milk", "size": "1 Litre", "quantity": 7 } ],
-  "deliveries": [
-    { "order_id": 24, "user_id": 7, "username": "ravi", "customer_name": "Ravi Kumar", "customer_phone": "9876543210",
-      "subscription_id": 3, "delivery_slot": "Morning, 8:00 AM – 9:00 AM", "status": "PLACED", "total_amount": "120.00",
-      "items": [ { "product_id": 2, "product_name": "Cow Milk", "size": "1 Litre", "quantity": 2 } ] }
-  ]
-}
-```
-`user_id` / `username` are `null` only for old guest orders (before #90); `subscription_id` and `delivery_slot` are `null` for one-time orders.
 
 ## Delivery boys (#103) *(ADMIN)*
 

@@ -4,7 +4,7 @@
  * Each admin page renders inside <Outlet />.
  */
 import { NavLink, Outlet, useNavigate } from "react-router"
-import { Bike, ClipboardList, Clock, LayoutDashboard, LogOut, Package, Repeat, Store, Truck, Users } from "lucide-react"
+import { Bike, ClipboardList, Clock, LayoutDashboard, LogOut, Package, Repeat, Store, Users } from "lucide-react"
 
 import { DevCrashProbe } from "@/components/common/DevMockSwitch"
 import { Logo } from "@/components/common/Logo"
@@ -16,9 +16,8 @@ const adminLinks = [
   // `end`: "/admin" is active only on the dashboard, not on /admin/orders too.
   { to: "/admin", label: "Dashboard", short: "Home", Icon: LayoutDashboard, end: true }, // short: 6 tabs at 360px (#100)
   { to: "/admin/orders", label: "Orders", Icon: ClipboardList, end: false },
-  { to: "/admin/deliveries", label: "Deliveries", short: "Daily", Icon: Truck, end: false }, // #101
-  // #103: on phones, linked from the Deliveries page (the tab bar is full).
-  { to: "/admin/delivery-boys", label: "Delivery boys", short: "Boys", Icon: Bike, end: false, phone: false },
+  // #103 (#104: in the phone tab bar again, now that Deliveries joined Orders).
+  { to: "/admin/delivery-boys", label: "Delivery boys", short: "Boys", Icon: Bike, end: false },
   { to: "/admin/products", label: "Products", Icon: Package, end: false },
   { to: "/admin/users", label: "Users", Icon: Users, end: false }, // #89
   // #97. `short`: the phone tab bar has room for a short word only.

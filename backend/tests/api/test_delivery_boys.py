@@ -6,11 +6,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.core.india_time import today_ist
 from app.models import Product, User
 from tests import factories
 
 URL = "/api/v1/admin/delivery-boys"
-DELIVERIES = "/api/v1/admin/deliveries"
+ORDERS = "/api/v1/admin/orders"  # #104: the Orders board
 
 
 @pytest.fixture
@@ -188,8 +189,9 @@ def test_deliveries_are_matched_filtered_and_counted(
     s1 = order_in(client, db_session, milk, "500081")
     nobody = order_in(client, db_session, milk, "560001")
 
-    day = client.get(DELIVERIES, headers=as_admin).json()
-    by_id = {row["order_id"]: row for row in day["deliveries"]}
+    today = {"date": today_ist().isoformat()}
+    day = client.get(ORDERS, params=today, headers=as_admin).json()
+    by_id = {row["order_id"]: row for row in day["items"]}
     assert by_id[r1]["delivery_boy"]["name"] == "Ravi"
     assert by_id[r1]["delivery_pincode"] == "500016"
     assert by_id[s1]["delivery_boy"]["name"] == "Suresh"
@@ -199,20 +201,17 @@ def test_deliveries_are_matched_filtered_and_counted(
     assert day["unassigned_count"] >= 1
 
     only_ravi = client.get(
-        DELIVERIES, params={"boy": ravi["delivery_boy_id"]}, headers=as_admin
+        ORDERS, params={**today, "boy": ravi["delivery_boy_id"]}, headers=as_admin
     ).json()
-    assert {r["order_id"] for r in only_ravi["deliveries"]} == {r1, r2}
-    # The van load is Ravi's only: 2 orders × 2 bottles.
-    assert [
-        (t["product_name"], t["quantity"]) for t in only_ravi["product_totals"]
-    ] == [("Cow Milk", 4)]
+    assert {r["order_id"] for r in only_ravi["items"]} == {r1, r2}
+    assert only_ravi["status_counts"]["PLACED"] == 2  # chips follow the boy filter
     assert only_ravi["boy_counts"] == day["boy_counts"]  # counts ignore the filter
 
     unassigned = client.get(
-        DELIVERIES, params={"boy": "unassigned"}, headers=as_admin
+        ORDERS, params={**today, "boy": "unassigned"}, headers=as_admin
     ).json()
-    assert nobody in {r["order_id"] for r in unassigned["deliveries"]}
-    assert r1 not in {r["order_id"] for r in unassigned["deliveries"]}
+    assert nobody in {r["order_id"] for r in unassigned["items"]}
+    assert r1 not in {r["order_id"] for r in unassigned["items"]}
 
     listed = client.get(URL, headers=as_admin).json()
     today = {b["name"]: b["today_orders"] for b in listed}
@@ -229,9 +228,9 @@ def test_inactive_delivery_boy_orders_are_not_assigned(
         f"{URL}/{ravi['delivery_boy_id']}", json={"is_active": False}, headers=as_admin
     )
 
-    day = client.get(DELIVERIES, headers=as_admin).json()
+    day = client.get(ORDERS, headers=as_admin).json()
 
-    row = next(r for r in day["deliveries"] if r["order_id"] == order_id)
+    row = next(r for r in day["items"] if r["order_id"] == order_id)
     assert row["delivery_boy"] is None
     assert "Ravi" not in {c["name"] for c in day["boy_counts"]}
 
@@ -247,14 +246,14 @@ def test_moving_an_area_moves_its_orders(
     client.delete(f"{URL}/{ravi['delivery_boy_id']}/areas/500016", headers=as_admin)
     add_area(client, as_admin, suresh, "500016")
 
-    day = client.get(DELIVERIES, headers=as_admin).json()
-    row = next(r for r in day["deliveries"] if r["order_id"] == order_id)
+    day = client.get(ORDERS, headers=as_admin).json()
+    row = next(r for r in day["items"] if r["order_id"] == order_id)
     assert row["delivery_boy"]["name"] == "Suresh"
 
 
 def test_bad_boy_filter(client: TestClient, as_admin) -> None:
     for value in ["abc", "0", "-1"]:
-        response = client.get(DELIVERIES, params={"boy": value}, headers=as_admin)
+        response = client.get(ORDERS, params={"boy": value}, headers=as_admin)
         assert response.status_code == 422, value
 
 

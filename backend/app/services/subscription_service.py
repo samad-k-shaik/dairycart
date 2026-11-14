@@ -17,7 +17,7 @@
 """
 
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy.exc import IntegrityError
@@ -29,6 +29,7 @@ from app.core.errors import (
     SubscriptionAlreadyActiveError,
     SubscriptionNotActiveError,
 )
+from app.core.india_time import IST, today_ist  # noqa: F401 (re-exported)
 from app.models import (
     PLAN_DAYS,
     Order,
@@ -52,17 +53,12 @@ from app.schemas.subscription import SubscriptionCreate
 from app.services import address_service, delivery_slot_service
 from app.services.order_service import check_items
 
-IST = timezone(timedelta(hours=5, minutes=30), "IST")
 # How far ahead a subscription may start.
 MAX_DAYS_AHEAD = 30
 
 ALREADY_ACTIVE_MESSAGE = (
     "You already have an active subscription. Cancel it before starting a new one."
 )
-
-
-def today_ist() -> date:
-    return datetime.now(IST).date()
 
 
 def end_date_for(start: date, days: int) -> date:

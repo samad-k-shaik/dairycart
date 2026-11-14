@@ -8,12 +8,16 @@ extra query per item.
 from dataclasses import dataclass
 from datetime import date, datetime, time
 from decimal import Decimal
+from typing import Literal
 
-from sqlalchemy import Select, and_, func, or_, select
+from sqlalchemy import ColumnElement, Select, and_, func, or_, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
+from app.core.india_time import india_day_range
 from app.models import (
     Customer,
+    DeliveryArea,
+    DeliveryBoy,
     DeliverySlot,
     Order,
     OrderItem,
@@ -36,6 +40,56 @@ class OrderRow:
     item_count: int
     subscription_id: int | None  # #97: set for orders created from a subscription
     delivery_slot: str | None  # #100: the delivery time of a subscription order
+
+
+@dataclass(frozen=True)
+class AdminOrderFilters:
+    """#104: the admin Orders board filters (all optional).
+
+    day  → the India delivery day: subscription orders FOR that day (delivery_date) +
+           one-time orders PLACED that day (order_date between India midnights)
+    boy  → a delivery boy's id (orders in his areas) or "unassigned"
+    q    → search: customer name or phone (contains), or the order number
+    """
+
+    day: date | None = None
+    boy: int | Literal["unassigned"] | None = None
+    q: str | None = None
+
+
+def _active_areas():
+    """PIN codes of ACTIVE delivery boys, with the delivery boy's id (#103)."""
+    return (
+        select(DeliveryArea.pincode, DeliveryArea.delivery_boy_id)
+        .join(DeliveryBoy, DeliveryBoy.delivery_boy_id == DeliveryArea.delivery_boy_id)
+        .where(DeliveryBoy.is_active.is_(True))
+        .subquery()
+    )
+
+
+def _day_condition(day: date) -> ColumnElement[bool]:
+    starts, ends = india_day_range(day)
+    return or_(
+        and_(Order.subscription_id.is_not(None), Order.delivery_date == day),
+        and_(
+            Order.subscription_id.is_(None),
+            Order.order_date >= starts,
+            Order.order_date < ends,
+        ),
+    )
+
+
+def _search_condition(q: str) -> ColumnElement[bool]:
+    """Name or phone contains `q`; "42" or "#42" also matches order 42."""
+    text = q.strip()
+    conditions: list[ColumnElement[bool]] = [
+        Customer.name.ilike(f"%{text}%"),
+        Customer.phone.contains(text),
+    ]
+    number = text.removeprefix("#")
+    if number.isdigit() and len(number) <= 9:
+        conditions.append(Order.order_id == int(number))
+    return or_(*conditions)
 
 
 def _with_details(query: Select) -> Select:
@@ -99,24 +153,74 @@ class OrderRepository:
         )
         return self._rows(query)
 
-    def list_admin(
-        self, status: OrderStatus | None, page: int, page_size: int
-    ) -> tuple[list[OrderRow], int]:
-        """One page of orders (newest first), optionally one status, plus the total
-        number of orders matching the filter."""
+    def _admin_query(
+        self, filters: AdminOrderFilters, *, use_boy: bool = True
+    ) -> Select:
+        """SELECT orders JOIN customers with the board filters (not the status)."""
         query = select(Order).join(Order.customer)
+        if filters.day is not None:
+            query = query.where(_day_condition(filters.day))
+        if filters.q:
+            query = query.where(_search_condition(filters.q))
+        if use_boy and filters.boy is not None:
+            areas = _active_areas()
+            if filters.boy == "unassigned":
+                query = query.where(
+                    or_(
+                        Order.delivery_pincode.is_(None),
+                        Order.delivery_pincode.not_in(select(areas.c.pincode)),
+                    )
+                )
+            else:
+                query = query.where(
+                    Order.delivery_pincode.in_(
+                        select(areas.c.pincode).where(
+                            areas.c.delivery_boy_id == filters.boy
+                        )
+                    )
+                )
+        return query
+
+    def list_admin(
+        self,
+        status: OrderStatus | None,
+        page: int,
+        page_size: int,
+        filters: AdminOrderFilters | None = None,
+    ) -> tuple[list[tuple[Order, str | None]], int]:
+        """One page of orders (newest first) with customer, items and products loaded
+        eagerly, each with the account's username; plus how many match in total."""
+        query = self._admin_query(filters or AdminOrderFilters())
         if status is not None:
             query = query.where(Order.status == status)
 
         total = self.db.scalar(
             select(func.count()).select_from(query.order_by(None).subquery())
         )
-        page_query = (
-            query.order_by(Order.order_date.desc(), Order.order_id.desc())
+        page_query = _with_details(
+            query.add_columns(User.username)
+            .outerjoin(User, User.user_id == Order.user_id)
+            .order_by(Order.order_date.desc(), Order.order_id.desc())
             .limit(page_size)
             .offset((page - 1) * page_size)
         )
-        return self._rows(page_query), total or 0
+        rows = self.db.execute(page_query).unique().all()
+        return [(order, username) for order, username in rows], total or 0
+
+    def boy_counts(self, filters: AdminOrderFilters) -> tuple[dict[int, int], int]:
+        """#104: orders per active delivery boy (by PIN code) and the unassigned ones,
+        for the board filters except `boy` itself and the status."""
+        areas = _active_areas()
+        base = self._admin_query(filters, use_boy=False).subquery()
+        rows = self.db.execute(
+            select(areas.c.delivery_boy_id, func.count())
+            .select_from(base)
+            .outerjoin(areas, areas.c.pincode == base.c.delivery_pincode)
+            .group_by(areas.c.delivery_boy_id)
+        ).all()
+        per_boy = {boy_id: count for boy_id, count in rows if boy_id is not None}
+        unassigned = next((count for boy_id, count in rows if boy_id is None), 0)
+        return per_boy, unassigned
 
     def list_for_day(
         self, day: date, starts: datetime, ends: datetime
@@ -165,11 +269,15 @@ class OrderRepository:
         ).one()
         return count, total
 
-    def count_by_status(self) -> dict[OrderStatus, int]:
-        """How many orders have each status; statuses with no orders get 0."""
+    def count_by_status(
+        self, filters: AdminOrderFilters | None = None
+    ) -> dict[OrderStatus, int]:
+        """How many orders have each status; statuses with no orders get 0.
+        #104: only the orders matching the board filters (all orders without them)."""
         counts: dict[OrderStatus, int] = dict.fromkeys(OrderStatus, 0)
+        base = self._admin_query(filters or AdminOrderFilters()).subquery()
         rows = self.db.execute(
-            select(Order.status, func.count()).group_by(Order.status)
+            select(base.c.status, func.count()).group_by(base.c.status)
         ).all()
         for status, count in rows:
             counts[OrderStatus(status)] = count

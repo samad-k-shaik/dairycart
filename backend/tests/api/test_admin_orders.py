@@ -56,6 +56,13 @@ def test_list_newest_first_with_counts_across_all_orders(
         "item_count",
         "subscription_id",  # #97
         "delivery_slot",  # #100
+        # #104: the Orders board card
+        "user_id",
+        "username",
+        "delivery_date",
+        "delivery_pincode",
+        "delivery_boy",
+        "items",
     }
     everything = client.get(URL).json()
     assert [o["order_id"] for o in everything["items"]] == [
