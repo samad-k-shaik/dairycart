@@ -7,7 +7,7 @@ import { useState, type FormEvent } from "react"
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router"
 import { AlertCircle, CheckCircle2, Loader2, LogIn } from "lucide-react"
 
-import { userFacingMessage } from "@/components/common/ErrorState"
+import { userFacingMessage } from "@/services/serviceError"
 import { FormField } from "@/components/common/FormField"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/useAuth"

@@ -34,7 +34,7 @@ describe("sign-up validation (#89, #121: same rules as the backend)", () => {
   })
 
   it("every field is mandatory", () => {
-    assert.deepEqual(Object.keys(validateSignUp(EMPTY_SIGN_UP)).sort(), [
+    assert.deepEqual(Object.keys(validateSignUp(EMPTY_SIGN_UP)).toSorted(), [
       "confirm_password",
       "full_name",
       "password",

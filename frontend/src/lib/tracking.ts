@@ -21,15 +21,19 @@ export type SentReading = { position: LatLng; sentAt: number }
 
 const EARTH_RADIUS_M = 6_371_000
 
+function toRadians(degrees: number): number {
+  return (degrees * Math.PI) / 180
+}
+
 /**
  * Distance in metres between two points on Earth: the Haversine formula. It treats the
  * Earth as a sphere, which is accurate to well under 1 % at city distances.
  */
 export function distanceMeters(a: LatLng, b: LatLng): number {
-  const rad = (degrees: number) => (degrees * Math.PI) / 180
-  const dLat = rad(b.lat - a.lat)
-  const dLng = rad(b.lng - a.lng)
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2
+  const dLat = toRadians(b.lat - a.lat)
+  const dLng = toRadians(b.lng - a.lng)
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(toRadians(a.lat)) * Math.cos(toRadians(b.lat)) * Math.sin(dLng / 2) ** 2
   return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(h))
 }
 

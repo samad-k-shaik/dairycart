@@ -204,6 +204,7 @@ function MapView({ label, markers, center, zoom, className, onPick, autoFrame = 
 
   // Remove every pin when the map goes away (page left, or a new map).
   useEffect(() => {
+    if (!map) return
     const drawn = drawnRef.current
     return () => {
       for (const entry of drawn.values()) {

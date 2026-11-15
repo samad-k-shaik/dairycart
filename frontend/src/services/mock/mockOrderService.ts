@@ -138,7 +138,7 @@ export function getOrder(orderId: number): Promise<Order> {
 /** GET /orders/mine (#90). The mock has no accounts, so offline every mock order is "mine". */
 export function getMyOrders(): Promise<OrderSummary[]> {
   const summaries: OrderSummary[] = [...readDb().orders]
-    .sort(newestFirst)
+    .toSorted(newestFirst)
     .map((o) => ({
       order_id: o.order_id,
       order_date: o.order_date,
@@ -167,7 +167,7 @@ export function getAdminOrders(query: AdminOrderQuery = {}): Promise<AdminOrderP
   const allOrders = readDb().orders // empty in the dev "empty" mock mode
   const filtered = allOrders
     .filter((o) => query.status === undefined || o.status === query.status)
-    .sort(newestFirst)
+    .toSorted(newestFirst)
   const start = (page - 1) * pageSize
   const items: AdminOrderSummary[] = filtered.slice(start, start + pageSize).map((o) => ({
     order_id: o.order_id,

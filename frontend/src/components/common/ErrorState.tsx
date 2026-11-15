@@ -9,7 +9,7 @@
 import { AlertTriangle, Loader2, RotateCw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { ServiceError } from "@/services/serviceError"
+import { userFacingMessage } from "@/services/serviceError"
 import { cn } from "@/lib/utils"
 
 type ErrorStateProps = {
@@ -21,11 +21,6 @@ type ErrorStateProps = {
   /** True while the retry is running, to disable the button. */
   retrying?: boolean
   className?: string
-}
-
-export function userFacingMessage(error: unknown): string {
-  if (error instanceof ServiceError) return error.message
-  return "Please check your connection and try again."
 }
 
 export function ErrorState({ title, error, onRetry, retrying = false, className }: ErrorStateProps) {

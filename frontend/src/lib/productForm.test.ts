@@ -73,7 +73,7 @@ describe("normalizePrice (the contract's money format)", () => {
 describe("validateProductForm", () => {
   it("returns one message per invalid field", () => {
     const errors = validateProductForm({ name: "A", size: "", price: "0", stock: "-1", is_available: true })
-    assert.deepEqual(Object.keys(errors).sort(), ["name", "price", "size", "stock"])
+    assert.deepEqual(Object.keys(errors).toSorted(), ["name", "price", "size", "stock"])
   })
 
   it("returns no errors for a valid form", () => {

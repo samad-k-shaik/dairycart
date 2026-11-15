@@ -16,7 +16,7 @@ import { toast } from "sonner"
 
 import { AddressPicker } from "@/components/address/AddressPicker"
 import { EmptyState } from "@/components/common/EmptyState"
-import { userFacingMessage } from "@/components/common/ErrorState"
+import { userFacingMessage } from "@/services/serviceError"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"

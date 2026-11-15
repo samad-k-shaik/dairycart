@@ -20,12 +20,14 @@ export function syncQueriesAcrossTabs(queryClient: QueryClient): void {
 
   queryClient.getMutationCache().subscribe((event) => {
     if (event.type === "updated" && event.action.type === "success") {
+      // BroadcastChannel.postMessage has no target origin (same-origin only by design).
+      // oxlint-disable-next-line unicorn/require-post-message-target-origin
       channel.postMessage("changed")
     }
   })
 
   // Messages only arrive in OTHER tabs (a channel never receives its own messages).
-  channel.onmessage = () => {
+  channel.addEventListener("message", () => {
     void queryClient.invalidateQueries()
-  }
+  })
 }

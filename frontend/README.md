@@ -35,6 +35,9 @@ Use `npm ci` (not `npm install`) for normal setup so everyone gets identical dep
 | `npm run build` | Type-checks, then builds optimised production files into `dist/` |
 | `npm run preview` | Serves the built `dist/` locally to check the production build |
 | `npm run typecheck` | Type-checks all code without building (`tsc -b`) |
+| `npm run lint` | **Oxlint** (#52): TypeScript, React, React Hooks, accessibility and test rules; fails on warnings too |
+| `npm run format` | **Prettier** (#52): formats every file (no semicolons, double quotes, 120 columns) |
+| `npm run format:check` | Checks the formatting without changing files (what CI runs) |
 | `npm test` | Runs all tests once with **Vitest** (`src/**/*.test.ts(x)`) |
 | `npm run test:watch` | Re-runs the tests on every save |
 | `npm run test:coverage` | Tests + a coverage summary (HTML report in `coverage/`) |
@@ -42,6 +45,8 @@ Use `npm ci` (not `npm install`) for normal setup so everyone gets identical dep
 **Tests (#49, ADR-009):** Vitest uses the same settings as Vite (`vite.config.ts` → `test`), so `@/` imports and the React plugin work in tests. Tests run in **jsdom** (a browser simulated in Node). Pure logic is tested in `*.test.ts`; components with **React Testing Library** in `*.test.tsx`: render the component and find things the way a user does (`getByRole`, `getByLabelText`, `getByText`), then interact with `@testing-library/user-event`. `src/test/setup.ts` adds the jest-dom matchers (`toBeInTheDocument()`, `toBeDisabled()`…) and cleans up after each test. Tests are type-checked by `tsconfig.test.json`. (Before #49 the tests ran with Node's built-in runner; the older logic tests still use relative `.ts` imports from that time, which also work in Vitest.)
 
 `typecheck` uses `tsc -b` rather than `tsc --noEmit`: the root `tsconfig.json` only references `tsconfig.app.json` (app code), `tsconfig.node.json` (`vite.config.ts`) and `tsconfig.test.json` (tests, #49), so plain `tsc --noEmit` would check no files. Both referenced configs set `noEmit`, so nothing is written.
+
+**Lint and format (#52, ADR-010):** CI runs `npm run lint` and `npm run format:check`; run `npm run format` before committing (or let VS Code do it: the repository suggests the Oxc and Prettier extensions in `.vscode/extensions.json`). The linter is **Oxlint**, not ESLint: the project uses TypeScript 7, which ESLint's TypeScript parser does not support yet. To silence one finding on purpose, put `// oxlint-disable-next-line <rule> -- reason` above the line, and say why.
 
 ## Conventions
 

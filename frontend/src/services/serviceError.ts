@@ -25,3 +25,9 @@ export class ServiceError extends Error {
     return this.body.error.code
   }
 }
+
+/** The sentence to show for any failed request: the backend's message, or a network hint. */
+export function userFacingMessage(error: unknown): string {
+  if (error instanceof ServiceError) return error.message
+  return "Please check your connection and try again."
+}

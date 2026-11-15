@@ -37,7 +37,7 @@ describe("address form (#102)", () => {
 
   it("explains what is missing", () => {
     const errors = validateAddressForm({ ...EMPTY_ADDRESS_FORM, label: "" })
-    assert.deepEqual(Object.keys(errors).sort(), ["city", "house", "label", "pincode", "street"])
+    assert.deepEqual(Object.keys(errors).toSorted(), ["city", "house", "label", "pincode", "street"])
   })
 
   it("checks the PIN code like the backend", () => {

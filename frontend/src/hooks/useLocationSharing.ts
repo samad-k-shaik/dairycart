@@ -30,25 +30,24 @@ export type SharingState = {
 }
 
 const OFF: SharingState = { phase: "off", lastSentAt: null, error: null }
+const WAITING: SharingState = { phase: "waiting", lastSentAt: null, error: null }
+
+function canShareLocation(): boolean {
+  return "geolocation" in navigator && window.isSecureContext
+}
 
 export function useLocationSharing(onRound: boolean): SharingState {
   const queryClient = useQueryClient()
-  const [state, setState] = useState<SharingState>(OFF)
+  // The state of the CURRENT round. "off" and "not supported" are not stored: they follow
+  // directly from the inputs (see the return below), so no state update is needed for them.
+  const [state, setState] = useState<SharingState>(WAITING)
 
   useEffect(() => {
-    if (!onRound) {
-      setState(OFF)
-      return
-    }
-    if (!("geolocation" in navigator) || !window.isSecureContext) {
-      setState({ phase: "error", lastSentAt: null, error: locationErrorMessage(null) })
-      return
-    }
+    if (!onRound || !canShareLocation()) return
 
     let last: SentReading | null = null
     let sending = false
     let stopped = false
-    setState({ phase: "waiting", lastSentAt: null, error: null })
 
     function handle(position: GeolocationPosition) {
       if (stopped || sending || !isAccurateEnough(position.coords.accuracy)) return
@@ -93,10 +92,13 @@ export function useLocationSharing(onRound: boolean): SharingState {
       stopped = true
       navigator.geolocation.clearWatch(watchId)
       window.clearInterval(heartbeat)
+      setState(WAITING) // the next round starts fresh
     }
   }, [onRound, queryClient])
 
   useScreenWakeLock(onRound)
+  if (!onRound) return OFF
+  if (!canShareLocation()) return { phase: "error", lastSentAt: null, error: locationErrorMessage(null) }
   return state
 }
 

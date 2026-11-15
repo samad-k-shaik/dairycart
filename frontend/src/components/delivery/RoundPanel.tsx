@@ -15,16 +15,16 @@ import { agoLabel } from "@/lib/tracking"
 import { cn } from "@/lib/utils"
 import { ServiceError } from "@/services/serviceError"
 
+function showError(error: Error) {
+  toast.error(error instanceof ServiceError ? error.message : "Please try again.")
+}
+
 export function RoundPanel({ onRound }: { onRound: boolean }) {
   const start = useStartRound()
   const stop = useStopRound()
   const sharing = useLocationSharing(onRound)
   const now = useNow(onRound)
   const busy = start.isPending || stop.isPending
-
-  function fail(error: Error) {
-    toast.error(error instanceof ServiceError ? error.message : "Please try again.")
-  }
 
   if (!onRound) {
     return (
@@ -37,7 +37,7 @@ export function RoundPanel({ onRound }: { onRound: boolean }) {
           order is out for delivery. Sharing stops when you press <span className="font-semibold">Stop round</span>.
           Keep this page open: the screen stays on.
         </p>
-        <Button className="h-12 w-full" onClick={() => start.mutate(undefined, { onError: fail })} disabled={busy}>
+        <Button className="h-12 w-full" onClick={() => start.mutate(undefined, { onError: showError })} disabled={busy}>
           {start.isPending ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Navigation aria-hidden="true" />}
           Start round
         </Button>
@@ -76,7 +76,7 @@ export function RoundPanel({ onRound }: { onRound: boolean }) {
       <Button
         variant="outline"
         className="h-12 w-full"
-        onClick={() => stop.mutate(undefined, { onError: fail })}
+        onClick={() => stop.mutate(undefined, { onError: showError })}
         disabled={busy}
       >
         {stop.isPending ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Square aria-hidden="true" />}

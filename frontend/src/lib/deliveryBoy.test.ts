@@ -24,7 +24,7 @@ const RAVI: DeliveryBoy = {
 
 describe("delivery boy form (#103)", () => {
   it("needs a name and a valid mobile number", () => {
-    assert.deepEqual(Object.keys(validateBoyForm(EMPTY_BOY_FORM)).sort(), ["name", "phone"])
+    assert.deepEqual(Object.keys(validateBoyForm(EMPTY_BOY_FORM)).toSorted(), ["name", "phone"])
     assert.match(validateBoyForm(EMPTY_BOY_FORM).name ?? "", /delivery boy's name/)
     assert.ok(validateBoyForm({ name: "Ravi", phone: "5876500001", is_active: true }).phone)
     assert.deepEqual(validateBoyForm({ name: "Ravi", phone: "9876500001", is_active: true }), {})
