@@ -1,0 +1,16 @@
+# Files Docker must NOT copy into the frontend build (#57).
+# node_modules is reinstalled inside the image by `npm ci` (Linux versions of the packages).
+node_modules/
+dist/
+coverage/
+.vite/
+
+# Local settings and secrets; the image gets its settings from build arguments
+.env
+.env.*
+
+# Editor / OS files
+.DS_Store
+.idea/
+.vscode/
+*.log
