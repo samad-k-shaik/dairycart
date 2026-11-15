@@ -87,6 +87,7 @@ Font: **Manrope**, self-hosted via `@fontsource-variable/manrope` (all weights i
 | Sheet / Dialog | shadcn | Admin order details, confirmations |
 | Toast | shadcn `Sonner` | Success/error feedback |
 | Icons | Lucide React | `ShoppingCart`, `Plus`, `Minus`, `Package`, `Truck`, `CheckCircle2`, `LayoutDashboard` |
+| Map | custom `LazyMapView` (Leaflet + OpenStreetMap, #107, ADR-018) | Card look: `rounded-2xl`, `shadow-card`, default height `h-72` (grey `bg-muted` placeholder while loading). Round 36 px pins with a white border: home = `House` on `primary`; delivery boy = `Bike` on `warning` (the OUT_FOR_DELIVERY colour); stale delivery boy = `Bike` on `muted-foreground`. Attribution "© OpenStreetMap contributors" always visible. Mouse-wheel zoom off (page scrolling stays normal); zoom buttons, double-click and pinch work |
 
 ## Screens (M2 scope)
 

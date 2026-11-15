@@ -1,0 +1,15 @@
+/*
+ * Small adjustments to Leaflet's own styles (#107). Loaded only with MapView, so pages
+ * without a map never download them.
+ */
+
+/* Leaflet sets its own font (Helvetica); use the app's font instead (design system). */
+.leaflet-container {
+  font-family: inherit;
+}
+
+/* Our markers are drawn by React inside Leaflet's divIcon: no default white box around them. */
+.leaflet-div-icon.map-pin {
+  background: transparent;
+  border: none;
+}
