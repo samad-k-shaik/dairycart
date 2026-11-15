@@ -193,7 +193,7 @@ erDiagram
 | full_name | VARCHAR(100) | NOT NULL | 2–100 characters |
 | phone | VARCHAR(10) | NOT NULL, UNIQUE, CHECK `^[6-9][0-9]{9}$` | The login (#121): 10-digit mobile number, saved without `+91` or spaces. Separate from `customers.phone`, which is the delivery contact typed at checkout. (`email` and `username` were removed in #121.) |
 | password_hash | VARCHAR(100) | NOT NULL | bcrypt hash (60 chars). **Never** the password |
-| role | VARCHAR(10) | NOT NULL, DEFAULT `'USER'`, CHECK in (`USER`, `ADMIN`) | `ADMIN` only via `python -m app.scripts.create_admin` |
+| role | VARCHAR(20) | NOT NULL, DEFAULT `'USER'`, CHECK in (`USER`, `ADMIN`, `DELIVERY_BOY`) | `ADMIN` only via `python -m app.scripts.create_admin`; `DELIVERY_BOY` only via the admin's "Give login" (#109) |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
 
 ### SUBSCRIPTIONS (#97)
@@ -273,8 +273,9 @@ The migration inserts two standard slots: Morning 08:00–09:00 and Evening 17:0
 | phone | VARCHAR(10) | NOT NULL, UNIQUE, CHECK `^[6-9][0-9]{9}$` | 10-digit mobile number |
 | is_active | BOOLEAN | NOT NULL, DEFAULT TRUE | Inactive: areas kept, orders not assigned |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
+| user_id | INTEGER | FK → users, NULL, UNIQUE, ON DELETE SET NULL | #109: his login (role `DELIVERY_BOY`, same phone and name); NULL = no login |
 
-Admin records only: delivery boys do not log in.
+Admin records. Since #109 the admin can give a delivery boy a login (`user_id`); deleting the delivery boy also deletes that account.
 
 ### DELIVERY_AREAS (#103)
 
@@ -293,11 +294,7 @@ Approved by #106 (ADR-018). Each change arrives in its own Alembic migration in 
 
 **Map pins (#108): done.** Now part of ADDRESSES, ORDERS and SUBSCRIPTIONS above (migration `aa76e3a3f9c4`).
 
-**New column on DELIVERY_BOYS (#109)**
-
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| user_id | INTEGER | FK → users, NULL, UNIQUE | The delivery boy's login (role `DELIVERY_BOY`); NULL = no login yet |
+**Delivery boy login (#109): done.** `delivery_boys.user_id` and the `DELIVERY_BOY` role are part of the tables above (migration `55754c848525`).
 
 **New table DELIVERY_LOCATIONS (#110)**: the latest position only, one row per delivery boy, overwritten on every update (upsert).
 
@@ -379,7 +376,8 @@ Every constraint has an explicit, readable name (set by the naming convention in
 | subscription_items | `ck_subscription_items_quantity_range`, `…_unit_price_positive`, `…_subtotal_non_negative` | as for order_items (#97) |
 | subscription_items | `uq_subscription_items_product` | (subscription_id, product_id) is unique (#97) |
 | users | `uq_users_phone`, `ck_users_phone_format` | phone unique and a 10-digit mobile number (#121) |
-| users | `ck_users_role_allowed` | role is `USER` or `ADMIN` |
+| users | `ck_users_role_allowed` | role is `USER`, `ADMIN` or `DELIVERY_BOY` (#109) |
+| delivery_boys | `uq_delivery_boys_user_id`, `delivery_boys_user_id_fkey` | one login per delivery boy; → users, ON DELETE SET NULL (#109) |
 
 Primary keys use PostgreSQL's default names (`customers_pkey`, …).
 

@@ -2,14 +2,15 @@
  * Route: `/admin/delivery-boys` (#103). The admin's list of delivery boys and the areas
  * (PIN codes) allocated to each. One delivery boy per PIN code. Orders are matched to a
  * delivery boy by the PIN code of their address on the Deliveries page.
- * Delivery boys do not log in (a delivery partner app is out of scope).
+ * #109: the admin can give a delivery boy a login ("Give login"); he then uses /delivery.
  */
 import { useState, type FormEvent } from "react"
 import { Link } from "react-router"
-import { Bike, Loader2, MapPin, Pencil, Phone, Plus, Trash2, Truck, X } from "lucide-react"
+import { Bike, KeyRound, Loader2, MapPin, Pencil, Phone, Plus, Trash2, Truck, X } from "lucide-react"
 import { toast } from "sonner"
 
 import { DeliveryBoyFormSheet } from "@/components/admin/DeliveryBoyFormSheet"
+import { DeliveryLoginSheet } from "@/components/admin/DeliveryLoginSheet"
 import { EmptyState } from "@/components/common/EmptyState"
 import { ErrorState } from "@/components/common/ErrorState"
 import {
@@ -37,6 +38,7 @@ function DeliveryBoysPage() {
   const query = useDeliveryBoys()
   const [form, setForm] = useState<FormState>({ open: false })
   const [toDelete, setToDelete] = useState<DeliveryBoy | null>(null)
+  const [loginFor, setLoginFor] = useState<DeliveryBoy | null>(null) // #109
   const openAdd = () => setForm({ open: true, boy: null })
 
   return (
@@ -90,7 +92,12 @@ function DeliveryBoysPage() {
         <ul className="grid gap-3 md:grid-cols-2" aria-label="Delivery boys">
           {query.data.map((boy) => (
             <li key={boy.delivery_boy_id}>
-              <BoyCard boy={boy} onEdit={() => setForm({ open: true, boy })} onDelete={() => setToDelete(boy)} />
+              <BoyCard
+                boy={boy}
+                onEdit={() => setForm({ open: true, boy })}
+                onDelete={() => setToDelete(boy)}
+                onLogin={() => setLoginFor(boy)}
+              />
             </li>
           ))}
         </ul>
@@ -98,11 +105,14 @@ function DeliveryBoysPage() {
 
       <DeliveryBoyFormSheet open={form.open} boy={form.open ? form.boy : null} onClose={() => setForm({ open: false })} />
       <DeleteBoyDialog boy={toDelete} onClose={() => setToDelete(null)} />
+      <DeliveryLoginSheet boy={loginFor} onClose={() => setLoginFor(null)} />
     </div>
   )
 }
 
-function BoyCard({ boy, onEdit, onDelete }: { boy: DeliveryBoy; onEdit: () => void; onDelete: () => void }) {
+type BoyCardProps = { boy: DeliveryBoy; onEdit: () => void; onDelete: () => void; onLogin: () => void }
+
+function BoyCard({ boy, onEdit, onDelete, onLogin }: BoyCardProps) {
   const removeArea = useRemoveArea()
   return (
     <article className="h-full space-y-3 rounded-2xl bg-surface p-4 shadow-card" aria-label={boy.name}>
@@ -126,6 +136,7 @@ function BoyCard({ boy, onEdit, onDelete }: { boy: DeliveryBoy; onEdit: () => vo
           <Badge className="bg-primary-soft font-semibold text-primary" data-testid="today-orders">
             Today: {boy.today_orders}
           </Badge>
+          {boy.has_login && <Badge className="bg-amber-50 font-semibold text-amber-700">Can log in</Badge>}
         </div>
       </div>
 
@@ -172,6 +183,11 @@ function BoyCard({ boy, onEdit, onDelete }: { boy: DeliveryBoy; onEdit: () => vo
         <Button variant="outline" className="h-11" onClick={onEdit}>
           <Pencil aria-hidden="true" />
           Edit<span className="sr-only"> {boy.name}</span>
+        </Button>
+        <Button variant="outline" className="h-11" onClick={onLogin}>
+          <KeyRound aria-hidden="true" />
+          {boy.has_login ? "New password" : "Give login"}
+          <span className="sr-only"> for {boy.name}</span>
         </Button>
         <Button variant="outline" className="h-11 text-danger hover:text-danger" onClick={onDelete}>
           <Trash2 aria-hidden="true" />

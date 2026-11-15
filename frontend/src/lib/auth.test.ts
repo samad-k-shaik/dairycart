@@ -87,6 +87,7 @@ describe("after login", () => {
   it("users go to the User Dashboard, admins to the Admin Dashboard", () => {
     assert.equal(pathAfterLogin("USER", null), "/account")
     assert.equal(pathAfterLogin("ADMIN", null), "/admin")
+    assert.equal(pathAfterLogin("DELIVERY_BOY", null), "/delivery") // #109
   })
 
   it("goes back to the page that asked for the login", () => {

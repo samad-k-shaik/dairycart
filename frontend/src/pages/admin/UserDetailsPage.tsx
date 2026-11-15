@@ -10,6 +10,7 @@ import { ArrowLeft, ClipboardList, Repeat } from "lucide-react"
 import { OrderDetailsSheet } from "@/components/admin/OrderDetailsSheet"
 import { EmptyState } from "@/components/common/EmptyState"
 import { ErrorState } from "@/components/common/ErrorState"
+import { RoleBadge } from "@/components/common/RoleBadge"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -70,11 +71,7 @@ function UserDetails({ userId }: { userId: number }) {
                 {user.data.phone} · joined {formatDate(user.data.created_at)}
               </p>
             </div>
-            {user.data.role === "ADMIN" ? (
-              <Badge className="bg-primary-soft font-semibold text-primary">Admin</Badge>
-            ) : (
-              <Badge className="bg-muted font-semibold text-muted-foreground">User</Badge>
-            )}
+            <RoleBadge role={user.data.role} />
           </div>
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Fact label="Orders" value={String(user.data.order_count)} testId="order-count" />

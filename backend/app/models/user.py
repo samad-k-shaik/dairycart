@@ -18,12 +18,15 @@ from app.database.base import Base
 
 class UserRole(StrEnum):
     """USER: everyone who signs up. ADMIN: may use the admin area.
+    DELIVERY_BOY (#109): a delivery boy's login, created by the admin on the Delivery
+    boys page; it opens the /delivery pages only.
 
     ADMIN is never given by the API; only the create_admin script sets it.
     """
 
     USER = "USER"
     ADMIN = "ADMIN"
+    DELIVERY_BOY = "DELIVERY_BOY"  # #109
 
 
 _ROLE_VALUES_SQL = ",".join(f"'{role.value}'" for role in UserRole)
@@ -51,7 +54,7 @@ class User(Base):
             UserRole,
             native_enum=False,
             create_constraint=False,
-            length=10,
+            length=20,  # #109: room for DELIVERY_BOY (12)
             values_callable=lambda roles: [r.value for r in roles],
         ),
         default=UserRole.USER,

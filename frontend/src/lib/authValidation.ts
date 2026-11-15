@@ -5,7 +5,7 @@
  * Each function returns an error message, or null when the value is valid.
  * (Relative ".ts" imports so Node's test runner can load this file.)
  */
-import type { RegisterRequest } from "../types/auth.ts"
+import type { RegisterRequest, UserRole } from "../types/auth.ts"
 import { normaliseMobile, validateName, validatePhone } from "./validation.ts"
 
 export type SignUpValues = {
@@ -71,9 +71,11 @@ export function toRegisterRequest(values: SignUpValues): RegisterRequest {
 }
 
 /** Where to go after login: the `next` page if it is a safe in-app path, else by role. */
-export function pathAfterLogin(role: "USER" | "ADMIN", next: string | null): string {
+export function pathAfterLogin(role: UserRole, next: string | null): string {
   // Only paths inside this app ("/…", not "//evil.com" or "https://…"): an open redirect
   // would let a link send people to another site right after they log in.
   if (next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\")) return next
-  return role === "ADMIN" ? "/admin" : "/account"
+  if (role === "ADMIN") return "/admin"
+  if (role === "DELIVERY_BOY") return "/delivery" // #109
+  return "/account"
 }

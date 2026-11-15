@@ -53,6 +53,10 @@
 | DELETE | `/admin/delivery-boys/{id}` | Delete (frees his areas) *(#103)* | 204 |
 | POST | `/admin/delivery-boys/{id}/areas` | Allocate a PIN code *(#103)* | 200 |
 | DELETE | `/admin/delivery-boys/{id}/areas/{pincode}` | Remove a PIN code *(#103)* | 200 |
+| PUT | `/admin/delivery-boys/{id}/login` | Give a delivery boy a login, or a new password *(#109)* | 200 |
+| GET | `/delivery/me` | Logged-in delivery boy: his record and areas *(#109)* | 200 |
+| GET | `/delivery/me/orders` | His day's orders (his PIN codes, not cancelled) *(#109)* | 200 |
+| PATCH | `/delivery/me/orders/{id}/status` | Mark his order out for delivery / delivered *(#109)* | 200 |
 | GET | `/admin/users/{id}` | One user with order count and amount spent *(#101)* | 200 |
 | GET | `/admin/users/{id}/orders` | All orders of one user *(#101)* | 200 |
 
@@ -552,7 +556,7 @@ Rules:
 
 ## Delivery boys (#103) *(ADMIN)*
 
-The admin's list of delivery boys and their areas. Delivery boys do **not** log in.
+The admin's list of delivery boys and their areas. Since #109 a delivery boy can get a **login** (see [Delivery boy app](#delivery-boy-app-109)).
 
 - Delivery boy: `name` 2–100, `phone` 10-digit Indian mobile number (unique → **409 `DELIVERY_BOY_ALREADY_EXISTS`**), `is_active` (default `true`).
 - Area: `pincode` (6 digits, not starting with 0) + optional `area_name` ≤ 50. **One delivery boy per PIN code**: allocating a PIN code someone has → **409 `AREA_ALREADY_ALLOCATED`** ("500016 is already allocated to Ravi Kumar. Remove it there first.").
@@ -561,9 +565,42 @@ The admin's list of delivery boys and their areas. Delivery boys do **not** log 
 ```json
 { "delivery_boy_id": 1, "name": "Ravi Kumar", "phone": "9876500001", "is_active": true,
   "areas": [ { "pincode": "500016", "area_name": "Ameerpet" } ],
-  "created_at": "2026-11-14T10:00:00Z", "today_orders": 3 }
+  "created_at": "2026-11-14T10:00:00Z", "today_orders": 3, "has_login": true }
 ```
-`today_orders`: today's orders (India time, not cancelled) in his areas. `GET` lists active first, then by name. `POST /admin/delivery-boys/{id}/areas` takes `{ "pincode": "500016", "area_name": "Ameerpet" }` and returns the delivery boy; `DELETE …/areas/{pincode}` returns him too (404 if it is not his area). `PATCH`: only the fields that change.
+`today_orders`: today's orders (India time, not cancelled) in his areas. `GET` lists active first, then by name. `POST /admin/delivery-boys/{id}/areas` takes `{ "pincode": "500016", "area_name": "Ameerpet" }` and returns the delivery boy; `DELETE …/areas/{pincode}` returns him too (404 if it is not his area). `PATCH`: only the fields that change; if he has a login, its mobile number and name follow (another account already using the new number → **409 `USER_ALREADY_EXISTS`**). Deleting a delivery boy also deletes his login.
+
+### PUT /api/v1/admin/delivery-boys/{id}/login *(#109)*
+
+Body `{ "password": "deliver123" }` (same rules as sign-up: 8+ characters, a letter and a number → otherwise **422**). Creates his account (his `phone` and `name`, role `DELIVERY_BOY`), or sets a new password if he has one. **200** with the delivery boy (`has_login: true`); the password is never returned. **409 `USER_ALREADY_EXISTS`** if another account (e.g. a customer) already uses his mobile number: an existing account is never taken over. **404** for an unknown id.
+
+---
+
+## Delivery boy app (#109)
+
+For a logged-in **DELIVERY_BOY** whose delivery boy record is **active**: **401** without a login, **403 `FORBIDDEN`** for customers, admins and switched-off delivery boys (checked on every request, so switching him off ends his access at once).
+
+### GET /api/v1/delivery/me
+
+```json
+{ "delivery_boy_id": 1, "name": "Ravi Kumar", "phone": "9876500001",
+  "areas": [ { "pincode": "500016", "area_name": "Ameerpet" } ] }
+```
+
+### GET /api/v1/delivery/me/orders?date=YYYY-MM-DD
+
+The orders to deliver that day (default: today, India time; same day rule as the admin Orders board) whose `delivery_pincode` is one of **his** areas, **not cancelled**, sorted by slot time (one-time orders last), then order id. Only what he needs at the door: no item prices.
+```json
+[ { "order_id": 41, "status": "CONFIRMED", "delivery_date": "2026-11-16", "delivery_slot": "Morning, 8:00 AM – 9:00 AM",
+    "customer_name": "Ravi Kumar", "customer_phone": "9876543210",
+    "delivery_address": "12-3 Sai Residency, MG Road, Ameerpet, Hyderabad - 500016", "delivery_pincode": "500016",
+    "delivery_latitude": 17.4375, "delivery_longitude": 78.4483, "total_amount": "120.00",
+    "items": [ { "product_name": "Cow Milk", "size": "1L", "quantity": 2 } ] } ]
+```
+An invalid `date` → **422**.
+
+### PATCH /api/v1/delivery/me/orders/{id}/status
+
+Body `{ "status": "OUT_FOR_DELIVERY" }` or `{ "status": "DELIVERED" }`; any other status → **422** (confirming and cancelling stay with the admin). The normal transition rules apply: `CONFIRMED → OUT_FOR_DELIVERY → DELIVERED`, otherwise **409 `INVALID_STATUS_TRANSITION`**. An order outside his areas → **404** (like a missing one). **200** with the order in the shape above.
 
 ### GET /api/v1/admin/users/{id} *(ADMIN)*
 
@@ -613,10 +650,12 @@ Tokens are JWTs (HS256) that expire after `JWT_EXPIRE_MINUTES` (default 60). Sen
 ```json
 { "access_token": "eyJhbGciOiJIUzI1NiIs...", "token_type": "bearer", "expires_in": 3600, "user": { "user_id": 7, "full_name": "Ravi Kumar", "phone": "9876543210", "role": "USER", "created_at": "2026-11-10T10:00:00Z" } }
 ```
+`role` is `USER`, `ADMIN` or `DELIVERY_BOY` (#109); the frontend opens `/account`, `/admin` or `/delivery` accordingly.
 
 | Status | Code | When |
 |---|---|---|
 | 401 | `UNAUTHORIZED` | "Invalid mobile number or password." The same message for a number without an account and a wrong password |
+| 403 | `FORBIDDEN` | *(#109)* Right password, but a delivery boy the admin switched off: "Your delivery account is switched off. Please contact the dairy." |
 | 422 | `VALIDATION_ERROR` | `phone` or `password` missing, or `phone` is not a valid mobile number |
 
 ### GET /api/v1/auth/me

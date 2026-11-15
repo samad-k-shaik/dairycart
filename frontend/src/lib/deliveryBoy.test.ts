@@ -19,6 +19,7 @@ const RAVI: DeliveryBoy = {
   areas: [{ pincode: "500016", area_name: "Ameerpet" }],
   created_at: "2026-11-14T10:00:00Z",
   today_orders: 3,
+  has_login: false,
 }
 
 describe("delivery boy form (#103)", () => {

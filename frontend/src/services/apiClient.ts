@@ -1,7 +1,7 @@
 /**
  * apiClient: the ONE place that talks HTTP to the backend (M3-08).
  *
- * Services call get / post / patch / del with a path such as "/products"; this file adds
+ * Services call get / post / patch / put / del with a path such as "/products"; this file adds
  * the base URL, sends JSON, and turns every failure into a ServiceError with the
  * backend's message, so pages handle errors the same way as before.
  *
@@ -17,7 +17,7 @@ import { errorFromResponse, networkError } from "@/services/apiError"
 
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1").replace(/\/$/, "")
 
-type Method = "GET" | "POST" | "PATCH" | "DELETE"
+type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE"
 
 async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
   const session = readSession()
@@ -52,6 +52,8 @@ export const api = {
   get: <T>(path: string) => request<T>("GET", path),
   post: <T>(path: string, body: unknown) => request<T>("POST", path, body),
   patch: <T>(path: string, body: unknown) => request<T>("PATCH", path, body),
+  /** #109: replace or create a resource (e.g. a delivery boy's login). */
+  put: <T>(path: string, body: unknown) => request<T>("PUT", path, body),
   // Usually 204 (no body); #103: removing an area answers 200 with the delivery boy.
   del: <T = void>(path: string) => request<T>("DELETE", path),
 }

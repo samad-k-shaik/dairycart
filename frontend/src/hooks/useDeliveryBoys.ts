@@ -11,6 +11,7 @@ import {
   deleteDeliveryBoy,
   getDeliveryBoys,
   removeArea,
+  setDeliveryBoyLogin,
   updateDeliveryBoy,
 } from "@/services/deliveryBoyService"
 import type { AreaInput, DeliveryBoyInput, DeliveryBoyUpdate } from "@/types/deliveryBoy"
@@ -39,6 +40,15 @@ export function useUpdateDeliveryBoy() {
   const refresh = useRefresh()
   return useMutation({
     mutationFn: ({ id, changes }: { id: number; changes: DeliveryBoyUpdate }) => updateDeliveryBoy(id, changes),
+    onSuccess: refresh,
+  })
+}
+
+/** #109: give a delivery boy a login, or a new password. */
+export function useSetDeliveryBoyLogin() {
+  const refresh = useRefresh()
+  return useMutation({
+    mutationFn: ({ id, password }: { id: number; password: string }) => setDeliveryBoyLogin(id, password),
     onSuccess: refresh,
   })
 }

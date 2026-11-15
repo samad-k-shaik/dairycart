@@ -67,11 +67,11 @@ CREATE TABLE users (
     full_name      VARCHAR(100)  NOT NULL,
     phone          VARCHAR(10)   NOT NULL,   -- 10 digits, without +91
     password_hash  VARCHAR(100)  NOT NULL,   -- bcrypt hash, never the password
-    role           VARCHAR(10)   NOT NULL DEFAULT 'USER',
+    role           VARCHAR(20)   NOT NULL DEFAULT 'USER',
     created_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     CONSTRAINT uq_users_phone UNIQUE (phone),
     CONSTRAINT ck_users_phone_format CHECK (phone ~ '^[6-9][0-9]{9}$'),
-    CONSTRAINT ck_users_role_allowed CHECK (role IN ('USER','ADMIN'))
+    CONSTRAINT ck_users_role_allowed CHECK (role IN ('USER','ADMIN','DELIVERY_BOY'))  -- DELIVERY_BOY: #109
 );
 
 -- Orders belong to the account that placed them (#90, migration add_user_id_to_orders).
@@ -178,6 +178,8 @@ CREATE TABLE delivery_boys (
     phone           VARCHAR(10) NOT NULL CONSTRAINT ck_delivery_boys_phone_format CHECK (phone ~ '^[6-9][0-9]{9}$'),
     is_active       BOOLEAN NOT NULL DEFAULT TRUE,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- #109: his login account (role DELIVERY_BOY); NULL = no login.
+    user_id         INTEGER REFERENCES users (user_id) ON DELETE SET NULL CONSTRAINT uq_delivery_boys_user_id UNIQUE,
     CONSTRAINT uq_delivery_boys_phone UNIQUE (phone)
 );
 CREATE TABLE delivery_areas (

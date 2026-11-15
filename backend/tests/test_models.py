@@ -180,6 +180,7 @@ ERD_COLUMNS = {
         "phone": ("VARCHAR(10)", False),
         "is_active": ("BOOLEAN", False),
         "created_at": ("TIMESTAMP WITH TIME ZONE", False),
+        "user_id": ("INTEGER", True),  # #109: his login (NULL = none)
     },
     "delivery_areas": {
         "delivery_area_id": ("INTEGER", False),
@@ -277,6 +278,7 @@ def test_check_and_unique_constraints_have_readable_names(schema: Engine) -> Non
         "uq_delivery_slots_times",  # #100
         "uq_delivery_boys_phone",  # #103
         "uq_delivery_areas_pincode",  # #103
+        "uq_delivery_boys_user_id",  # #109: one login per delivery boy
     }
 
 

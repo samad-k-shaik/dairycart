@@ -29,6 +29,14 @@ class DeliveryBoyRepository:
         )
         return self.db.scalars(query).first()
 
+    def get_by_user(self, user_id: int) -> DeliveryBoy | None:
+        """#109: the delivery boy who logs in with this account, with his areas."""
+        return self.db.scalar(
+            select(DeliveryBoy)
+            .options(selectinload(DeliveryBoy.areas))
+            .where(DeliveryBoy.user_id == user_id)
+        )
+
     def find_by_phone(self, phone: str, *, exclude_id: int | None = None) -> DeliveryBoy | None:
         query = select(DeliveryBoy).where(DeliveryBoy.phone == phone)
         if exclude_id is not None:

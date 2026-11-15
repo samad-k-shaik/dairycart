@@ -5,7 +5,7 @@
  * (?tab=addresses) so checkout can link straight to the addresses.
  */
 import { Link, useNavigate, useSearchParams } from "react-router"
-import { LayoutDashboard, LogOut, MapPin, ReceiptText, Repeat, ShoppingBag, UserRound } from "lucide-react"
+import { Bike, LayoutDashboard, LogOut, MapPin, ReceiptText, Repeat, ShoppingBag, UserRound } from "lucide-react"
 
 import { AddressesPanel } from "@/components/address/AddressesPanel"
 
@@ -121,6 +121,14 @@ function UserDashboardPage() {
                 My subscriptions
               </Link>
             </Button>
+            {user?.role === "DELIVERY_BOY" && (
+              <Button asChild className="h-12 justify-start sm:col-span-2">
+                <Link to="/delivery">
+                  <Bike aria-hidden="true" />
+                  Open my deliveries
+                </Link>
+              </Button>
+            )}
             {isAdmin && (
               <Button asChild className="h-12 justify-start sm:col-span-2">
                 <Link to="/admin">

@@ -49,6 +49,12 @@ export function addArea(id: number, area: AreaInput): Promise<DeliveryBoy> {
   return api.post(`${BASE}/${id}/areas`, area)
 }
 
+/** #109: create his login, or set a new password. 409 if another account uses his number. */
+export function setDeliveryBoyLogin(id: number, password: string): Promise<DeliveryBoy> {
+  if (USE_MOCKS) return needsBackend()
+  return api.put(`${BASE}/${id}/login`, { password })
+}
+
 export function removeArea(id: number, pincode: string): Promise<DeliveryBoy> {
   if (USE_MOCKS) return needsBackend()
   return api.del<DeliveryBoy>(`${BASE}/${id}/areas/${pincode}`)

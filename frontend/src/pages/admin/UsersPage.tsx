@@ -9,7 +9,7 @@ import { Users } from "lucide-react"
 
 import { EmptyState } from "@/components/common/EmptyState"
 import { ErrorState } from "@/components/common/ErrorState"
-import { Badge } from "@/components/ui/badge"
+import { RoleBadge } from "@/components/common/RoleBadge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatDate } from "@/lib/format"
@@ -69,11 +69,7 @@ function UsersPage() {
                   </TableCell>
                   <TableCell className="hidden md:table-cell">{user.phone}</TableCell>
                   <TableCell>
-                    {user.role === "ADMIN" ? (
-                      <Badge className="bg-primary-soft font-semibold text-primary">Admin</Badge>
-                    ) : (
-                      <Badge className="bg-muted font-semibold text-muted-foreground">User</Badge>
-                    )}
+                    <RoleBadge role={user.role} />
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground sm:table-cell">{formatDate(user.created_at)}</TableCell>
                 </TableRow>

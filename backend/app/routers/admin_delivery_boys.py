@@ -1,5 +1,6 @@
 """Admin delivery boys and their areas (#103). ADMIN only (401 / 403 otherwise).
-Delivery boys are records kept by the admin; they do not log in.
+Delivery boys are records kept by the admin. Since #109 the admin can give one a login
+(his mobile number + a password) for the /delivery pages.
 
     GET    /api/v1/admin/delivery-boys                       → all, with areas + today's orders
     POST   /api/v1/admin/delivery-boys                       → add            (201)
@@ -7,6 +8,7 @@ Delivery boys are records kept by the admin; they do not log in.
     DELETE /api/v1/admin/delivery-boys/{id}                  → delete (frees his areas, 204)
     POST   /api/v1/admin/delivery-boys/{id}/areas            → allocate a PIN code
     DELETE /api/v1/admin/delivery-boys/{id}/areas/{pincode}  → remove a PIN code
+    PUT    /api/v1/admin/delivery-boys/{id}/login            → his login / new password (#109)
 
 Rules: services/delivery_boy_service.py.
 """
@@ -25,6 +27,7 @@ from app.schemas.delivery_boy import (
     DeliveryBoyCreate,
     DeliveryBoyRead,
     DeliveryBoyUpdate,
+    DeliveryLoginSet,
 )
 from app.services import delivery_boy_service, delivery_service
 from app.services.subscription_service import today_ist
@@ -53,6 +56,7 @@ def _read(db: Session, boy: DeliveryBoy, counts: dict[int, int] | None = None) -
         counts = delivery_service.todays_orders_per_boy(db, today_ist())
     read = DeliveryBoyRead.model_validate(boy)
     read.today_orders = counts.get(boy.delivery_boy_id, 0)
+    read.has_login = boy.user_id is not None  # #109
     return read
 
 
@@ -127,3 +131,19 @@ def add_area(delivery_boy_id: BoyId, data: AreaCreate, db: DbSession) -> Deliver
 )
 def remove_area(delivery_boy_id: BoyId, pincode: Pincode, db: DbSession) -> DeliveryBoyRead:
     return _read(db, delivery_boy_service.remove_area(db, delivery_boy_id, pincode))
+
+
+@router.put(
+    "/{delivery_boy_id}/login",
+    response_model=DeliveryBoyRead,
+    summary="Create his login, or set a new password (#109)",
+    responses={
+        404: _error("No such delivery boy"),
+        409: _error("USER_ALREADY_EXISTS: another account already uses his mobile number"),
+        422: _error("Password breaks the rules (8+ characters, a letter and a number)"),
+    },
+)
+def set_login(delivery_boy_id: BoyId, data: DeliveryLoginSet, db: DbSession) -> DeliveryBoyRead:
+    """He logs in with his mobile number and this password, on the /delivery pages.
+    The password is never returned; tell it to him in person."""
+    return _read(db, delivery_boy_service.set_login(db, delivery_boy_id, data.password))

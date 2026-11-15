@@ -5,9 +5,10 @@ from collections.abc import Sequence
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.errors import UnauthorizedError, UserAlreadyExistsError
+from app.core.errors import ForbiddenError, UnauthorizedError, UserAlreadyExistsError
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models import User, UserRole
+from app.repositories.delivery_boy_repository import DeliveryBoyRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import RegisterRequest
 from app.schemas.common import ErrorDetail
@@ -16,6 +17,9 @@ from app.schemas.common import ErrorDetail
 # anyone find out which mobile numbers have an account.
 INVALID_LOGIN_MESSAGE = "Invalid mobile number or password."
 ALREADY_REGISTERED_MESSAGE = "An account with this mobile number already exists."
+DELIVERY_SWITCHED_OFF_MESSAGE = (
+    "Your delivery account is switched off. Please contact the dairy."  # #109
+)
 
 
 def register(db: Session, data: RegisterRequest) -> User:
@@ -57,6 +61,12 @@ def login(db: Session, phone: str, password: str) -> tuple[str, int, User]:
     password_ok = verify_password(password, user.password_hash if user else None)
     if user is None or not password_ok:
         raise UnauthorizedError(INVALID_LOGIN_MESSAGE)
+    # #109: a switched-off delivery boy cannot log in. The password was right, so saying
+    # why does not reveal anything new.
+    if user.role == UserRole.DELIVERY_BOY:
+        boy = DeliveryBoyRepository(db).get_by_user(user.user_id)
+        if boy is None or not boy.is_active:
+            raise ForbiddenError(DELIVERY_SWITCHED_OFF_MESSAGE)
     token, expires_in = create_access_token(user.user_id, user.role.value)
     return token, expires_in, user
 

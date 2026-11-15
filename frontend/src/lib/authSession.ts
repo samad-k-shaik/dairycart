@@ -27,7 +27,7 @@ export function parseSession(raw: string | null, now: number = Date.now()): Sess
       typeof value.expiresAt !== "number" ||
       // #121: sessions saved before mobile login have no phone: treat them as logged out.
       typeof value.user?.phone !== "string" ||
-      (value.user.role !== "USER" && value.user.role !== "ADMIN")
+      !["USER", "ADMIN", "DELIVERY_BOY"].includes(value.user.role) // #109
     ) {
       return null
     }

@@ -29,6 +29,7 @@ from app.routers import (
     admin_subscriptions,
     admin_users,
     auth,
+    delivery,
     delivery_slots,
     health,
     orders,
@@ -74,7 +75,7 @@ app.add_middleware(RequestIdMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE"],  # PUT: #109
     allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
     expose_headers=["X-Request-ID", "Location"],
 )
@@ -97,3 +98,4 @@ app.include_router(admin_delivery_slots.router, prefix=API_PREFIX)  # #100
 app.include_router(addresses.router, prefix=API_PREFIX)  # #102
 app.include_router(admin_delivery_boys.router, prefix=API_PREFIX)  # #103
 app.include_router(admin_income.router, prefix=API_PREFIX)  # #105
+app.include_router(delivery.router, prefix=API_PREFIX)  # #109

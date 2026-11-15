@@ -11,6 +11,7 @@ import { RequireAuth } from "@/components/auth/RequireAuth"
 import { RouteErrorFallback } from "@/components/common/RouteErrorFallback"
 import AdminLayout from "@/layouts/AdminLayout"
 import CustomerLayout from "@/layouts/CustomerLayout"
+import DeliveryLayout from "@/layouts/DeliveryLayout"
 import DashboardPage from "@/pages/admin/DashboardPage"
 import OrdersPage from "@/pages/admin/OrdersPage"
 import ProductsPage from "@/pages/admin/ProductsPage"
@@ -30,6 +31,7 @@ import OrderHistoryPage from "@/pages/customer/OrderHistoryPage"
 import ProductDetailsPage from "@/pages/customer/ProductDetailsPage"
 import SubscriptionsPage from "@/pages/customer/SubscriptionsPage"
 import UserDashboardPage from "@/pages/customer/UserDashboardPage"
+import TodayDeliveriesPage from "@/pages/delivery/TodayDeliveriesPage"
 import DesignPage from "@/pages/DesignPage"
 import NotFoundPage from "@/pages/NotFoundPage"
 
@@ -90,6 +92,21 @@ export const router = createBrowserRouter([
       { path: "subscriptions", element: <AdminSubscriptionsPage /> }, // #97
       { path: "delivery-slots", element: <DeliverySlotsPage /> }, // #100
       { path: "*", element: <NotFoundPage homePath="/admin" /> },
+    ],
+  },
+  {
+    // Delivery boy route tree (#109): his own phone pages. Not logged in → /login;
+    // logged in with another role → "Delivery boys only".
+    path: "/delivery",
+    element: (
+      <RequireAuth role="DELIVERY_BOY">
+        <DeliveryLayout />
+      </RequireAuth>
+    ),
+    errorElement: <RouteErrorFallback />,
+    children: [
+      { index: true, element: <TodayDeliveriesPage /> },
+      { path: "*", element: <NotFoundPage homePath="/delivery" /> },
     ],
   },
   // TEMPORARY design review page (M2-02); no layout. Remove after M2-14 approval.

@@ -4,7 +4,8 @@
  */
 import type { IsoDateTime } from "./order.ts"
 
-export type UserRole = "USER" | "ADMIN"
+/** #109: DELIVERY_BOY = a delivery boy's login (created by the admin); opens /delivery only. */
+export type UserRole = "USER" | "ADMIN" | "DELIVERY_BOY"
 
 /** POST /auth/register (201), GET /auth/me, one row of GET /admin/users. */
 export type User = {
