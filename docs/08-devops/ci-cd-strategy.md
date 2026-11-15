@@ -1,6 +1,6 @@
 # CI/CD Strategy
 
-CI/CD is built **incrementally**. In M0 there is a placeholder workflow only; real pipelines arrive in M5 (CI) and M6 (CD).
+CI/CD is built **incrementally**. **CI is live since M5** (`.github/workflows/ci.yml`, #60 #61); CD (deployment) arrives in M6.
 
 ## Pipeline overview
 
@@ -11,7 +11,7 @@ flowchart LR
     ci --> fe[Frontend: eslint, tsc, vitest, vite build]
     ci --> dk[Docker: build images]
     be & fe & dk --> ok{All green?}
-    ok -->|yes + 1 approval| merge[Merge to develop]
+    ok -->|yes| merge[Merge to develop]
     merge --> rel[Release PR develop → main]
     rel --> cd[CD workflow on main]
     cd --> push[Build & push images to Artifact Registry]
@@ -20,23 +20,26 @@ flowchart LR
     deploy --> smoke[Smoke test /api/v1/health]
 ```
 
-## Workflows (planned)
+## Workflows
 
 | File | Trigger | Jobs | Milestone |
 |---|---|---|---|
-| `.github/workflows/ci-placeholder.yml` | PR, push to `develop`/`main` | Checks repo docs exist | M0 |
-| `.github/workflows/ci.yml` | PR to `develop`/`main` | `backend`, `frontend`, `docker-build` | M5 |
+| ~~`.github/workflows/ci-placeholder.yml`~~ | – | Removed in M5 (#61), replaced by `ci.yml` | M0 |
+| `.github/workflows/ci.yml` | PR to and push on `develop`/`main` | `backend`, `frontend`, `docker-build` (in parallel) | M5 ✅ |
 | `.github/workflows/deploy.yml` | Push to `main`, manual | `build-push`, `deploy` (environment: `production`) | M6 |
 
 ## CI details (M5)
 
 | Job | Steps |
 |---|---|
-| backend | Python 3.12 → install deps → `ruff check` → `alembic upgrade head` on service Postgres → `pytest --cov` |
-| frontend | Node 20 LTS → `npm ci` → `npm run lint` → `npm run typecheck` → `npm test -- --run` → `npm run build` |
-| docker-build | `docker build` backend and frontend images (no push) |
+| backend | Python 3.12 (pip cache) → install deps → `ruff check` → `ruff format --check` → `alembic upgrade head` on a PostgreSQL 16 service container → `pytest --cov` (test database `milk_delivery_test`) |
+| frontend | Node 24 (npm cache) → `npm ci` → `npm run typecheck` → `npm test` → `npm run build` |
+| docker-build | `docker compose build backend frontend` (builds both images, nothing is pushed) |
 
-Caching: pip and npm caches via `actions/setup-python` and `actions/setup-node`.
+- Node 24, not 20: Vite 8 needs Node 20.19+/22.12+ and Node 20 is end-of-life; same version as the frontend Docker image.
+- **Not yet in CI:** frontend lint (ESLint arrives with M4 #52) and a coverage minimum (M4 #53). Add them to `ci.yml` when those issues are done.
+- A newer push to the same branch cancels the older run (`concurrency`).
+- Where to see results: the **Checks** section at the bottom of every PR, or the **Actions** tab.
 
 ## CD details (M6)
 

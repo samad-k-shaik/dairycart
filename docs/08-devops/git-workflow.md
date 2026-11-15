@@ -98,25 +98,26 @@ Scopes: `backend`, `frontend`, `db`, `api`, `docs`, `ci`, `infra`.
 - [ ] Is documentation updated?
 - [ ] **Can the author explain the code, including AI-generated parts?**
 
-## Branch protection (target configuration)
+## Branch protection (current configuration)
+
+Set in **Settings → Branches** for `main` and `develop` (#62). The project owner decided in M5 to manage merges without required approvals; CI is the safety net.
 
 | Rule | `main` | `develop` |
 |---|---|---|
-| Require pull request before merging | ✅ | ✅ |
-| Required approvals | 1 | 1 |
-| Dismiss stale approvals on new commits | ✅ | ✅ |
-| Require conversation resolution | ✅ | ✅ |
-| Require status checks (CI) | ✅ (from M5) | ✅ (from M5) |
+| Require pull request before merging | By team agreement | By team agreement |
+| Required approvals | 0 (reviews encouraged, not enforced) | 0 |
+| Require conversation resolution | ❌ | ❌ |
+| **Require status checks: `backend`, `frontend`, `docker-build`** | ✅ | ✅ |
+| Require branch to be up to date before merging | ✅ | ✅ |
 | Block force pushes | ✅ | ✅ |
 | Block deletion | ✅ | ✅ |
-| Restrict who can merge | Maintainers | Maintainers + contributors with write |
-| Admin bypass | Allowed (emergency only, must be explained in PR) | Allowed |
+| Apply rules to admins too | ✅ | ✅ |
 
-**Why admin bypass is allowed:** with a small team, a single maintainer must be able to fix a broken setting without locking everyone out. Bypass use must be rare and documented.
+**What this means:** nobody, including admins, can merge a PR while a CI check is red or still running. Fix the code, push again, and wait for all three ✅.
 
-**Required status checks are added only after the CI workflow exists (M5).** Requiring a check that never runs would block every PR.
+**"Branch is out of date":** click **Update branch** on the PR (it merges the latest `develop` into your branch), wait for CI, then merge.
 
-**Note:** GitHub only enforces branch protection / rulesets on **private** repositories with a paid plan (Pro, Team or Enterprise). On a free plan, protection works only on **public** repositories. If protection cannot be enabled, the rules above are enforced by team agreement and review.
+**Check names must match the job IDs in `.github/workflows/ci.yml` exactly.** If a job is renamed, update the required checks too, or every PR waits forever for a check that never runs.
 
 ## Releases
 
