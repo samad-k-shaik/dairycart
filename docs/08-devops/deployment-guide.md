@@ -49,8 +49,47 @@ npm run dev
 
 ## 3. Full stack with Docker Compose (M5)
 
+One command starts the database, backend and frontend (#58). Only Docker Desktop is needed; Python and Node run inside the containers.
+
 ```bash
-docker compose up --build
+docker compose up --build      # build images and start everything (add -d to run in the background)
+docker compose ps              # all three should show "Up"; db and backend "(healthy)"
+docker compose logs -f backend # follow the backend log
+docker compose down            # stop; database data is kept
+docker compose down -v         # stop and DELETE all data (fresh start)
+```
+
+| Service | Container | Address on your computer | Image |
+|---|---|---|---|
+| `db` | `milk-delivery-db` | `localhost:5432` | `postgres:16-alpine` |
+| `backend` | `milk-delivery-backend` | http://localhost:8000 (API docs at `/docs`) | `infrastructure/docker/backend.Dockerfile` |
+| `frontend` | `milk-delivery-frontend` | http://localhost:5173 (nginx on 8080 inside) | `infrastructure/docker/frontend.Dockerfile` |
+| `pgadmin` | `milk-delivery-pgadmin` | http://localhost:5050 (database viewer, local only, ADR-017) | `dpage/pgadmin4:9.19` |
+
+**Viewing the data (pgAdmin).** Open http://localhost:5050 and log in with `admin@example.com` / `admin123` (local only). In the left panel: **Servers → DairyCart (local Docker) → Databases → milk_delivery → Schemas → public → Tables**. Right-click a table → **View/Edit Data → All Rows**. The connection comes from `infrastructure/docker/pgadmin-servers.json` (read on pgAdmin's first start; after changing it, run `docker compose down -v` or remove the `pgadmin-data` volume). Use pgAdmin to *look* at data; change the database structure only through Alembic migrations.
+
+**Start order.** `db` becomes healthy → `backend` runs `alembic upgrade head`, the product seed and `create_admin` (on later starts the admin already exists; this is logged and ignored), then starts and becomes healthy → `frontend` starts.
+
+**Logins (local only).** Website admin `admin` / `admin_local_only_123` (customers register on the website). pgAdmin `admin@example.com` / `admin123`. PostgreSQL `milk_user` / `milk_password_local_only`.
+
+**Settings.** Local-only defaults are in `docker-compose.yml`. To override the JWT secret or admin password, create a git-ignored `.env` file in the repository root:
+
+```bash
+JWT_SECRET_KEY=<at least 32 random characters>
+ADMIN_PASSWORD=<letters and numbers>
+```
+
+`ADMIN_PASSWORD` is only used when the admin is first created (an empty database).
+
+**Frontend API address.** `VITE_API_BASE_URL` is baked into the JavaScript at build time (`http://localhost:8000/api/v1`, because the browser runs on your computer). Changing it requires `docker compose up --build`.
+
+**Port 5432 already in use?** Another PostgreSQL (e.g. Postgres.app) is running. Stop it, or change the `db` port mapping to `"5433:5432"`.
+
+**Backend tests against the Compose database** (from `backend/` with its `.venv`):
+
+```bash
+docker compose exec db createdb -U milk_user milk_delivery_test   # once per fresh volume
+pytest
 ```
 
 ## 4. GCP deployment (M6 – outline)

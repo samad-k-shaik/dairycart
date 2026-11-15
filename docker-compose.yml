@@ -1,10 +1,18 @@
-# Milk Delivery POC – local development stack
+# DairyCart – full local stack (#58)
 #
-# PLACEHOLDER (M0). Only the database service is defined so the target
-# architecture is visible. The backend and frontend services are added in
-# milestone M5 – Docker and CI, once the Dockerfiles exist.
+#   docker compose up --build      start database + backend + frontend → http://localhost:5173
+#                                  (+ pgAdmin database viewer → http://localhost:5050)
+#   docker compose down            stop (database data is kept in the "postgres-data" volume)
+#   docker compose down -v         stop AND delete all data (fresh start next time)
 #
-# Do not use these credentials outside local development.
+# Start order: db (healthy) → backend (migrations + seed, then healthy) → frontend.
+# Inside this network, services find each other by NAME: the backend reaches the
+# database at host "db", not "localhost".
+#
+# ⚠️ Every password and secret in this file is for LOCAL development only.
+#    Never reuse them anywhere else. To use your own values, put them in a
+#    git-ignored ".env" file next to this file (Compose reads it automatically):
+#      JWT_SECRET_KEY=...   ADMIN_PASSWORD=...
 
 services:
   db:
@@ -15,10 +23,11 @@ services:
       POSTGRES_USER: milk_user
       POSTGRES_PASSWORD: milk_password_local_only
     ports:
+      # Also reachable from your computer (backend tests, database tools).
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      # Schema is created by Alembic migrations (M1), not by init.sql.
+      # Schema is created by Alembic migrations, not by init.sql.
       # database/init.sql is a reference DDL for learning; see database/README.md.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U milk_user -d milk_delivery"]
@@ -26,8 +35,99 @@ services:
       timeout: 5s
       retries: 10
 
-  # backend:   -> added in M5 (FastAPI, port 8000)
-  # frontend:  -> added in M5 (Vite, port 5173)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../infrastructure/docker/backend.Dockerfile
+    container_name: milk-delivery-backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://milk_user:milk_password_local_only@db:5432/milk_delivery
+      # The browser opens the site at localhost:5173, so that origin may call the API.
+      CORS_ORIGINS: http://localhost:5173
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-local-only-jwt-secret-do-not-use-elsewhere-0123456789}
+      APP_ENV: local
+      LOG_LEVEL: INFO
+      # Password for the "admin" login created on first start (must contain a letter and a number).
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin_local_only_123}
+    # Before the API starts:
+    #   1. alembic upgrade head → create/update the tables
+    #   2. seed                 → add the starting products (safe to repeat)
+    #   3. create_admin         → add the "admin" login; on later starts it already
+    #                             exists, which is reported and ignored
+    command:
+      - sh
+      - -c
+      - |
+        alembic upgrade head &&
+        python -m app.scripts.seed &&
+        { python -m app.scripts.create_admin --username admin --email admin@dairycart.local --full-name "Dairy Admin" ||
+          echo "Admin not created (it most likely exists already) - continuing."; } &&
+        exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # The slim Python image has no curl, so Python itself calls the health endpoint.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../infrastructure/docker/frontend.Dockerfile
+      # Second build folder, so the Dockerfile can read nginx.conf.
+      additional_contexts:
+        docker-config: ./infrastructure/docker
+      args:
+        # The BROWSER calls the API, and the browser runs on your computer → localhost:8000.
+        VITE_API_BASE_URL: http://localhost:8000/api/v1
+    container_name: milk-delivery-frontend
+    ports:
+      # Your computer's port 5173 → nginx's port 8080 inside the container.
+      - "5173:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # Database viewer in the browser → http://localhost:5050 (local only, ADR-017).
+  # Log in with admin@example.com / admin123; the DairyCart database is already
+  # listed under "Servers". Never deployed anywhere.
+  pgadmin:
+    image: dpage/pgadmin4:9.19
+    container_name: milk-delivery-pgadmin
+    environment:
+      # pgAdmin login. Deliberately simple: this only runs on your own computer.
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      # No extra "master password" prompt for saved connection passwords.
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    # Write the database password to a "pgpass" file (PostgreSQL's standard password file)
+    # so pgAdmin connects without asking, then start pgAdmin normally.
+    # pgAdmin looks for it in the user's storage folder (admin@example.com → admin_example.com).
+    entrypoint:
+      - sh
+      - -c
+      - |
+        mkdir -p /var/lib/pgadmin/storage/admin_example.com &&
+        printf 'db:5432:*:milk_user:milk_password_local_only\n' > /var/lib/pgadmin/storage/admin_example.com/pgpass &&
+        chmod 600 /var/lib/pgadmin/storage/admin_example.com/pgpass &&
+        exec /entrypoint.sh
+    volumes:
+      # The pre-configured connection (read once, on pgAdmin's first start).
+      - ./infrastructure/docker/pgadmin-servers.json:/pgadmin4/servers.json:ro
+      # pgAdmin's own settings (saved queries, layout) survive restarts.
+      - pgadmin-data:/var/lib/pgadmin
+    ports:
+      - "5050:80"
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   postgres-data:
+  pgadmin-data:

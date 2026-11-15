@@ -39,7 +39,7 @@ A **modular monolith**: one frontend app (customer + admin routes), one backend 
 milk-delivery-poc/
 ├── AGENTS.md               # Rules for AI coding assistants (read first!)
 ├── CONTRIBUTING.md         # How to contribute (branches, PRs, reviews)
-├── docker-compose.yml      # Local stack (filled in during M5)
+├── docker-compose.yml      # Full local stack: db + backend + frontend (M5)
 ├── frontend/               # React + Vite + TypeScript app
 ├── backend/                # FastAPI app, tests, Alembic migrations
 ├── database/               # init.sql and seed.sql
@@ -71,6 +71,50 @@ gh auth login --scopes repo,project
 ```
 
 Creates the repo, labels, milestones M0–M7, the eight M0 issues, the `develop` branch, branch protection (where the plan allows) and the "Milk Delivery POC" Project board. It is idempotent and never deletes anything.
+
+## Run the whole app (Docker)
+
+One command starts everything: database, backend, frontend and a database viewer.
+You only need **[Docker Desktop](https://www.docker.com/products/docker-desktop/)** (open it and wait for "Engine running"). Python, Node and PostgreSQL run inside Docker.
+
+```bash
+git clone https://github.com/samad-k-shaik/dairycart.git
+cd dairycart
+docker compose up --build     # first time: builds the images (a few minutes)
+```
+
+When the log calms down (or `docker compose ps` shows everything "Up"), open:
+
+| What | Address | Login (local only) |
+|---|---|---|
+| 🛒 Website (shop + admin) | http://localhost:5173 | Admin: `admin` / `admin_local_only_123` · customers register on the site |
+| ⚙️ Backend API docs | http://localhost:8000/docs | – |
+| 🗄️ pgAdmin (view the database) | http://localhost:5050 | `admin@example.com` / `admin123` |
+| 🐘 PostgreSQL (for other tools) | `localhost:5432` | user `milk_user` / `milk_password_local_only`, database `milk_delivery` |
+
+> These are **local development** logins. They only work on your own computer and are shown here on purpose. Never reuse them for anything real.
+
+### See the data in pgAdmin
+
+1. Open http://localhost:5050 and log in with `admin@example.com` / `admin123`.
+2. Left panel: **Servers → DairyCart (local Docker)**. It is already set up and connects without a password.
+3. Open **Databases → milk_delivery → Schemas → public → Tables**.
+4. Right-click a table (e.g. `orders`) → **View/Edit Data → All Rows**.
+
+Place an order on the website, refresh the `orders` table, and the new row appears.
+
+### Everyday commands
+
+| Task | Command |
+|---|---|
+| Start (in the background) | `docker compose up -d` |
+| Start after changing code | `docker compose up -d --build` |
+| Check what is running | `docker compose ps` |
+| Show backend logs | `docker compose logs -f backend` |
+| Stop (data is kept) | `docker compose down` |
+| Stop and **delete all data** | `docker compose down -v` |
+
+**Troubleshooting:** "port is already allocated" means something else uses 5173, 8000, 5432 or 5050 (e.g. Postgres.app, or a running `npm run dev`/`uvicorn`); stop it and try again. Code changes need `--build`. More details: [`docs/08-devops/deployment-guide.md`](docs/08-devops/deployment-guide.md#3-full-stack-with-docker-compose-m5).
 
 ## How to start
 
