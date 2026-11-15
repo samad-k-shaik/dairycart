@@ -1,0 +1,15 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "DairyCart (local Docker)",
+      "Group": "Servers",
+      "Host": "db",
+      "Port": 5432,
+      "MaintenanceDB": "milk_delivery",
+      "Username": "milk_user",
+      "SSLMode": "prefer",
+      "PassFile": "/pgpass",
+      "Comment": "Local-only database from docker-compose.yml. Host is the Compose service name 'db'."
+    }
+  }
+}

@@ -1,0 +1,24 @@
+# Files Docker must NOT copy into the backend image (#56).
+# Smaller build context = faster builds; secrets and local files never end up in an image.
+
+# Secrets and local settings (Compose passes settings as environment variables instead)
+.env
+.env.*
+
+# Local Python environment and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Tests and dev-only tooling are not needed to run the app
+tests/
+requirements-dev.txt
+
+# Editor / OS files
+.DS_Store
+.idea/
+.vscode/
