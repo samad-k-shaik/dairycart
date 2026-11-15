@@ -6,6 +6,7 @@ import { api } from "@/services/apiClient"
 import { USE_MOCKS } from "@/services/mockMode"
 import { ServiceError } from "@/services/serviceError"
 import type { AreaInput, DeliveryBoy, DeliveryBoyInput, DeliveryBoyUpdate } from "@/types/deliveryBoy"
+import type { LiveBoy } from "@/types/liveMap"
 
 function needsBackend(): Promise<never> {
   return Promise.reject(
@@ -47,6 +48,12 @@ export function deleteDeliveryBoy(id: number): Promise<void> {
 export function addArea(id: number, area: AreaInput): Promise<DeliveryBoy> {
   if (USE_MOCKS) return needsBackend()
   return api.post(`${BASE}/${id}/areas`, area)
+}
+
+/** #111: live map data (positions, stale flags, today's order pins). */
+export function getLiveMap(): Promise<LiveBoy[]> {
+  if (USE_MOCKS) return needsBackend()
+  return api.get(`${BASE}/locations`)
 }
 
 /** #109: create his login, or set a new password. 409 if another account uses his number. */

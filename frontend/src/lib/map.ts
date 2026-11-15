@@ -131,3 +131,18 @@ export function markerLook(marker: MapMarker): MarkerLook {
     description: `Delivery boy: ${marker.label}`,
   }
 }
+
+/**
+ * #111: a point between `from` (t = 0) and `to` (t = 1), used to glide a pin to its new
+ * position instead of jumping. Straight-line maths on the coordinates is fine for the few
+ * metres a delivery boy moves between two updates.
+ */
+export function interpolate(from: LatLng, to: LatLng, t: number): LatLng {
+  const k = Math.min(1, Math.max(0, t))
+  return { lat: from.lat + (to.lat - from.lat) * k, lng: from.lng + (to.lng - from.lng) * k }
+}
+
+/** Starts fast, ends slowly: movement that looks natural (t from 0 to 1). */
+export function easeOut(t: number): number {
+  return 1 - (1 - t) ** 3
+}

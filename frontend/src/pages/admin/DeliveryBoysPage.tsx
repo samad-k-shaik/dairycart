@@ -6,7 +6,7 @@
  */
 import { useState, type FormEvent } from "react"
 import { Link } from "react-router"
-import { Bike, KeyRound, Loader2, MapPin, Pencil, Phone, Plus, Trash2, Truck, X } from "lucide-react"
+import { Bike, KeyRound, Loader2, MapPin, MapPinned, Pencil, Phone, Plus, Trash2, Truck, X } from "lucide-react"
 import { toast } from "sonner"
 
 import { DeliveryBoyFormSheet } from "@/components/admin/DeliveryBoyFormSheet"
@@ -56,6 +56,13 @@ function DeliveryBoysPage() {
           >
             <Truck className="size-4" aria-hidden="true" />
             Today's deliveries per delivery boy
+          </Link>
+          <Link
+            to="/admin/live-map"
+            className="ml-4 inline-flex min-h-11 items-center gap-1.5 font-semibold text-primary hover:underline"
+          >
+            <MapPinned className="size-4" aria-hidden="true" />
+            Live map
           </Link>
         </div>
         <Button className="h-11" onClick={openAdd}>

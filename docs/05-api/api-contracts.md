@@ -54,6 +54,7 @@
 | POST | `/admin/delivery-boys/{id}/areas` | Allocate a PIN code *(#103)* | 200 |
 | DELETE | `/admin/delivery-boys/{id}/areas/{pincode}` | Remove a PIN code *(#103)* | 200 |
 | PUT | `/admin/delivery-boys/{id}/login` | Give a delivery boy a login, or a new password *(#109)* | 200 |
+| GET | `/admin/delivery-boys/locations` | Live map: positions, stale flags, today's order pins *(#111)* | 200 |
 | GET | `/delivery/me` | Logged-in delivery boy: his record and areas *(#109)* | 200 |
 | GET | `/delivery/me/orders` | His day's orders (his PIN codes, not cancelled) *(#109)* | 200 |
 | PATCH | `/delivery/me/orders/{id}/status` | Mark his order out for delivery / delivered *(#109)* | 200 |
@@ -575,6 +576,21 @@ The admin's list of delivery boys and their areas. Since #109 a delivery boy can
 ### PUT /api/v1/admin/delivery-boys/{id}/login *(#109)*
 
 Body `{ "password": "deliver123" }` (same rules as sign-up: 8+ characters, a letter and a number → otherwise **422**). Creates his account (his `phone` and `name`, role `DELIVERY_BOY`), or sets a new password if he has one. **200** with the delivery boy (`has_login: true`); the password is never returned. **409 `USER_ALREADY_EXISTS`** if another account (e.g. a customer) already uses his mobile number: an existing account is never taken over. **404** for an unknown id.
+
+### GET /api/v1/admin/delivery-boys/locations *(#111)*
+
+The admin live map (asked every 10 s by the page). Every **active** delivery boy, those on a round first, then by name:
+```json
+[ { "delivery_boy_id": 1, "name": "Ravi Kumar", "phone": "9876500001",
+    "on_round": true, "round_started_at": "2026-11-16T02:30:00Z",
+    "position": { "latitude": 17.4375, "longitude": 78.4483, "accuracy_m": 12,
+                  "updated_at": "2026-11-16T02:41:05Z", "is_stale": false },
+    "orders": [ { "order_id": 41, "status": "CONFIRMED", "customer_name": "Asha",
+                  "latitude": 17.4401, "longitude": 78.4512 } ] } ]
+```
+- `position`: his latest reading (#110) while on a round, else `null` (also `null` on a round before the first reading). `is_stale`: no update for more than **2 minutes** (screen locked, no signal…).
+- `orders`: his orders for today (same day rule as the Orders board, matched by PIN code) that are **not delivered or cancelled** and have a **map pin** (#108).
+- A fixed number of queries however many delivery boys there are.
 
 ---
 

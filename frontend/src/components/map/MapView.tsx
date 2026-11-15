@@ -28,6 +28,8 @@ import { useLeafletMap } from "@/hooks/useLeafletMap"
 import {
   chooseFraming,
   DEFAULT_MAP_HEIGHT_CLASS,
+  easeOut,
+  interpolate,
   isValidLatLng,
   markerLook,
   readTileConfig,
@@ -55,6 +57,11 @@ export interface MapViewProps {
    * position. The page then updates `markers`, which moves the pin.
    */
   onPick?: (position: LatLng) => void
+  /**
+   * #111: "always" (default) re-frames when the pins change; "once" frames the first time
+   * there are pins and then leaves the view to the user (for live maps).
+   */
+  autoFrame?: "always" | "once"
 }
 
 /** A pin's Leaflet layer plus the <div> that React draws the icon into. */
@@ -63,7 +70,87 @@ interface DrawnPin {
   element: HTMLDivElement
 }
 
-function MapView({ label, markers, center, zoom, className, onPick }: MapViewProps) {
+/** What MapView keeps for each pin on the map (#111: so it can be moved later). */
+interface DrawnLayer extends DrawnPin {
+  layer: L.Marker
+  pickable: boolean
+  /** Stops a running glide animation. */
+  stopGlide: () => void
+}
+
+/** How long a pin takes to glide to its new position. */
+const GLIDE_MS = 1000
+
+/** Create one pin on the map (see the comments in the effect above). */
+function drawPin(
+  map: L.Map,
+  marker: MapMarker,
+  pickable: boolean,
+  onPickRef: { current: ((position: LatLng) => void) | undefined },
+): DrawnLayer {
+  const look = markerLook(marker)
+  const element = document.createElement("div")
+  const layer = L.marker([marker.position.lat, marker.position.lng], {
+    icon: L.divIcon({
+      html: element,
+      className: "map-pin",
+      iconSize: [PIN_SIZE, PIN_SIZE],
+      iconAnchor: [PIN_SIZE / 2, PIN_SIZE / 2],
+      popupAnchor: [0, -PIN_SIZE / 2],
+    }),
+    title: look.description, // tooltip on hover, name for screen readers
+    keyboard: true, // reachable with Tab, opens its popup with Enter
+    draggable: pickable && marker.kind === "home", // #108: drag to adjust
+  })
+    .bindPopup(textNode(look.description))
+    .addTo(map)
+  layer.on("dragend", () => {
+    const { lat, lng } = layer.getLatLng()
+    onPickRef.current?.({ lat, lng })
+  })
+  return { marker, element, layer, pickable, stopGlide: () => {} }
+}
+
+/**
+ * Popup text is set as TEXT, never as HTML: labels can contain names typed by users, and
+ * HTML there could run someone else's script (XSS).
+ */
+function textNode(text: string): HTMLElement {
+  const span = document.createElement("span")
+  span.textContent = text
+  return span
+}
+
+function updateText(layer: L.Marker, text: string) {
+  layer.setPopupContent(textNode(text))
+  layer.getElement()?.setAttribute("title", text)
+}
+
+/**
+ * #111: move a pin smoothly to `to` over GLIDE_MS, one small step per screen frame
+ * (requestAnimationFrame). Jumps at once when the user prefers reduced motion. Returns a
+ * function that stops the animation (when a newer position arrives first).
+ */
+function glide(layer: L.Marker, to: LatLng): () => void {
+  const start = layer.getLatLng()
+  const from = { lat: start.lat, lng: start.lng }
+  if ((from.lat === to.lat && from.lng === to.lng) || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+    layer.setLatLng([to.lat, to.lng])
+    return () => {}
+  }
+  const began = performance.now()
+  let frame = 0
+  const step = (now: number) => {
+    const t = Math.min(1, (now - began) / GLIDE_MS)
+    const point = interpolate(from, to, easeOut(t))
+    layer.setLatLng([point.lat, point.lng])
+    if (t < 1) frame = requestAnimationFrame(step)
+  }
+  frame = requestAnimationFrame(step)
+  return () => cancelAnimationFrame(frame)
+}
+
+function MapView({ label, markers, center, zoom, className, onPick, autoFrame = "always" }: MapViewProps) {
   const { containerRef, map } = useLeafletMap(TILES)
   const [pins, setPins] = useState<DrawnPin[]>([])
   const pickable = onPick !== undefined
@@ -83,46 +170,49 @@ function MapView({ label, markers, center, zoom, className, onPick }: MapViewPro
   const stableMarkers = useMemo(() => JSON.parse(markersKey) as MapMarker[], [markersKey])
   const framingKey = JSON.stringify(chooseFraming(stableMarkers, center, zoom))
 
-  // Draw the pins.
+  // Draw the pins. #111: a pin that is already on the map is MOVED (it glides there)
+  // instead of being removed and drawn again, so live maps that refresh every few
+  // seconds do not flicker. Pins are matched by `id`.
+  const drawnRef = useRef(new Map<string, DrawnLayer>())
   useEffect(() => {
     if (!map) return
-    const drawn = stableMarkers
-      .filter((marker) => isValidLatLng(marker.position))
-      .map((marker) => {
-        const look = markerLook(marker)
-        const element = document.createElement("div")
-        // Popup text is set as TEXT, never as HTML: labels can contain names typed by users,
-        // and HTML there could run someone else's script (XSS).
-        const popup = document.createElement("span")
-        popup.textContent = look.description
+    const drawn = drawnRef.current
+    const wanted = stableMarkers.filter((marker) => isValidLatLng(marker.position))
+    const wantedIds = new Set(wanted.map((marker) => marker.id))
 
-        const layer = L.marker([marker.position.lat, marker.position.lng], {
-          icon: L.divIcon({
-            html: element,
-            className: "map-pin",
-            iconSize: [PIN_SIZE, PIN_SIZE],
-            iconAnchor: [PIN_SIZE / 2, PIN_SIZE / 2],
-            popupAnchor: [0, -PIN_SIZE / 2],
-          }),
-          title: look.description, // tooltip on hover, name for screen readers
-          keyboard: true, // reachable with Tab, opens its popup with Enter
-          draggable: pickable && marker.kind === "home", // #108: drag to adjust
-        })
-          .bindPopup(popup)
-          .addTo(map)
-        layer.on("dragend", () => {
-          const { lat, lng } = layer.getLatLng()
-          onPickRef.current?.({ lat, lng })
-        })
-        return { marker, element, layer }
-      })
-
-    setPins(drawn.map(({ marker, element }) => ({ marker, element })))
-    return () => {
-      drawn.forEach(({ layer }) => layer.remove())
-      setPins([])
+    for (const [id, entry] of drawn) {
+      // Gone, or its drag setting changed (rare): remove it (it is redrawn below if needed).
+      if (!wantedIds.has(id) || entry.pickable !== pickable) {
+        entry.stopGlide()
+        entry.layer.remove()
+        drawn.delete(id)
+      }
     }
+    for (const marker of wanted) {
+      const entry = drawn.get(marker.id)
+      if (entry) {
+        entry.marker = marker
+        entry.stopGlide()
+        entry.stopGlide = glide(entry.layer, marker.position)
+        updateText(entry.layer, markerLook(marker).description)
+      } else {
+        drawn.set(marker.id, drawPin(map, marker, pickable, onPickRef))
+      }
+    }
+    setPins([...drawn.values()].map(({ marker, element }) => ({ marker, element })))
   }, [map, stableMarkers, pickable])
+
+  // Remove every pin when the map goes away (page left, or a new map).
+  useEffect(() => {
+    const drawn = drawnRef.current
+    return () => {
+      for (const entry of drawn.values()) {
+        entry.stopGlide()
+        entry.layer.remove()
+      }
+      drawn.clear()
+    }
+  }, [map])
 
   // #108: in pick mode, a tap on the map places the pin there.
   useEffect(() => {
@@ -135,8 +225,13 @@ function MapView({ label, markers, center, zoom, className, onPick }: MapViewPro
   }, [map, pickable])
 
   // Frame the content: one pin → zoom in, several → fit all, none → whole city.
+  // #111 autoFrame="once": only the first time there are pins, then the user's own
+  // panning and zooming is left alone (live maps refresh every few seconds).
+  const framedRef = useRef(false)
   useEffect(() => {
     if (!map) return
+    if (autoFrame === "once" && framedRef.current) return
+    if (stableMarkers.length > 0) framedRef.current = true
     const framing = JSON.parse(framingKey) as ReturnType<typeof chooseFraming>
     if (framing.kind === "fit") {
       const { southWest, northEast } = framing.bounds
@@ -153,7 +248,7 @@ function MapView({ label, markers, center, zoom, className, onPick }: MapViewPro
       const targetZoom = pickable ? Math.max(framing.zoom, map.getZoom()) : framing.zoom
       map.setView([framing.center.lat, framing.center.lng], targetZoom)
     }
-  }, [map, framingKey, pickable])
+  }, [map, framingKey, pickable, autoFrame, stableMarkers.length])
 
   return (
     // "isolate" keeps Leaflet's high z-index values (up to 1000) INSIDE this box, so the map

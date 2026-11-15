@@ -1,6 +1,6 @@
 """Live tracking (#110, ADR-018): delivery rounds and the delivery boy's latest position.
 
-Write path of live tracking:
+Write path of live tracking (#110):
     phone (browser GPS) ──PUT /delivery/me/location every 10–15 s──► save_location ──► upsert
 
 Privacy rules (NFR-17):
@@ -8,16 +8,21 @@ Privacy rules (NFR-17):
   the consent text). Otherwise 409 ROUND_NOT_STARTED and nothing is stored.
 - "Stop round" deletes his position. There is no history.
 - Coordinates are never logged (the request log has the path only).
+
+Read path (#111): live_map() for the admin; the customer's view comes in #112.
 """
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
 from app.core.errors import RoundNotStartedError
-from app.models import DeliveryBoy
+from app.core.india_time import india_day_range
+from app.models import DeliveryBoy, OrderStatus
+from app.repositories.delivery_boy_repository import DeliveryBoyRepository
 from app.repositories.delivery_location_repository import DeliveryLocationRepository
-from app.schemas.delivery import LocationUpdate
+from app.repositories.order_repository import OrderRepository
+from app.schemas.delivery import LiveBoyRead, LiveOrderPin, LivePosition, LocationUpdate
 
 # A position older than this is shown greyed out ("stale") on the maps (#111, #112).
 STALE_AFTER = timedelta(minutes=2)
@@ -78,3 +83,65 @@ def is_stale(updated_at: datetime, now: datetime | None = None) -> bool:
     """True when the last update is older than STALE_AFTER (the phone stopped sending:
     screen locked, no signal…)."""
     return (now or _now()) - updated_at > STALE_AFTER
+
+
+# ---- Read path: the admin live map (#111) ----
+
+
+def live_map(db: Session, day: date, now: datetime | None = None) -> list[LiveBoyRead]:
+    """Every ACTIVE delivery boy with his latest position (if on a round) and the pins of his
+    undelivered orders for `day`. A fixed number of queries, however many delivery boys:
+    all positions in one query, the day's orders in one query, the allocation in one."""
+    now = now or _now()
+    boys = [boy for boy in DeliveryBoyRepository(db).list_all() if boy.is_active]
+    positions = {row.delivery_boy_id: row for row in DeliveryLocationRepository(db).list_all()}
+    allocation = DeliveryBoyRepository(db).active_allocation()  # PIN code → delivery boy
+
+    starts, ends = india_day_range(day)
+    pins: dict[int, list[LiveOrderPin]] = {}
+    for order, _, _ in OrderRepository(db).list_for_day(day, starts, ends):
+        boy = allocation.get(order.delivery_pincode or "")
+        if (
+            boy is None
+            or order.status in (OrderStatus.CANCELLED, OrderStatus.DELIVERED)
+            or order.delivery_latitude is None
+            or order.delivery_longitude is None
+        ):
+            continue
+        pins.setdefault(boy.delivery_boy_id, []).append(
+            LiveOrderPin(
+                order_id=order.order_id,
+                status=order.status,
+                customer_name=order.customer.name,
+                latitude=order.delivery_latitude,
+                longitude=order.delivery_longitude,
+            )
+        )
+
+    result = []
+    for boy in boys:
+        on_round = boy.round_started_at is not None
+        row = positions.get(boy.delivery_boy_id) if on_round else None
+        result.append(
+            LiveBoyRead(
+                delivery_boy_id=boy.delivery_boy_id,
+                name=boy.name,
+                phone=boy.phone,
+                on_round=on_round,
+                round_started_at=boy.round_started_at,
+                position=(
+                    LivePosition(
+                        latitude=row.latitude,
+                        longitude=row.longitude,
+                        accuracy_m=row.accuracy_m,
+                        updated_at=row.updated_at,
+                        is_stale=is_stale(row.updated_at, now),
+                    )
+                    if row is not None
+                    else None
+                ),
+                orders=sorted(pins.get(boy.delivery_boy_id, []), key=lambda p: p.order_id),
+            )
+        )
+    # On a round first, then by name.
+    return sorted(result, key=lambda b: (not b.on_round, b.name.lower()))

@@ -119,3 +119,38 @@ class DeliveryStatusUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     status: Literal[OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED]
+
+
+# ---- Admin live map (#111) ----
+
+
+class LivePosition(BaseModel):
+    latitude: float
+    longitude: float
+    accuracy_m: int | None
+    # When the server last received it; `is_stale` = older than 2 minutes.
+    updated_at: UtcDateTime
+    is_stale: bool
+
+
+class LiveOrderPin(BaseModel):
+    """One of his undelivered orders today that has a map pin (#108)."""
+
+    order_id: int
+    status: OrderStatus
+    customer_name: str
+    latitude: float
+    longitude: float
+
+
+class LiveBoyRead(BaseModel):
+    """One ACTIVE delivery boy on GET /admin/delivery-boys/locations."""
+
+    delivery_boy_id: int
+    name: str
+    phone: str
+    on_round: bool
+    round_started_at: UtcDateTime | None
+    # Null when he is not on a round, or on a round but no reading has arrived yet.
+    position: LivePosition | None
+    orders: list[LiveOrderPin]

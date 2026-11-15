@@ -10,6 +10,7 @@ import {
   createDeliveryBoy,
   deleteDeliveryBoy,
   getDeliveryBoys,
+  getLiveMap,
   removeArea,
   setDeliveryBoyLogin,
   updateDeliveryBoy,
@@ -17,6 +18,14 @@ import {
 import type { AreaInput, DeliveryBoyInput, DeliveryBoyUpdate } from "@/types/deliveryBoy"
 
 export const deliveryBoyKeys = { all: ["delivery-boys"] as const }
+
+/**
+ * #111: the live map, asked again every 10 s. TanStack Query pauses the interval while
+ * the tab is hidden (refetchIntervalInBackground is false), so a forgotten tab costs nothing.
+ */
+export function useLiveMap() {
+  return useQuery({ queryKey: [...deliveryBoyKeys.all, "live"], queryFn: getLiveMap, refetchInterval: 10_000 })
+}
 
 export function useDeliveryBoys() {
   return useQuery({ queryKey: deliveryBoyKeys.all, queryFn: getDeliveryBoys })

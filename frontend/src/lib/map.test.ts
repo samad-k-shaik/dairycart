@@ -6,6 +6,8 @@ import {
   chooseFraming,
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
+  easeOut,
+  interpolate,
   isValidLatLng,
   markerLook,
   OSM_ATTRIBUTION,
@@ -120,5 +122,28 @@ describe("marker look (#107)", () => {
     const look = markerLook({ ...RAVI, stale: true })
     assert.match(look.className, /bg-muted-foreground/)
     assert.match(look.description, /not updated recently/)
+  })
+})
+
+describe("gliding pins (#111)", () => {
+  const from = { lat: 17.43, lng: 78.44 }
+  const to = { lat: 17.44, lng: 78.46 }
+
+  it("starts at `from`, ends at `to`, and is halfway at 0.5", () => {
+    assert.deepEqual(interpolate(from, to, 0), from)
+    assert.deepEqual(interpolate(from, to, 1), to)
+    const half = interpolate(from, to, 0.5)
+    assert.ok(Math.abs(half.lat - 17.435) < 1e-9 && Math.abs(half.lng - 78.45) < 1e-9)
+  })
+
+  it("never overshoots", () => {
+    assert.deepEqual(interpolate(from, to, 1.7), to)
+    assert.deepEqual(interpolate(from, to, -0.2), from)
+  })
+
+  it("eases out: quick start, gentle stop", () => {
+    assert.equal(easeOut(0), 0)
+    assert.equal(easeOut(1), 1)
+    assert.ok(easeOut(0.5) > 0.5)
   })
 })

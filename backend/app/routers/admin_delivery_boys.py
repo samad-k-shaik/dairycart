@@ -9,6 +9,7 @@ Delivery boys are records kept by the admin. Since #109 the admin can give one a
     POST   /api/v1/admin/delivery-boys/{id}/areas            → allocate a PIN code
     DELETE /api/v1/admin/delivery-boys/{id}/areas/{pincode}  → remove a PIN code
     PUT    /api/v1/admin/delivery-boys/{id}/login            → his login / new password (#109)
+    GET    /api/v1/admin/delivery-boys/locations             → live map data (#111)
 
 Rules: services/delivery_boy_service.py.
 """
@@ -22,6 +23,7 @@ from app.core.auth import require_admin
 from app.database.session import get_db
 from app.models import DeliveryBoy
 from app.schemas.common import ErrorResponse
+from app.schemas.delivery import LiveBoyRead
 from app.schemas.delivery_boy import (
     AreaCreate,
     DeliveryBoyCreate,
@@ -29,7 +31,7 @@ from app.schemas.delivery_boy import (
     DeliveryBoyUpdate,
     DeliveryLoginSet,
 )
-from app.services import delivery_boy_service, delivery_service
+from app.services import delivery_boy_service, delivery_service, tracking_service
 from app.services.subscription_service import today_ist
 
 router = APIRouter(
@@ -65,6 +67,18 @@ def list_delivery_boys(db: DbSession) -> list[DeliveryBoyRead]:
     """Active first, then by name. `today_orders`: today's orders in his areas."""
     counts = delivery_service.todays_orders_per_boy(db, today_ist())
     return [_read(db, boy, counts) for boy in delivery_boy_service.list_delivery_boys(db)]
+
+
+@router.get(
+    "/locations",
+    response_model=list[LiveBoyRead],
+    summary="Live map: positions and today's order pins (#111)",
+)
+def live_locations(db: DbSession) -> list[LiveBoyRead]:
+    """Active delivery boys (on a round first). `position` is his latest reading while on a
+    round (`is_stale` after 2 minutes without an update), else null. `orders`: his
+    undelivered orders today that have a map pin. The admin page asks every 10 s."""
+    return tracking_service.live_map(db, today_ist())
 
 
 @router.post(
