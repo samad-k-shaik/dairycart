@@ -110,6 +110,8 @@ ERD_COLUMNS = {
         "delivery_slot": ("VARCHAR(100)", True),  # #100: copy of the slot's label
         "delivery_address": ("VARCHAR(500)", True),  # #102: copy of the address
         "delivery_pincode": ("VARCHAR(6)", True),  # #103: its PIN code
+        "delivery_latitude": ("NUMERIC(9, 6)", True),  # #108: copy of the map pin
+        "delivery_longitude": ("NUMERIC(9, 6)", True),  # #108
     },
     "order_items": {
         "order_item_id": ("INTEGER", False),
@@ -132,6 +134,8 @@ ERD_COLUMNS = {
         "delivery_slot_id": ("INTEGER", True),  # #100: null before #100
         "delivery_address": ("VARCHAR(500)", True),  # #102: null before #102
         "delivery_pincode": ("VARCHAR(6)", True),  # #103
+        "delivery_latitude": ("NUMERIC(9, 6)", True),  # #108: copy of the map pin
+        "delivery_longitude": ("NUMERIC(9, 6)", True),  # #108
         "daily_total": ("NUMERIC(10, 2)", False),
         "created_at": ("TIMESTAMP WITH TIME ZONE", False),
         "cancelled_at": ("TIMESTAMP WITH TIME ZONE", True),
@@ -164,6 +168,8 @@ ERD_COLUMNS = {
         "landmark": ("VARCHAR(100)", True),
         "city": ("VARCHAR(50)", False),
         "pincode": ("VARCHAR(6)", False),
+        "latitude": ("NUMERIC(9, 6)", True),  # #108: optional map pin
+        "longitude": ("NUMERIC(9, 6)", True),  # #108
         "is_default": ("BOOLEAN", False),
         "created_at": ("TIMESTAMP WITH TIME ZONE", False),
     },
@@ -251,6 +257,16 @@ def test_check_and_unique_constraints_have_readable_names(schema: Engine) -> Non
         "ck_addresses_pincode_format",  # #102
         "ck_delivery_boys_phone_format",  # #103
         "ck_delivery_areas_pincode_format",  # #103
+        # #108: map pins (range, and both-or-neither)
+        "ck_addresses_latitude_range",
+        "ck_addresses_longitude_range",
+        "ck_addresses_map_pin_complete",
+        "ck_orders_delivery_latitude_range",
+        "ck_orders_delivery_longitude_range",
+        "ck_orders_map_pin_complete",
+        "ck_subscriptions_delivery_latitude_range",
+        "ck_subscriptions_delivery_longitude_range",
+        "ck_subscriptions_map_pin_complete",
     }
     assert uniques == {
         "uq_customers_phone",

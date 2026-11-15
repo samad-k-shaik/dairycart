@@ -8,6 +8,11 @@
   font-family: inherit;
 }
 
+/* #108: pick mode (address form): a crosshair shows that a tap places the pin. */
+.leaflet-container.map-pickable {
+  cursor: crosshair;
+}
+
 /* Our markers are drawn by React inside Leaflet's divIcon: no default white box around them. */
 .leaflet-div-icon.map-pin {
   background: transparent;

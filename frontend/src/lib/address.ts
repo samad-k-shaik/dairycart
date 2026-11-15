@@ -4,6 +4,7 @@
  * (Relative ".ts" imports so Node's test runner can load this file.)
  */
 import type { Address, AddressInput, AddressUpdate } from "../types/address.ts"
+import type { LatLng } from "../types/map.ts"
 
 export const MAX_ADDRESSES = 10
 /** Indian PIN code: 6 digits, not starting with 0. */
@@ -16,6 +17,8 @@ export type AddressFormValues = {
   landmark: string
   city: string
   pincode: string
+  /** #108: optional map pin; null = no pin. */
+  pin: LatLng | null
   is_default: boolean
 }
 
@@ -29,6 +32,7 @@ export const EMPTY_ADDRESS_FORM: AddressFormValues = {
   landmark: "",
   city: "",
   pincode: "",
+  pin: null,
   is_default: false,
 }
 
@@ -77,6 +81,8 @@ export function toAddressInput(values: AddressFormValues): AddressInput {
     landmark: values.landmark.trim() || null,
     city: values.city.trim(),
     pincode: values.pincode.trim(),
+    latitude: values.pin ? roundCoordinate(values.pin.lat) : null,
+    longitude: values.pin ? roundCoordinate(values.pin.lng) : null,
     is_default: values.is_default,
   }
 }
@@ -89,6 +95,10 @@ export function toAddressFormValues(address: Address): AddressFormValues {
     landmark: address.landmark ?? "",
     city: address.city,
     pincode: address.pincode,
+    pin:
+      address.latitude !== null && address.longitude !== null
+        ? { lat: address.latitude, lng: address.longitude }
+        : null,
     is_default: address.is_default,
   }
 }
@@ -101,7 +111,29 @@ export function changedAddressFields(address: Address, values: AddressFormValues
     if (input[field] !== address[field]) changes[field] = input[field]
   }
   if (input.landmark !== address.landmark) changes.landmark = input.landmark
+  // #108: the pin is sent as a pair (both null removes it), and only if it moved.
+  if (input.latitude !== address.latitude || input.longitude !== address.longitude) {
+    changes.latitude = input.latitude
+    changes.longitude = input.longitude
+  }
   return changes
+}
+
+/** 6 decimals (about 11 cm): what the backend stores, so a saved pin compares equal. */
+export function roundCoordinate(value: number): number {
+  return Math.round(value * 1e6) / 1e6
+}
+
+/**
+ * A friendly sentence for a failed "Use my current location" (#108). `code` is the
+ * browser's GeolocationPositionError code: 1 = permission denied, 2 = position
+ * unavailable, 3 = timeout; anything else (e.g. no geolocation in this browser) is generic.
+ */
+export function locationErrorMessage(code: number | null): string {
+  if (code === 1) return "Location permission is off. Allow it in your browser, or tap the map instead."
+  if (code === 2) return "Your location could not be found. Tap the map instead."
+  if (code === 3) return "Finding your location took too long. Try again, or tap the map instead."
+  return "This browser cannot share your location. Tap the map instead."
 }
 
 /** The address to choose first: the default, else the first one, else none. */

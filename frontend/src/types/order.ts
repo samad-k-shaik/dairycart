@@ -57,6 +57,9 @@ export type Order = {
   delivery_slot?: string | null
   /** #102: where to deliver (copy of the address; null for orders before #102). */
   delivery_address?: string | null
+  /** #108: copy of the address's map pin (null when it had none). */
+  delivery_latitude?: number | null
+  delivery_longitude?: number | null
   /** #97: the day ("2026-11-21") a subscription order is for; null for one-time orders. */
   delivery_date?: string | null
 }

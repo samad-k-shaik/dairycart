@@ -136,6 +136,8 @@ def create_order(db: Session, data: OrderCreate, user: User) -> Order:
             user_id=user_id,  # the account that placed it (#90)
             delivery_address=address.text,  # #102
             delivery_pincode=address.pincode,  # #103
+            delivery_latitude=address.latitude,  # #108
+            delivery_longitude=address.longitude,
             items=items,
             status=OrderStatus.PLACED,
             total_amount=sum((item.subtotal for item in items), Decimal("0.00")),

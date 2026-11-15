@@ -43,6 +43,9 @@ export type Subscription = {
   delivery_slot: BookedSlot | null
   /** #102: where to deliver (null for subscriptions from before #102). */
   delivery_address: string | null
+  /** #108: copy of the address's map pin (null when it had none). */
+  delivery_latitude?: number | null
+  delivery_longitude?: number | null
   start_date: IsoDate
   /** Last delivery day, included. */
   end_date: IsoDate

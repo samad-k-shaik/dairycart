@@ -191,3 +191,18 @@ CREATE INDEX idx_delivery_areas_delivery_boy_id ON delivery_areas (delivery_boy_
 -- The address's PIN code on orders and subscriptions, to match the delivery boy.
 ALTER TABLE orders ADD COLUMN delivery_pincode VARCHAR(6);
 ALTER TABLE subscriptions ADD COLUMN delivery_pincode VARCHAR(6);
+
+-- #108: optional map pin on addresses, copied onto orders and subscriptions.
+-- NUMERIC(9,6) = 6 decimals (about 11 cm). Both set or both NULL.
+ALTER TABLE addresses
+    ADD COLUMN latitude  NUMERIC(9,6) CONSTRAINT ck_addresses_latitude_range CHECK (latitude BETWEEN -90 AND 90),
+    ADD COLUMN longitude NUMERIC(9,6) CONSTRAINT ck_addresses_longitude_range CHECK (longitude BETWEEN -180 AND 180),
+    ADD CONSTRAINT ck_addresses_map_pin_complete CHECK ((latitude IS NULL) = (longitude IS NULL));
+ALTER TABLE orders
+    ADD COLUMN delivery_latitude  NUMERIC(9,6) CONSTRAINT ck_orders_delivery_latitude_range CHECK (delivery_latitude BETWEEN -90 AND 90),
+    ADD COLUMN delivery_longitude NUMERIC(9,6) CONSTRAINT ck_orders_delivery_longitude_range CHECK (delivery_longitude BETWEEN -180 AND 180),
+    ADD CONSTRAINT ck_orders_map_pin_complete CHECK ((delivery_latitude IS NULL) = (delivery_longitude IS NULL));
+ALTER TABLE subscriptions
+    ADD COLUMN delivery_latitude  NUMERIC(9,6) CONSTRAINT ck_subscriptions_delivery_latitude_range CHECK (delivery_latitude BETWEEN -90 AND 90),
+    ADD COLUMN delivery_longitude NUMERIC(9,6) CONSTRAINT ck_subscriptions_delivery_longitude_range CHECK (delivery_longitude BETWEEN -180 AND 180),
+    ADD CONSTRAINT ck_subscriptions_map_pin_complete CHECK ((delivery_latitude IS NULL) = (delivery_longitude IS NULL));

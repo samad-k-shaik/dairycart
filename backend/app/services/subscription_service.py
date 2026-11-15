@@ -118,6 +118,8 @@ def create_subscription(
             delivery_slot=slot,
             delivery_address=address.text,
             delivery_pincode=address.pincode,  # #103
+            delivery_latitude=address.latitude,  # #108
+            delivery_longitude=address.longitude,
             status=SubscriptionStatus.ACTIVE,
             items=items,
             daily_total=sum((item.subtotal for item in items), Decimal("0.00")),
@@ -287,6 +289,8 @@ def change_address(
         address = address_service.delivery_copy_for(db, user_id, address_id)
         subscription.delivery_address = address.text
         subscription.delivery_pincode = address.pincode  # #103
+        subscription.delivery_latitude = address.latitude  # #108
+        subscription.delivery_longitude = address.longitude
         db.commit()
     except Exception:
         db.rollback()
@@ -366,6 +370,8 @@ def _create_daily_order(db: Session, subscription: Subscription, day: date) -> O
             ),
             delivery_address=subscription.delivery_address,  # #102
             delivery_pincode=subscription.delivery_pincode,  # #103
+            delivery_latitude=subscription.delivery_latitude,  # #108
+            delivery_longitude=subscription.delivery_longitude,
             status=OrderStatus.PLACED,
             items=[
                 OrderItem(

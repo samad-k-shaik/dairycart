@@ -96,6 +96,9 @@ class OrderRead(BaseModel):
     delivery_slot: str | None = None
     # #102: where to deliver (copy of the address; null for orders from before #102).
     delivery_address: str | None = None
+    # #108: copy of the address's map pin (null when the address had none).
+    delivery_latitude: float | None = None
+    delivery_longitude: float | None = None
 
     @classmethod
     def from_order(cls, order: Order) -> Self:
@@ -123,6 +126,8 @@ class OrderRead(BaseModel):
             delivery_date=order.delivery_date,
             delivery_slot=order.delivery_slot,
             delivery_address=order.delivery_address,
+            delivery_latitude=order.delivery_latitude,
+            delivery_longitude=order.delivery_longitude,
         )
 
 

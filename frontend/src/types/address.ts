@@ -15,6 +15,9 @@ export type Address = {
   city: string
   /** 6 digits, not starting with 0 */
   pincode: string
+  /** #108: optional map pin in degrees; both null when there is none. */
+  latitude: number | null
+  longitude: number | null
   is_default: boolean
   /** One line, as copied onto orders: "12-3 Sai Residency, MG Road, Hyderabad - 500016". */
   full_text: string
@@ -29,8 +32,12 @@ export type AddressInput = {
   landmark: string | null
   city: string
   pincode: string
+  /** #108: send both, or both null (no pin). */
+  latitude?: number | null
+  longitude?: number | null
   is_default?: boolean
 }
 
-/** PATCH /addresses/{id}: only the fields that change (landmark null = remove it). */
+/** PATCH /addresses/{id}: only the fields that change (landmark null = remove it;
+ * latitude + longitude change together, both null = remove the pin). */
 export type AddressUpdate = Partial<Omit<AddressInput, "is_default">>

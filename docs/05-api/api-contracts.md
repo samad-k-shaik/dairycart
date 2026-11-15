@@ -114,7 +114,7 @@ Returns `[]` (not 404) if there are no products.
 
 Needs a logged-in user (#90): no token → `401 UNAUTHORIZED`. The order is saved with that account; `customer` (name + phone) is the delivery contact.
 
-*(#102)* `address_id` is one of the user's saved addresses ([Addresses](#addresses-102)); if it is left out, the user's **default** address is used. The backend copies the address text onto the order (`delivery_address` in the response). A user with no saved address → **422** with detail `{ "field": "address_id", "issue": "required" }`; someone else's or a missing address → **422** `{ "field": "address_id", "issue": "not available" }`.
+*(#102)* `address_id` is one of the user's saved addresses ([Addresses](#addresses-102)); if it is left out, the user's **default** address is used. The backend copies the address text onto the order (`delivery_address` in the response) and its map pin, if any (`delivery_latitude` / `delivery_longitude`, #108; `null` without a pin). A user with no saved address → **422** with detail `{ "field": "address_id", "issue": "required" }`; someone else's or a missing address → **422** `{ "field": "address_id", "issue": "not available" }`.
 
 **Request**
 ```json
@@ -367,7 +367,7 @@ Rules:
   "items": [ { "product_id": 2, "quantity": 1 } ]
 }
 ```
-`every_n_days` is optional (default `1`); only `1`, `2` or `3` are accepted (otherwise 422). `delivery_slot_id` is **required** *(#100)*. `address_id` works as for `POST /orders` *(#102)*; the subscription keeps the address text (`delivery_address`) and every delivery order copies it. `customer` and `items` follow the same rules as `POST /orders` (1–10 items, quantity 1–20, no duplicates; the products must be available and in stock today).
+`every_n_days` is optional (default `1`); only `1`, `2` or `3` are accepted (otherwise 422). `delivery_slot_id` is **required** *(#100)*. `address_id` works as for `POST /orders` *(#102)*; the subscription keeps the address text (`delivery_address`) and map pin (`delivery_latitude` / `delivery_longitude`, #108), and every delivery order copies them. `customer` and `items` follow the same rules as `POST /orders` (1–10 items, quantity 1–20, no duplicates; the products must be available and in stock today).
 
 **201 Created** + `Location: /api/v1/subscriptions/{id}`:
 ```json
@@ -432,7 +432,7 @@ Change the delivery time of an `ACTIVE` subscription. Owner or ADMIN (anyone els
 
 ### PATCH /api/v1/subscriptions/{id}/address *(#102)*
 
-Owner only (anyone else, admins included: 404, since only the owner's saved addresses can be chosen). Body `{ "address_id": 5 }`. **200** with the subscription and its new `delivery_address`; orders already created keep theirs. **409 `SUBSCRIPTION_NOT_ACTIVE`** for a cancelled or completed plan; **422** on `address_id` for an address that is not yours.
+Owner only (anyone else, admins included: 404, since only the owner's saved addresses can be chosen). Body `{ "address_id": 5 }`. **200** with the subscription and its new `delivery_address` and map pin (#108); orders already created keep theirs. **409 `SUBSCRIPTION_NOT_ACTIVE`** for a cancelled or completed plan; **422** on `address_id` for an address that is not yours.
 
 ---
 
@@ -445,13 +445,14 @@ Rules:
 - The first address becomes the default; exactly one default while the user has addresses (also a database rule: a partial unique index). `is_default: true` on create, or `POST /addresses/{id}/default`, moves the default. Deleting the default makes the oldest remaining address the default.
 - Fields: `label` 2–30, `house` 1–100, `street` 2–150, `landmark` optional ≤ 100 (`null` or `""` removes it), `city` 2–50, `pincode` 6 digits not starting with 0. Text is trimmed.
 - Orders and subscriptions keep a **text copy** (`full_text`), so editing or deleting an address never changes them.
+- **Map pin (optional, #108):** `latitude` (−90…90) and `longitude` (−180…180) in degrees, sent **together** (one without the other → 422). Stored with 6 decimals (about 11 cm); more decimals are rounded. Returned as JSON numbers, or both `null` when there is no pin. Orders and subscriptions copy the pin as `delivery_latitude` / `delivery_longitude`, like the address text.
 
 ### GET /api/v1/addresses
 
 Default first, then oldest first:
 ```json
 [ { "address_id": 4, "label": "Home", "house": "12-3 Sai Residency", "street": "MG Road, Ameerpet",
-    "landmark": null, "city": "Hyderabad", "pincode": "500016", "is_default": true,
+    "landmark": null, "city": "Hyderabad", "pincode": "500016", "latitude": 17.4375, "longitude": 78.4483, "is_default": true,
     "full_text": "12-3 Sai Residency, MG Road, Ameerpet, Hyderabad - 500016", "created_at": "2026-11-13T09:00:00Z" } ]
 ```
 
@@ -459,9 +460,9 @@ Default first, then oldest first:
 
 ```json
 { "label": "Office", "house": "Plot 5, Cyber Towers", "street": "Hitech City", "landmark": "Opposite metro",
-  "city": "Hyderabad", "pincode": "500081", "is_default": false }
+  "city": "Hyderabad", "pincode": "500081", "latitude": 17.4474, "longitude": 78.3762, "is_default": false }
 ```
-`label` defaults to `"Home"`, `is_default` to `false`. PATCH: only the fields that change (at least one; not `is_default`).
+`label` defaults to `"Home"`, `is_default` to `false`; `latitude`/`longitude` are optional (#108). PATCH: only the fields that change (at least one; not `is_default`). The pin changes as a pair: both numbers move it, both `null` remove it.
 
 ### POST /api/v1/addresses/{id}/default → 200 · DELETE /api/v1/addresses/{id} → 204
 
