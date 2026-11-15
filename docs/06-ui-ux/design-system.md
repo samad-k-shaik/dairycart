@@ -26,11 +26,11 @@ We are **recreating its design language** (clean, premium grocery UI) with our o
 | `border` | `#E2E8F0` | `border-border` | Dividers, input borders |
 | `text` | `#0F172A` | `text-foreground` | Primary text |
 | `text-muted` | `#64748B` | `text-muted-foreground` | Secondary text |
-| `success` | `#16A34A` | | DELIVERED, success toasts |
-| `warning` | `#D97706` | | OUT_FOR_DELIVERY |
-| `danger` | `#DC2626` | | CANCELLED, errors |
+| `success` | `#16A34A` | `text-success`, `bg-success` | DELIVERED, success toasts |
+| `warning` | `#D97706` | `text-warning`, `bg-warning` | OUT_FOR_DELIVERY |
+| `danger` | `#DC2626` | `text-danger`, `bg-danger` | CANCELLED, errors |
 
-These map to shadcn/ui CSS variables (`--primary`, `--background`, …) in `src/index.css` (set up in M2).
+These map to shadcn/ui CSS variables (`--primary`, `--background`, …) in `frontend/src/index.css` (set up in M2-02). Live preview of every token: `http://localhost:5173/design` (temporary, until the M2 design approval).
 
 ### Status badge colours
 
@@ -44,24 +44,26 @@ These map to shadcn/ui CSS variables (`--primary`, `--background`, …) in `src/
 
 ## Typography
 
-Font: **Manrope** (Google Fonts or `@fontsource/manrope`), fallback `system-ui, sans-serif`.
+Font: **Manrope**, self-hosted via `@fontsource-variable/manrope` (all weights in one file), fallback `system-ui, sans-serif`.
 
-| Style | Size / line-height | Weight | Use |
-|---|---|---|---|
-| Display | 28 / 36 px | 800 | Home hero |
-| H1 | 24 / 32 px | 700 | Page titles |
-| H2 | 20 / 28 px | 700 | Section titles |
-| H3 | 16 / 24 px | 600 | Card titles |
-| Body | 14 / 22 px | 500 | Default text |
-| Small | 12 / 16 px | 500 | Labels, metadata |
-| Price | 18 / 24 px | 800 | Product prices |
+**Customer pages (#95): Fraunces for headings.** On every page inside `CustomerLayout`, headings (`h1`–`h3`, `text-display`), prices (`text-price`) and the logo name (`brand-name`) use **Fraunces**: a warm, soft serif that matches the serif names on the product pictures. It is self-hosted via `@fontsource-variable/fraunces/soft.css` (weight + SOFT axes, SIL Open Font License), with the SOFT axis at 100 and letter-spacing -0.01em. Token: `--font-display: "Fraunces Variable", "Manrope Variable", Georgia, serif`; Manrope comes second so any missing character (such as ₹) still matches the app. The rule lives in `src/index.css` under `.customer-type`, the class on the CustomerLayout wrapper. Body text, buttons, chips and forms stay Manrope. Admin pages use Manrope only. The sizes and weights in the table below apply to both fonts.
+
+| Style | Size / line-height | Weight | Tailwind usage | Use |
+|---|---|---|---|---|
+| Display | 28 / 36 px | 800 | `text-display font-extrabold` | Home hero |
+| H1 | 24 / 32 px | 700 | `text-h1 font-bold` | Page titles |
+| H2 | 20 / 28 px | 700 | `text-h2 font-bold` | Section titles |
+| H3 | 16 / 24 px | 600 | `text-h3 font-semibold` | Card titles |
+| Body | 14 / 22 px | 500 | `text-body font-medium` (body default) | Default text |
+| Small | 12 / 16 px | 500 | `text-small font-medium` | Labels, metadata |
+| Price | 18 / 24 px | 800 | `text-price font-extrabold` | Product prices |
 
 ## Spacing, radius, shadow
 
 - **Spacing scale:** 4 px base (Tailwind default): 4, 8, 12, 16, 24, 32, 48.
 - **Page gutter:** 16 px mobile, 24 px tablet, 32 px desktop. Max content width 1200 px.
 - **Radius:** cards `rounded-2xl` (16 px), buttons/inputs `rounded-xl` (12 px), chips `rounded-full`.
-- **Shadow:** cards `shadow-[0_2px_12px_rgba(15,23,42,0.06)]`; elevated sheets `shadow-lg`. Keep shadows subtle.
+- **Shadow:** cards `shadow-card` (= `0 2px 12px rgba(15,23,42,0.06)`); elevated sheets `shadow-lg`. Keep shadows subtle.
 
 ## Breakpoints
 
@@ -102,10 +104,15 @@ Admin products list (read-only table) reuses the table component.
 
 ## Imagery
 
-- Product images: clean photos or illustrations on a light background, square (1:1), WebP, ≤ 100 KB, stored in `frontend/public/images/products/`.
+- Product images: clean photos or illustrations, square (1:1), WebP or SVG, ≤ 100 KB, stored in `frontend/public/images/products/`. Since #94 the illustrations share one style: an olive-green background (`#B9C79E` → `#8E9D72`), a glass bottle or jar, and the product name in a serif typeface. They fill the image box edge to edge (`object-cover`).
 - Use only images we own, created ourselves, or licensed for reuse. Record the source in `frontend/public/images/README.md` when images are added.
-- Every image has meaningful `alt` text.
+- Every image has meaningful `alt` text. Exception: purely decorative backgrounds are `aria-hidden` and have no alt text.
+- **Customer page background (#93):** a dairy-barn photo (`frontend/public/images/backgrounds/dairy-barn.webp`, 1600×900 WebP, ~250 KB) is fixed behind every customer page (`CustomerLayout`), under a thin veil of the page colour at 35% (`bg-background/35`, #94) so the photo stays bright. Admin pages keep the plain background.
+- **Text on the photo (#94):** page titles, subtitles and back links that would sit straight on the photo go on a frosted panel: the `photo-panel` utility in `src/index.css` (white at 88% + 8px blur, rounded 16px; add padding per use). Cards, forms and empty/error states are already solid white.
+- On customer pages `muted-foreground` is one shade darker (`#475569`, slate-600). Measured worst case on a `photo-panel` over the darkest part of the photo: grey text 6.4:1, body text 15.2:1 (WCAG AA needs 4.5:1).
 
 ## Approval gate
 
 M2 screens use **mock JSON** only. The design is reviewed and approved (screenshots attached to the M2 review issue) **before** M3 connects real APIs.
+
+The M2 review (screenshots of every screen, design-system measurements, scope check, keyboard and Lighthouse results, follow-ups) is in [`design-review-m2.md`](design-review-m2.md); screenshots are in [`screens/`](screens/).

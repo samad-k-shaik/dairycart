@@ -52,7 +52,7 @@ backend/app/
 ├── schemas/             # product.py, order.py, common.py (ErrorResponse, Page)
 ├── repositories/        # product_repository.py, customer_repository.py, order_repository.py
 ├── services/            # product_service.py, order_service.py
-└── routers/             # health.py, products.py, orders.py, admin_orders.py
+└── routers/             # health.py, products.py, orders.py, admin_orders.py, admin_products.py
 ```
 
 > `pydantic-settings` is the Pydantic package for environment-based config; it is part of the approved Pydantic stack.

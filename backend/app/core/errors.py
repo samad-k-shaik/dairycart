@@ -1,0 +1,312 @@
+"""Domain exceptions and the handlers that turn every error into the standard JSON format
+(M1-08, LLD §8, docs/05-api/api-contracts.md#error-format).
+
+Services raise domain exceptions without knowing about HTTP:
+
+    raise ProductUnavailableError("Product 'Buffalo Milk 1 Litre' is currently unavailable.",
+                                  details=[ErrorDetail(field="items[1].product_id", issue="unavailable")])
+
+`register_error_handlers(app)` maps them, FastAPI's validation errors, Starlette's HTTP errors
+(unknown URL, wrong method) and any unexpected crash to:
+
+    {"error": {"code", "message", "details", "request_id"}}
+
+Unexpected crashes (500) are logged in full with the request ID, but the client only gets a
+generic message: a stack trace would reveal code, file paths and library versions to attackers.
+"""
+
+import logging
+from collections.abc import Sequence
+from typing import ClassVar
+
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from app.core.logging import REQUEST_ID_HEADER, request_id_var
+from app.schemas.common import ErrorBody, ErrorDetail, ErrorResponse
+
+logger = logging.getLogger("app.errors")
+
+
+# ---- Domain exceptions (raised by services) ----
+
+
+class DomainError(Exception):
+    """Base class: an expected business error with an HTTP status and an error code."""
+
+    status_code: int = 400
+    code: str = "BAD_REQUEST"
+    # Extra response headers, e.g. WWW-Authenticate for a 401.
+    headers: dict[str, str] | None = None
+
+    def __init__(self, message: str, details: Sequence[ErrorDetail] = ()) -> None:
+        super().__init__(message)
+        self.message = message
+        self.details = list(details)
+
+
+class NotFoundError(DomainError):
+    """A product or order with this id does not exist."""
+
+    status_code = 404
+    code = "NOT_FOUND"
+
+
+class ProductUnavailableError(DomainError):
+    """The request is valid, but a product is not available right now (is_available = false)."""
+
+    status_code = 409
+    code = "PRODUCT_UNAVAILABLE"
+
+
+class InsufficientStockError(DomainError):
+    """The order asks for more bottles than are in stock (#92). The message never says
+    how many are left: stock numbers are for admins only."""
+
+    status_code = 409
+    code = "INSUFFICIENT_STOCK"
+
+
+class InvalidStatusTransitionError(DomainError):
+    """The request is valid, but the order cannot move to that status (e.g. DELIVERED → PLACED)."""
+
+    status_code = 409
+    code = "INVALID_STATUS_TRANSITION"
+
+
+class DuplicateProductError(DomainError):
+    """The same product appears twice in one order (BR-4)."""
+
+    status_code = 400
+    code = "DUPLICATE_PRODUCT"
+
+
+class ProductAlreadyExistsError(DomainError):
+    """Admin: another product already has this name and size (issue #86)."""
+
+    status_code = 409
+    code = "PRODUCT_ALREADY_EXISTS"
+
+
+class UserAlreadyExistsError(DomainError):
+    """Sign-up: the email address or the username is already used (#89)."""
+
+    status_code = 409
+    code = "USER_ALREADY_EXISTS"
+
+
+class UnauthorizedError(DomainError):
+    """Not logged in: no token, a wrong/expired token, or wrong login details (#89)."""
+
+    status_code = 401
+    code = "UNAUTHORIZED"
+    # The standard header that tells clients to send "Authorization: Bearer <token>".
+    headers: ClassVar[dict[str, str]] = {"WWW-Authenticate": "Bearer"}
+
+
+class ForbiddenError(DomainError):
+    """Logged in, but not allowed: e.g. a USER calling an admin API (#89)."""
+
+    status_code = 403
+    code = "FORBIDDEN"
+
+
+class ProductInUseError(DomainError):
+    """Admin: the product appears in an order, so deleting it would break order history
+    (issue #86). Mark it unavailable instead."""
+
+    status_code = 409
+    code = "PRODUCT_IN_USE"
+
+
+class SubscriptionAlreadyActiveError(DomainError):
+    """The user already has an ACTIVE subscription; one at a time (#97)."""
+
+    status_code = 409
+    code = "SUBSCRIPTION_ALREADY_ACTIVE"
+
+
+class SubscriptionNotActiveError(DomainError):
+    """Cancel was asked for a subscription that is already cancelled or completed (#97)."""
+
+    status_code = 409
+    code = "SUBSCRIPTION_NOT_ACTIVE"
+
+
+class DeliverySlotFullError(DomainError):
+    """The chosen delivery slot has no places left (#100)."""
+
+    status_code = 409
+    code = "DELIVERY_SLOT_FULL"
+
+
+class DeliverySlotAlreadyExistsError(DomainError):
+    """Admin: another slot already has exactly these start and end times (#100)."""
+
+    status_code = 409
+    code = "DELIVERY_SLOT_ALREADY_EXISTS"
+
+
+class DeliverySlotInUseError(DomainError):
+    """Admin: the slot was booked by a subscription, so it cannot be deleted (#100).
+    Switch it off instead."""
+
+    status_code = 409
+    code = "DELIVERY_SLOT_IN_USE"
+
+
+class LastActiveDeliverySlotError(DomainError):
+    """Admin: switching off or deleting this slot would leave customers with no delivery
+    time to choose (#100)."""
+
+    status_code = 409
+    code = "LAST_ACTIVE_DELIVERY_SLOT"
+
+
+class AddressLimitReachedError(DomainError):
+    """The user already has the maximum number of saved addresses (#102)."""
+
+    status_code = 409
+    code = "ADDRESS_LIMIT_REACHED"
+
+
+class DeliveryBoyAlreadyExistsError(DomainError):
+    """Admin: another delivery boy already has this phone number (#103)."""
+
+    status_code = 409
+    code = "DELIVERY_BOY_ALREADY_EXISTS"
+
+
+class AreaAlreadyAllocatedError(DomainError):
+    """Admin: this PIN code is already allocated to a delivery boy (#103). One delivery
+    boy per PIN code; remove it from him first."""
+
+    status_code = 409
+    code = "AREA_ALREADY_ALLOCATED"
+
+
+class InvalidFieldError(DomainError):
+    """A field is well-formed but breaks a rule that needs the database or today's date,
+    e.g. a subscription start date in the past (#97). Same code and shape as pydantic's
+    422, so the frontend shows it under the field in the same way."""
+
+    status_code = 422
+    code = "VALIDATION_ERROR"
+
+
+# ---- Building the response ----
+
+INTERNAL_ERROR_MESSAGE = "Something went wrong on our side. Please try again."
+
+_HTTP_ERRORS: dict[int, tuple[str, str]] = {
+    404: ("NOT_FOUND", "The requested resource was not found."),
+    405: ("METHOD_NOT_ALLOWED", "This method is not allowed for this URL."),
+}
+
+
+def _request_id(request: Request) -> str | None:
+    return getattr(request.state, "request_id", None) or request_id_var.get()
+
+
+def error_response(
+    request: Request,
+    status_code: int,
+    code: str,
+    message: str,
+    details: Sequence[ErrorDetail] = (),
+    headers: dict[str, str] | None = None,
+) -> JSONResponse:
+    body = ErrorResponse(
+        error=ErrorBody(
+            code=code,
+            message=message,
+            details=list(details),
+            request_id=_request_id(request),
+        )
+    )
+    return JSONResponse(
+        status_code=status_code, content=body.model_dump(), headers=headers
+    )
+
+
+def field_path(location: Sequence[str | int]) -> str:
+    """("body", "items", 0, "quantity") → "items[0].quantity"; ("query", "page") → "page".
+
+    The first part only says WHERE the value was (body, query, path, header, cookie).
+    """
+    parts: list[str] = []
+    for index, part in enumerate(location):
+        if index == 0 and part in {"body", "query", "path", "header", "cookie"}:
+            continue
+        if isinstance(part, int):
+            if parts:
+                parts[-1] += f"[{part}]"
+            else:
+                parts.append(f"[{part}]")
+        else:
+            parts.append(str(part))
+    return ".".join(parts) or str(location[0] if location else "request")
+
+
+# ---- Handlers ----
+
+
+async def _domain_error(request: Request, exc: Exception) -> JSONResponse:
+    assert isinstance(exc, DomainError)
+    return error_response(
+        request,
+        exc.status_code,
+        exc.code,
+        exc.message,
+        exc.details,
+        headers=exc.headers,
+    )
+
+
+async def _validation_error(request: Request, exc: Exception) -> JSONResponse:
+    assert isinstance(exc, RequestValidationError)
+    # Only the field path and pydantic's message; never the submitted value (privacy).
+    details = [
+        ErrorDetail(field=field_path(e["loc"]), issue=e["msg"]) for e in exc.errors()
+    ]
+    return error_response(
+        request, 422, "VALIDATION_ERROR", "Request validation failed.", details
+    )
+
+
+async def _http_error(request: Request, exc: Exception) -> JSONResponse:
+    assert isinstance(exc, StarletteHTTPException)
+    code, message = _HTTP_ERRORS.get(
+        exc.status_code, ("HTTP_ERROR", "The request failed.")
+    )
+    # Keep headers such as Allow (405).
+    return error_response(request, exc.status_code, code, message, headers=exc.headers)
+
+
+async def _unhandled_error(request: Request, exc: Exception) -> JSONResponse:
+    request_id = _request_id(request)
+    # Full traceback in the logs (with the request ID), nothing technical for the client.
+    logger.exception(
+        "unhandled error",
+        exc_info=exc,
+        extra={
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+        },
+    )
+    # This handler runs outside the request-ID middleware, so add the header here.
+    headers = {REQUEST_ID_HEADER: request_id} if request_id else None
+    return error_response(
+        request, 500, "INTERNAL_ERROR", INTERNAL_ERROR_MESSAGE, headers=headers
+    )
+
+
+def register_error_handlers(app: FastAPI) -> None:
+    """Installs all handlers on the app (called from main.py)."""
+    app.add_exception_handler(DomainError, _domain_error)
+    app.add_exception_handler(RequestValidationError, _validation_error)
+    app.add_exception_handler(StarletteHTTPException, _http_error)
+    app.add_exception_handler(Exception, _unhandled_error)

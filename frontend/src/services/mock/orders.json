@@ -1,0 +1,87 @@
+[
+  {
+    "order_id": 94,
+    "customer": { "customer_id": 7, "name": "Ravi Kumar", "phone": "9876543210" },
+    "order_date": "2026-11-01T03:00:00Z",
+    "status": "DELIVERED",
+    "items": [
+      { "order_item_id": 480, "product_id": 2, "product_name": "Cow Milk", "size": "1 Litre", "quantity": 1, "unit_price": "60.00", "subtotal": "60.00" }
+    ],
+    "total_amount": "60.00"
+  },
+  {
+    "order_id": 95,
+    "customer": { "customer_id": 8, "name": "Asha Reddy", "phone": "9123456780" },
+    "order_date": "2026-11-02T03:15:00Z",
+    "status": "DELIVERED",
+    "items": [
+      { "order_item_id": 481, "product_id": 1, "product_name": "Cow Milk", "size": "500 ml", "quantity": 2, "unit_price": "30.00", "subtotal": "60.00" },
+      { "order_item_id": 482, "product_id": 3, "product_name": "Buffalo Milk", "size": "500 ml", "quantity": 1, "unit_price": "35.00", "subtotal": "35.00" }
+    ],
+    "total_amount": "95.00"
+  },
+  {
+    "order_id": 96,
+    "customer": { "customer_id": 9, "name": "Suresh Babu", "phone": "8899776655" },
+    "order_date": "2026-11-03T02:45:00Z",
+    "status": "CANCELLED",
+    "items": [
+      { "order_item_id": 483, "product_id": 4, "product_name": "Buffalo Milk", "size": "1 Litre", "quantity": 2, "unit_price": "70.00", "subtotal": "140.00" }
+    ],
+    "total_amount": "140.00"
+  },
+  {
+    "order_id": 97,
+    "customer": { "customer_id": 10, "name": "Lakshmi Devi", "phone": "7012345678" },
+    "order_date": "2026-11-04T04:00:00Z",
+    "status": "OUT_FOR_DELIVERY",
+    "items": [
+      { "order_item_id": 484, "product_id": 2, "product_name": "Cow Milk", "size": "1 Litre", "quantity": 3, "unit_price": "60.00", "subtotal": "180.00" },
+      { "order_item_id": 485, "product_id": 4, "product_name": "Buffalo Milk", "size": "1 Litre", "quantity": 1, "unit_price": "70.00", "subtotal": "70.00" }
+    ],
+    "total_amount": "250.00"
+  },
+  {
+    "order_id": 98,
+    "customer": { "customer_id": 7, "name": "Ravi Kumar", "phone": "9876543210" },
+    "order_date": "2026-11-05T03:10:00Z",
+    "status": "CONFIRMED",
+    "items": [
+      { "order_item_id": 486, "product_id": 3, "product_name": "Buffalo Milk", "size": "500 ml", "quantity": 2, "unit_price": "35.00", "subtotal": "70.00" }
+    ],
+    "total_amount": "70.00"
+  },
+  {
+    "order_id": 99,
+    "customer": { "customer_id": 8, "name": "Asha Reddy", "phone": "9123456780" },
+    "order_date": "2026-11-06T05:20:00Z",
+    "status": "CONFIRMED",
+    "items": [
+      { "order_item_id": 487, "product_id": 1, "product_name": "Cow Milk", "size": "500 ml", "quantity": 1, "unit_price": "30.00", "subtotal": "30.00" },
+      { "order_item_id": 488, "product_id": 2, "product_name": "Cow Milk", "size": "1 Litre", "quantity": 1, "unit_price": "60.00", "subtotal": "60.00" }
+    ],
+    "total_amount": "90.00"
+  },
+  {
+    "order_id": 100,
+    "customer": { "customer_id": 9, "name": "Suresh Babu", "phone": "8899776655" },
+    "order_date": "2026-11-06T06:30:00Z",
+    "status": "PLACED",
+    "items": [
+      { "order_item_id": 489, "product_id": 4, "product_name": "Buffalo Milk", "size": "1 Litre", "quantity": 1, "unit_price": "70.00", "subtotal": "70.00" },
+      { "order_item_id": 490, "product_id": 1, "product_name": "Cow Milk", "size": "500 ml", "quantity": 4, "unit_price": "30.00", "subtotal": "120.00" }
+    ],
+    "total_amount": "190.00"
+  },
+  {
+    "order_id": 101,
+    "customer": { "customer_id": 7, "name": "Ravi Kumar", "phone": "9876543210" },
+    "order_date": "2026-11-07T04:30:00Z",
+    "status": "PLACED",
+    "items": [
+      { "order_item_id": 501, "product_id": 2, "product_name": "Cow Milk", "size": "1 Litre", "quantity": 2, "unit_price": "60.00", "subtotal": "120.00" },
+      { "order_item_id": 502, "product_id": 3, "product_name": "Buffalo Milk", "size": "500 ml", "quantity": 1, "unit_price": "35.00", "subtotal": "35.00" }
+    ],
+    "total_amount": "155.00"
+  }
+]
