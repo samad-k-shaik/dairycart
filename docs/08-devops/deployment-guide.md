@@ -40,12 +40,31 @@ npm run dev
 
 ### Environment variables
 
-| Variable | Example | Service |
+Every setting the app reads (#59). Copy `backend/.env.example` → `backend/.env` and `frontend/.env.example` → `frontend/.env.local` to change them; both files are git-ignored. Docker Compose sets the backend values itself (see section 3).
+
+**Backend** (`backend/.env`, read by `app/core/config.py`; the app refuses to start if a required value is missing or invalid):
+
+| Variable | Required | Default / example | What it does |
+|---|---|---|---|
+| `DATABASE_URL` | ✅ | `postgresql+psycopg://milk_user:milk_password_local_only@localhost:5432/milk_delivery` | PostgreSQL connection. Treated as secret: never logged |
+| `JWT_SECRET_KEY` | ✅ | none. Generate: `python -c "import secrets; print(secrets.token_urlsafe(48))"` | Signs login tokens; at least 32 characters. **Secret** |
+| `CORS_ORIGINS` | | `http://localhost:5173` | Frontend addresses allowed to call the API (comma-separated) |
+| `JWT_EXPIRE_MINUTES` | | `60` | How long a login stays valid (5–1440) |
+| `SUBSCRIPTION_AUTO_ORDERS` | | `true` | Create subscription delivery orders automatically |
+| `SUBSCRIPTION_ORDERS_INTERVAL_MINUTES` | | `15` | How often (1–1440) |
+| `LOG_LEVEL` | | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
+| `APP_ENV` | | `local` | `local`, `test` or `production` |
+| `TEST_DATABASE_URL` | | `…/milk_delivery_test` | Test database for `pytest`; the name must end in `_test` |
+| `ADMIN_PASSWORD` | | none | Lets `create_admin` run without a password prompt (Compose, automation) |
+
+**Frontend** (`frontend/.env.local`; Vite bakes these in at **build** time):
+
+| Variable | Default | What it does |
 |---|---|---|
-| `DATABASE_URL` | `postgresql+psycopg://milk_user:milk_password_local_only@localhost:5432/milk_delivery` | backend |
-| `CORS_ORIGINS` | `http://localhost:5173` | backend |
-| `LOG_LEVEL` | `INFO` | backend |
-| `VITE_API_BASE_URL` | `http://localhost:8000/api/v1` | frontend |
+| `VITE_API_BASE_URL` | `http://localhost:8000/api/v1` | Backend address the browser calls |
+| `VITE_USE_MOCKS` | `false` | `true` = use the M2 mock data instead of the backend |
+
+**Secrets rule:** real secrets never go into Git. Local values are marked `local_only`, CI values `ci-only`. Production secrets (M6) live in GCP Secret Manager. GitHub **secret scanning** and **push protection** are enabled, so a push containing a recognised key (cloud, GitHub token…) is blocked. The full history was searched for secrets on 2026-11-15 (#59): none were found.
 
 ## 3. Full stack with Docker Compose (M5)
 
