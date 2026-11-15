@@ -120,7 +120,7 @@ class AdminSubscriptionSummary(BaseModel):
     """One row of GET /admin/subscriptions."""
 
     subscription_id: int
-    username: str
+    account_name: str  # #121: the account holder's full name
     customer_name: str
     customer_phone: str
     plan: SubscriptionPlan

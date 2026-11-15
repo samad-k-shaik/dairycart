@@ -93,7 +93,7 @@ class ProductAlreadyExistsError(DomainError):
 
 
 class UserAlreadyExistsError(DomainError):
-    """Sign-up: the email address or the username is already used (#89)."""
+    """Sign-up: the mobile number already has an account (#89, #121)."""
 
     status_code = 409
     code = "USER_ALREADY_EXISTS"

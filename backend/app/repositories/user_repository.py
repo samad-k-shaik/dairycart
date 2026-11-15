@@ -1,8 +1,8 @@
-"""Queries for the users table (#89)."""
+"""Queries for the users table (#89; looked up by mobile number since #121)."""
 
 from collections.abc import Sequence
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import User
@@ -15,18 +15,13 @@ class UserRepository:
     def get(self, user_id: int) -> User | None:
         return self.db.get(User, user_id)
 
-    def find_by_login(self, login: str) -> User | None:
-        """The user whose username OR email is `login` (both are stored in lower case)."""
-        value = login.strip().lower()
-        query = select(User).where(or_(User.username == value, User.email == value))
-        return self.db.scalars(query).first()
+    def get_by_phone(self, phone: str) -> User | None:
+        """The user whose login is this mobile number (10 digits, already normalised by
+        the schema)."""
+        return self.db.scalars(select(User).where(User.phone == phone)).first()
 
-    def email_taken(self, email: str) -> bool:
-        return self.db.scalar(select(User.user_id).where(User.email == email)) is not None
-
-    def username_taken(self, username: str) -> bool:
-        query = select(User.user_id).where(User.username == username)
-        return self.db.scalar(query) is not None
+    def phone_taken(self, phone: str) -> bool:
+        return self.db.scalar(select(User.user_id).where(User.phone == phone)) is not None
 
     def list_all(self) -> Sequence[User]:
         """Every user, oldest first."""

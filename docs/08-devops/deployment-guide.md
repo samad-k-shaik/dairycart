@@ -89,7 +89,7 @@ docker compose down -v         # stop and DELETE all data (fresh start)
 
 **Start order.** `db` becomes healthy → `backend` runs `alembic upgrade head`, the product seed and `create_admin` (on later starts the admin already exists; this is logged and ignored), then starts and becomes healthy → `frontend` starts.
 
-**Logins (local only).** Website admin `admin` / `admin_local_only_123` (customers register on the website). pgAdmin `admin@example.com` / `admin123`. PostgreSQL `milk_user` / `milk_password_local_only`.
+**Logins (local only).** Website admin: mobile `9000000001` / `admin_local_only_123` (customers register on the website). pgAdmin `admin@example.com` / `admin123`. PostgreSQL `milk_user` / `milk_password_local_only`.
 
 **Settings.** Local-only defaults are in `docker-compose.yml`. To override the JWT secret or admin password, create a git-ignored `.env` file in the repository root:
 

@@ -5,8 +5,8 @@ from typing import Annotated, Any, Self
 from pydantic import BaseModel, ConfigDict, StringConstraints, model_validator
 
 from app.models.address import PINCODE_PATTERN
-from app.schemas.common import UtcDateTime
-from app.schemas.order import CustomerName, Phone
+from app.schemas.common import Phone, UtcDateTime
+from app.schemas.order import CustomerName
 
 Pincode = Annotated[str, StringConstraints(strip_whitespace=True, pattern=PINCODE_PATTERN)]
 AreaName = Annotated[str, StringConstraints(strip_whitespace=True, max_length=50)]

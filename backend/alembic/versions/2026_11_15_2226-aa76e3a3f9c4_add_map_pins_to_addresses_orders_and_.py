@@ -8,7 +8,7 @@ The CHECK constraints were added by hand (autogenerate does not detect them). Th
 follow the naming convention in app/database/base.py and match app/models/map_pin.py.
 
 Revision ID: aa76e3a3f9c4
-Revises: 99af8de2905d
+Revises: b2526ba63844
 Create Date: 2026-11-15 22:26:42.722879
 
 """
@@ -20,7 +20,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "aa76e3a3f9c4"
-down_revision: str | Sequence[str] | None = "99af8de2905d"
+down_revision: str | Sequence[str] | None = "b2526ba63844"  # after #121
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

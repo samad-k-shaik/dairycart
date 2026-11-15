@@ -35,8 +35,7 @@ function UserDashboardPage() {
 
   const details: [string, string][] = [
     ["Full name", user.full_name],
-    ["Username", user.username],
-    ["Email", user.email],
+    ["Mobile number", user.phone],
     ["Member since", formatDate(user.created_at)],
   ]
 

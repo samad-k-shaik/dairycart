@@ -185,7 +185,7 @@ def list_my_orders(db: Session, user: User) -> list[OrderRow]:
 class AdminOrderBoard:
     """#104: one page of the admin Orders board."""
 
-    rows: list[tuple[Order, str | None, DeliveryBoy | None]]  # order, username, boy
+    rows: list[tuple[Order, str | None, DeliveryBoy | None]]  # order, account name, boy
     total: int
     status_counts: dict[OrderStatus, int]
     boy_counts: list[tuple[DeliveryBoy, int]]
@@ -210,8 +210,8 @@ def list_admin_orders(
     boys = {boy.delivery_boy_id: boy for boy in allocation.values()}
     return AdminOrderBoard(
         rows=[
-            (order, username, allocation.get(order.delivery_pincode or ""))
-            for order, username in orders
+            (order, account_name, allocation.get(order.delivery_pincode or ""))
+            for order, account_name in orders
         ],
         total=total,
         status_counts=repository.count_by_status(filters),

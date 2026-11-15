@@ -89,9 +89,10 @@ function CheckoutPage() {
   const { user } = useAuth()
 
   // Controlled inputs: React state holds what the user typed.
-  // Name starts as the account's name (#90); it is the delivery contact and can be changed.
+  // Name (#90) and phone (#121) start as the account's; they are the delivery contact and
+  // can be changed (e.g. ordering for a parent at another number).
   const [name, setName] = useState(user?.full_name ?? "")
-  const [phone, setPhone] = useState("")
+  const [phone, setPhone] = useState(user?.phone ?? "")
   // Show a field's error only after the user leaves it, or after they try to submit.
   const [touched, setTouched] = useState({ name: false, phone: false })
   const [submitted, setSubmitted] = useState(false)

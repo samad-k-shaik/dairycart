@@ -47,12 +47,13 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-local-only-jwt-secret-do-not-use-elsewhere-0123456789}
       APP_ENV: local
       LOG_LEVEL: INFO
-      # Password for the "admin" login created on first start (must contain a letter and a number).
+      # Password for the admin login (mobile 9000000001, #121) created on first start
+      # (must contain a letter and a number).
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin_local_only_123}
     # Before the API starts:
     #   1. alembic upgrade head → create/update the tables
     #   2. seed                 → add the starting products (safe to repeat)
-    #   3. create_admin         → add the "admin" login; on later starts it already
+    #   3. create_admin         → add the admin login (mobile 9000000001); on later starts it already
     #                             exists, which is reported and ignored
     command:
       - sh
@@ -60,7 +61,7 @@ services:
       - |
         alembic upgrade head &&
         python -m app.scripts.seed &&
-        { python -m app.scripts.create_admin --username admin --email admin@dairycart.local --full-name "Dairy Admin" ||
+        { python -m app.scripts.create_admin --phone 9000000001 --full-name "Dairy Admin" ||
           echo "Admin not created (it most likely exists already) - continuing."; } &&
         exec uvicorn app.main:app --host 0.0.0.0 --port 8000
     ports:

@@ -10,15 +10,13 @@ from typing import Annotated, Self
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from app.models import DeliveryBoy, Order, OrderStatus
-from app.schemas.common import Money, UtcDateTime
+from app.schemas.common import Money, Phone, UtcDateTime
 
 # ---- Requests ----
 
 CustomerName = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=2, max_length=100)
 ]
-# 10-digit Indian mobile number: starts with 6, 7, 8 or 9.
-Phone = Annotated[str, StringConstraints(pattern=r"^[6-9]\d{9}$")]
 
 
 class CustomerIn(BaseModel):
@@ -186,14 +184,14 @@ class AdminOrderSummary(BaseModel):
     delivery_slot: str | None = None  # #100
     # #104: the card's details. Null user only for old guest orders (before #90).
     user_id: int | None = None
-    username: str | None = None
+    account_name: str | None = None  # #121: the account holder's full name
     delivery_date: date | None = None
     delivery_pincode: str | None = None  # #103
     delivery_boy: AssignedBoy | None = None  # #103: by PIN code; null = not assigned
     items: list[AdminOrderLine] = []
 
     @classmethod
-    def from_order(cls, order: Order, username: str | None, boy: DeliveryBoy | None) -> Self:
+    def from_order(cls, order: Order, account_name: str | None, boy: DeliveryBoy | None) -> Self:
         lines = sorted(order.items, key=lambda i: i.order_item_id)
         return cls(
             order_id=order.order_id,
@@ -206,7 +204,7 @@ class AdminOrderSummary(BaseModel):
             subscription_id=order.subscription_id,
             delivery_slot=order.delivery_slot,
             user_id=order.user_id,
-            username=username,
+            account_name=account_name,
             delivery_date=order.delivery_date,
             delivery_pincode=order.delivery_pincode,
             delivery_boy=(

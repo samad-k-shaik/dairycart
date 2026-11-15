@@ -92,7 +92,7 @@ function CustomerLayout() {
             </NavLink>
             {/* #89: "Account" when logged in, otherwise "Log in". */}
             {user ? (
-              <NavLink to="/account" className={navLinkClass} aria-label={`Account, ${user.username}`}>
+              <NavLink to="/account" className={navLinkClass} aria-label={`Account, ${user.full_name}`}>
                 <UserRound className="size-5" aria-hidden="true" />
                 <span className="hidden sm:inline">Account</span>
               </NavLink>

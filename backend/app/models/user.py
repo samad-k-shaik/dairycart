@@ -1,7 +1,8 @@
-"""USERS table (#89): people who sign up and log in.
+"""USERS table (#89): people who sign up and log in, with their mobile number (#121).
 
-Separate from CUSTOMERS on purpose: ordering still works without an account (guest checkout,
-customer found by phone). A user account is for the user dashboard and the admin area.
+Separate from CUSTOMERS on purpose: users.phone is the LOGIN of the account, while
+customers.phone is the delivery contact typed at checkout (BR-5). They are often the same
+number, but someone may order for a parent at another number.
 """
 
 from __future__ import annotations
@@ -30,15 +31,18 @@ _ROLE_VALUES_SQL = ",".join(f"'{role.value}'" for role in UserRole)
 
 class User(Base):
     __tablename__ = "users"
-    __table_args__ = (CheckConstraint(f"role IN ({_ROLE_VALUES_SQL})", name="role_allowed"),)
+    __table_args__ = (
+        CheckConstraint(f"role IN ({_ROLE_VALUES_SQL})", name="role_allowed"),
+        # Same rule as the API (schemas/common.py → Phone): the database refuses a badly
+        # formatted number even if it does not come through the API (e.g. a script).
+        CheckConstraint("phone ~ '^[6-9][0-9]{9}$'", name="phone_format"),
+    )
 
     user_id: Mapped[int] = mapped_column(primary_key=True)
     full_name: Mapped[str] = mapped_column(String(100))
-    # Stored in lower case, so "Ravi@Mail.com" and "ravi@mail.com" are the same account.
-    # unique=True also creates the index used to find a user at login.
-    email: Mapped[str] = mapped_column(String(254), unique=True)
-    # Stored in lower case too (3–30 letters, digits, dot, dash, underscore).
-    username: Mapped[str] = mapped_column(String(30), unique=True)
+    # #121: the login. 10-digit Indian mobile number, always saved without +91 or spaces.
+    # unique=True: one account per number; it also creates the index used at login.
+    phone: Mapped[str] = mapped_column(String(10), unique=True)
     # bcrypt hash (60 characters, includes its own random salt). NEVER the password itself.
     password_hash: Mapped[str] = mapped_column(String(100))
     # VARCHAR + CHECK (like orders.status), not a native PostgreSQL enum.
@@ -56,5 +60,5 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self) -> str:
-        # Never include the email or the hash: reprs end up in logs.
+        # Never include the phone number or the hash: reprs end up in logs.
         return f"User(user_id={self.user_id!r}, role={self.role!r})"

@@ -1,5 +1,5 @@
 /**
- * Route: `/login` (#89). Username or email + password.
+ * Route: `/login` (#89). Mobile number + password (#121).
  * After login: back to the page that asked for it (?next=…), otherwise the User
  * Dashboard (/account) for a USER and the Admin Dashboard (/admin) for an ADMIN.
  */
@@ -11,7 +11,8 @@ import { userFacingMessage } from "@/components/common/ErrorState"
 import { FormField } from "@/components/common/FormField"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/useAuth"
-import { pathAfterLogin } from "@/lib/authValidation"
+import { pathAfterLogin, validateMobile } from "@/lib/authValidation"
+import { normaliseMobile } from "@/lib/validation"
 
 function LoginPage() {
   const { user, login } = useAuth()
@@ -20,9 +21,10 @@ function LoginPage() {
   const next = searchParams.get("next")
   const justRegistered = searchParams.get("registered") === "1"
 
-  const [loginName, setLoginName] = useState(searchParams.get("username") ?? "")
+  // After sign-up the new number is passed in the URL (?phone=…), so it is filled in.
+  const [phone, setPhone] = useState(searchParams.get("phone") ?? "")
   const [password, setPassword] = useState("")
-  const [errors, setErrors] = useState<{ login?: string; password?: string }>({})
+  const [errors, setErrors] = useState<{ phone?: string; password?: string }>({})
   const [submitError, setSubmitError] = useState<Error | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -32,19 +34,19 @@ function LoginPage() {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     const found = {
-      login: loginName.trim() ? undefined : "Please enter your username or email.",
+      phone: validateMobile(phone) ?? undefined,
       password: password ? undefined : "Please enter your password.",
     }
     setErrors(found)
     setSubmitError(null)
-    if (found.login || found.password) return
+    if (found.phone || found.password) return
 
     setBusy(true)
     try {
-      const loggedIn = await login({ login: loginName.trim(), password })
+      const loggedIn = await login({ phone: normaliseMobile(phone), password })
       navigate(pathAfterLogin(loggedIn.role, next), { replace: true })
     } catch (error) {
-      setSubmitError(error as Error) // 401: "Invalid username/email or password."
+      setSubmitError(error as Error) // 401: "Invalid mobile number or password."
       setPassword("")
     } finally {
       setBusy(false)
@@ -58,7 +60,7 @@ function LoginPage() {
           <LogIn className="size-6" aria-hidden="true" />
         </span>
         <h1 className="text-h1 font-bold">Log in</h1>
-        <p className="text-muted-foreground">Use the username or email you signed up with.</p>
+        <p className="text-muted-foreground">Use the mobile number you signed up with.</p>
       </div>
 
       {justRegistered && (
@@ -69,7 +71,7 @@ function LoginPage() {
       )}
 
       <form onSubmit={handleSubmit} noValidate className="space-y-4 rounded-2xl bg-surface p-5 shadow-card">
-        <FormField id="login-name" label="Username or email" autoComplete="username" value={loginName} error={errors.login} onChange={(v) => { setLoginName(v); setErrors((e) => ({ ...e, login: undefined })) }} />
+        <FormField id="login-phone" label="Mobile number" type="tel" inputMode="tel" autoComplete="tel-national" leadingText="+91" value={phone} error={errors.phone} placeholder="98765 43210" onChange={(v) => { setPhone(v); setErrors((e) => ({ ...e, phone: undefined })) }} />
         <FormField id="login-password" label="Password" type="password" autoComplete="current-password" value={password} error={errors.password} onChange={(v) => { setPassword(v); setErrors((e) => ({ ...e, password: undefined })) }} />
 
         {submitError && (

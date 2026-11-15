@@ -7,29 +7,28 @@ import {
   EMPTY_SIGN_UP,
   pathAfterLogin,
   toRegisterRequest,
-  validateEmail,
+  validateFullName,
+  validateMobile,
   validatePassword,
   validateSignUp,
-  validateUsername,
 } from "./authValidation.ts"
+import { normaliseMobile } from "./validation.ts"
 
 const USER: User = {
   user_id: 1,
   full_name: "Ravi Kumar",
-  email: "ravi@example.com",
-  username: "ravi",
+  phone: "9876543210",
   role: "USER",
   created_at: "2026-11-10T10:00:00Z",
 }
 const VALID = {
   full_name: "Ravi Kumar",
-  email: "ravi@example.com",
-  username: "Ravi_K",
+  phone: "98765 43210",
   password: "milk1234",
   confirm_password: "milk1234",
 }
 
-describe("sign-up validation (#89, same rules as the backend)", () => {
+describe("sign-up validation (#89, #121: same rules as the backend)", () => {
   it("a complete, valid form has no errors", () => {
     assert.deepEqual(validateSignUp(VALID), {})
   })
@@ -37,21 +36,33 @@ describe("sign-up validation (#89, same rules as the backend)", () => {
   it("every field is mandatory", () => {
     assert.deepEqual(Object.keys(validateSignUp(EMPTY_SIGN_UP)).sort(), [
       "confirm_password",
-      "email",
       "full_name",
       "password",
-      "username",
+      "phone",
     ])
   })
 
-  it("checks the email format", () => {
-    for (const bad of ["ravi", "ravi@", "ravi@example", "ra vi@example.com"]) assert.ok(validateEmail(bad), bad)
-    assert.equal(validateEmail(" ravi@example.com "), null)
+  it("the full name is mandatory, 2–100 characters", () => {
+    assert.equal(validateFullName("   "), "Please enter your full name.")
+    assert.equal(validateFullName("A"), "Name must be 2–100 characters.")
+    assert.ok(validateFullName("x".repeat(101)))
+    assert.equal(validateFullName(" Ravi Kumar "), null)
   })
 
-  it("checks the username", () => {
-    for (const bad of ["ab", "has space", "x".repeat(31), "ravi!"]) assert.ok(validateUsername(bad), bad)
-    assert.equal(validateUsername("Ravi_K.1-x"), null)
+  it("checks the mobile number (10 digits, starts with 6-9)", () => {
+    for (const bad of ["", "987654321", "98765432101", "5876543210", "98765abcde", "+44 7911 123456"]) {
+      assert.ok(validateMobile(bad), bad)
+    }
+    for (const good of ["9876543210", "98765 43210", "+91 98765 43210", "+919876543210", "09876543210", "98765-43210"]) {
+      assert.equal(validateMobile(good), null, good)
+    }
+  })
+
+  it("normalises the mobile number like the backend", () => {
+    assert.equal(normaliseMobile("+91 98765-43210"), "9876543210")
+    assert.equal(normaliseMobile("098765 43210"), "9876543210")
+    assert.equal(normaliseMobile("9876543210"), "9876543210")
+    assert.equal(normaliseMobile("0987654321"), "0987654321") // 10 digits: left alone (and invalid)
   })
 
   it("checks the password strength and bcrypt's 72-byte limit", () => {
@@ -67,8 +78,8 @@ describe("sign-up validation (#89, same rules as the backend)", () => {
   })
 
   it("sends trimmed values and never the confirm field", () => {
-    const body = toRegisterRequest({ ...VALID, full_name: "  Ravi Kumar ", email: " ravi@example.com " })
-    assert.deepEqual(body, { full_name: "Ravi Kumar", email: "ravi@example.com", username: "Ravi_K", password: "milk1234" })
+    const body = toRegisterRequest({ ...VALID, full_name: "  Ravi Kumar ", phone: "+91 98765 43210" })
+    assert.deepEqual(body, { full_name: "Ravi Kumar", phone: "9876543210", password: "milk1234" })
   })
 })
 
@@ -104,8 +115,13 @@ describe("stored session", () => {
     assert.equal(parseSession(JSON.stringify(session), now + 3_600_000 - 10_000), null) // 30 s margin
   })
 
+  it("a session saved before #121 (username, no phone) counts as logged out", () => {
+    const old = { token: "t", expiresAt: now + 1e7, user: { user_id: 1, username: "ravi", role: "USER" } }
+    assert.equal(parseSession(JSON.stringify(old), now), null)
+  })
+
   it("logout (no stored value) and damaged data count as logged out", () => {
-    for (const raw of [null, "", "not json", "{}", JSON.stringify({ token: 1 }), JSON.stringify({ token: "t", expiresAt: now + 1e7, user: { username: "x", role: "ROOT" } })]) {
+    for (const raw of [null, "", "not json", "{}", JSON.stringify({ token: 1 }), JSON.stringify({ token: "t", expiresAt: now + 1e7, user: { phone: "9876543210", role: "ROOT" } })]) {
       assert.equal(parseSession(raw, now), null, String(raw))
     }
   })
