@@ -1,0 +1,131 @@
+# Continuous Integration (M5: #60, #61)
+#
+# Runs on every pull request to develop/main and on every push to them.
+# Three jobs run IN PARALLEL; each shows up as a ✅/❌ check on the pull request:
+#
+#   backend       Ruff (lint + format) → Alembic migrations → pytest with coverage
+#   frontend      type check → unit tests → production build
+#   docker-build  builds the backend and frontend images (nothing is pushed)
+#
+# The job IDs (backend, frontend, docker-build) are the names used as
+# "required status checks" in the branch protection of main and develop (#62).
+# Renaming a job means updating that setting too, or every PR waits forever.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+# Read-only access to the code is all CI needs.
+permissions:
+  contents: read
+
+# A new push to the same PR cancels the older, now-outdated run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+
+    # A real PostgreSQL 16 (same version as docker-compose.yml) next to the job.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: milk_user
+          POSTGRES_PASSWORD: milk_password_local_only # CI-only throwaway database
+          POSTGRES_DB: milk_delivery
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U milk_user -d milk_delivery"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+psycopg://milk_user:milk_password_local_only@localhost:5432/milk_delivery
+      TEST_DATABASE_URL: postgresql+psycopg://milk_user:milk_password_local_only@localhost:5432/milk_delivery_test
+      JWT_SECRET_KEY: ci-only-secret-key-that-is-long-enough-0123456789
+      PGPASSWORD: milk_password_local_only
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip # reuse downloaded packages between runs
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Lint (ruff check)
+        run: ruff check .
+
+      - name: Formatting (ruff format --check)
+        run: ruff format --check .
+
+      - name: Apply migrations to an empty database
+        # Proves every Alembic migration runs cleanly from scratch.
+        run: alembic upgrade head
+
+      - name: Create the test database
+        run: createdb -h localhost -U milk_user milk_delivery_test
+
+      - name: Tests with coverage
+        run: pytest --cov=app --cov-report=term-missing:skip-covered
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24" # same as the frontend Docker image
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Lint (ESLint) is added here once M4 issue #52 sets it up.
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Production build
+        run: npm run build
+
+  docker-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Builds exactly what `docker compose up --build` builds (backend + frontend
+      # images), so a broken Dockerfile or compose file fails here, not on a laptop.
+      - name: Build images
+        run: docker compose build backend frontend
