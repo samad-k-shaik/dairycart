@@ -27,6 +27,8 @@ Check it works: `curl http://localhost:8000/` returns `{"name":"Milk Delivery PO
 
 The backend needs PostgreSQL with user `milk_user`, password `milk_password_local_only` (local only) and database `milk_delivery`, matching `DATABASE_URL` in `.env.example`. Tests use a second database, `milk_delivery_test`.
 
+> **Just want to run the app?** `docker compose up --build` from the repository root runs the database, backend and frontend together, with no Python setup needed. See [`docs/08-devops/deployment-guide.md`](../docs/08-devops/deployment-guide.md#3-full-stack-with-docker-compose-m5). The steps below are for developing the backend on your computer.
+
 **Option A: Docker (project default).** From the repository root:
 
 ```bash
