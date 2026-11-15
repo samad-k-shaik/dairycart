@@ -27,3 +27,6 @@ Artifact Registry, Cloud SQL, Secret Manager, Cloud Run (backend + frontend), Wo
 
 ## M7 – Final Demonstration
 End-to-end demo, documentation review, retrospective, individual learning reflections, backlog of future features.
+
+## M12 – Future: Maps and Live Delivery Tracking
+Future enhancement, needs the scope change in M12-01 first. Free and open source only: Leaflet + OpenStreetMap maps, a map pin on saved addresses, delivery boy login, live location from the phone browser (Geolocation API), admin live map and customer order tracking with a straight-line ETA (polling), then push updates with SSE and PostgreSQL LISTEN/NOTIFY. No Google Maps, Redis, Kafka or native apps. Issues: `12xx`.

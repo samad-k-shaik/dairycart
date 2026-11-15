@@ -20,3 +20,4 @@ Targets are sized for a POC: meaningful enough to learn from, small enough to ac
 | NFR-14 | Portability | Whole stack runs locally with `docker compose up` | M5 acceptance |
 | NFR-15 | Cost | GCP resources sized at minimum tiers; Cloud Run scales to zero | M6 review |
 | NFR-16 | Documentation | Every feature PR updates relevant docs | PR template checklist |
+| NFR-17 | Privacy | Location data (planned M12, #106). A delivery boy's position is stored only after he starts a round, with the consent text shown on screen, and is cleared when the round stops; only his latest position is kept. A customer sees it only for their own order while it is `OUT_FOR_DELIVERY`; admins see delivery boys on an active round. Customers are never tracked: address pins are optional and saved once. Coordinates are never written to logs. Location is personal data under India's DPDP Act 2023 | Access-rule tests in #110–#112; log review |
