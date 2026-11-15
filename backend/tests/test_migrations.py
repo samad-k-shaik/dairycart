@@ -22,6 +22,7 @@ APP_TABLES = {
     "addresses",  # #102
     "delivery_boys",  # #103
     "delivery_areas",  # #103
+    "delivery_locations",  # #110
 }
 
 

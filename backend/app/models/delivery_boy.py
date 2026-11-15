@@ -55,6 +55,9 @@ class DeliveryBoy(Base):
         ForeignKey("users.user_id", ondelete="SET NULL"), unique=True, default=None
     )
     user: Mapped[User | None] = relationship()
+    # #110: when he pressed "Start round"; NULL = not on a round, so his location is not
+    # accepted (privacy, NFR-17). "Stop round" sets it back to NULL.
+    round_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
 
     areas: Mapped[list[DeliveryArea]] = relationship(
         back_populates="delivery_boy",

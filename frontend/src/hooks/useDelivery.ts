@@ -3,7 +3,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { getDeliveryMe, getMyDeliveries, updateDeliveryStatus } from "@/services/deliveryService"
+import { getDeliveryMe, getMyDeliveries, startRound, stopRound, updateDeliveryStatus } from "@/services/deliveryService"
 import type { DeliveryStatus } from "@/types/delivery"
 
 export const deliveryKeys = {
@@ -27,5 +27,22 @@ export function useUpdateDeliveryStatus() {
     mutationFn: ({ orderId, status }: { orderId: number; status: DeliveryStatus }) =>
       updateDeliveryStatus(orderId, status),
     onSettled: () => queryClient.invalidateQueries({ queryKey: deliveryKeys.orders }),
+  })
+}
+
+/** #110: start / stop the round; the page reads `on_round` from /delivery/me. */
+export function useStartRound() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => startRound(),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: deliveryKeys.me }),
+  })
+}
+
+export function useStopRound() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => stopRound(),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: deliveryKeys.me }),
   })
 }

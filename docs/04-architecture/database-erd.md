@@ -274,6 +274,7 @@ The migration inserts two standard slots: Morning 08:00–09:00 and Evening 17:0
 | is_active | BOOLEAN | NOT NULL, DEFAULT TRUE | Inactive: areas kept, orders not assigned |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
 | user_id | INTEGER | FK → users, NULL, UNIQUE, ON DELETE SET NULL | #109: his login (role `DELIVERY_BOY`, same phone and name); NULL = no login |
+| round_started_at | TIMESTAMPTZ | NULL | #110: when he pressed "Start round"; NULL = not on a round (his location is refused) |
 
 Admin records. Since #109 the admin can give a delivery boy a login (`user_id`); deleting the delivery boy also deletes that account.
 
@@ -296,7 +297,9 @@ Approved by #106 (ADR-018). Each change arrives in its own Alembic migration in 
 
 **Delivery boy login (#109): done.** `delivery_boys.user_id` and the `DELIVERY_BOY` role are part of the tables above (migration `55754c848525`).
 
-**New table DELIVERY_LOCATIONS (#110)**: the latest position only, one row per delivery boy, overwritten on every update (upsert).
+### DELIVERY_LOCATIONS (#110)
+
+The latest position only, one row per delivery boy, overwritten on every update (upsert, migration `b01d7b7a246d`). The row exists only during a round.
 
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
@@ -307,7 +310,7 @@ Approved by #106 (ADR-018). Each change arrives in its own Alembic migration in 
 | recorded_at | TIMESTAMPTZ | NOT NULL | Time on the phone when the position was read |
 | updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | Time the server saved it; older than 2 minutes = stale |
 
-Whether a round is active is decided in #110 (for example an `is_sharing` flag); stopping a round removes the position (NFR-17).
+A reading only replaces the saved one if its `recorded_at` is **newer** (late requests never move the pin back); a phone clock ahead of the server is clamped to the server's time. Stopping the round (or logging out) deletes the row; there is no location history (NFR-17).
 
 ## Normalization notes
 
@@ -372,6 +375,7 @@ Every constraint has an explicit, readable name (set by the naming convention in
 | addresses, orders, subscriptions | `ck_<table>_<latitude column>_range`, `ck_<table>_<longitude column>_range`, `ck_<table>_map_pin_complete` | map pin in range, and both set or both NULL (#108) |
 | delivery_boys | `uq_delivery_boys_phone`, `ck_delivery_boys_phone_format` | phone unique and a 10-digit mobile number (#103) |
 | delivery_areas | `uq_delivery_areas_pincode`, `ck_delivery_areas_pincode_format` | one delivery boy per PIN code; PIN format (#103) |
+| delivery_locations | `ck_delivery_locations_latitude_range`, `…_longitude_range`, `…_accuracy_non_negative`; `delivery_locations_delivery_boy_id_fkey` | position in range, accuracy ≥ 0; → delivery_boys, ON DELETE CASCADE (#110) |
 | delivery_areas | `delivery_areas_delivery_boy_id_fkey` | → delivery_boys, ON DELETE CASCADE (#103) |
 | subscription_items | `ck_subscription_items_quantity_range`, `…_unit_price_positive`, `…_subtotal_non_negative` | as for order_items (#97) |
 | subscription_items | `uq_subscription_items_product` | (subscription_id, product_id) is unique (#97) |

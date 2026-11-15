@@ -11,6 +11,21 @@ export type DeliveryMe = {
   name: string
   phone: string
   areas: DeliveryArea[]
+  /** #110: sharing his location now, and since when. */
+  on_round: boolean
+  round_started_at: string | null
+}
+
+/** POST /delivery/me/round/start and /stop (#110). */
+export type RoundState = { on_round: boolean; round_started_at: string | null }
+
+/** PUT /delivery/me/location body (#110). */
+export type LocationBody = {
+  latitude: number
+  longitude: number
+  accuracy_m: number | null
+  /** ISO time when the phone read it. */
+  recorded_at: string
 }
 
 export type DeliveryLine = {

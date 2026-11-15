@@ -5,11 +5,13 @@
  * at the door: the address, a "Call" link, the items, the amount to collect, an "Open map"
  * link when the customer saved a pin (#108), and ONE button for the next step
  * (Start delivery → Mark delivered). The list refreshes every minute.
+ * #110: the RoundPanel on top starts / stops sharing his location.
  */
 import { Loader2, MapPinned, PackageCheck, Phone } from "lucide-react"
 import { toast } from "sonner"
 
 import { EmptyState } from "@/components/common/EmptyState"
+import { RoundPanel } from "@/components/delivery/RoundPanel"
 import { ErrorState } from "@/components/common/ErrorState"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { Button } from "@/components/ui/button"
@@ -37,6 +39,8 @@ function TodayDeliveriesPage() {
         )}
         {areas.length > 0 && <p className="text-small text-muted-foreground">Your areas: {areas.join(", ")}</p>}
       </header>
+
+      {me.data && <RoundPanel onRound={me.data.on_round} />}
 
       {orders.isPending ? (
         <div className="space-y-3" aria-hidden="true">

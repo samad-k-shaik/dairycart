@@ -174,6 +174,13 @@ class AddressLimitReachedError(DomainError):
     code = "ADDRESS_LIMIT_REACHED"
 
 
+class RoundNotStartedError(DomainError):
+    """#110: a location was sent while the delivery boy is not on a round."""
+
+    status_code = 409
+    code = "ROUND_NOT_STARTED"
+
+
 class DeliveryBoyAlreadyExistsError(DomainError):
     """Admin: another delivery boy already has this phone number (#103)."""
 

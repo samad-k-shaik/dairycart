@@ -66,6 +66,7 @@ def test_all_tables_are_registered_for_alembic() -> None:
         "addresses",  # #102
         "delivery_boys",  # #103
         "delivery_areas",  # #103
+        "delivery_locations",  # #110
     }
 
 
@@ -181,6 +182,16 @@ ERD_COLUMNS = {
         "is_active": ("BOOLEAN", False),
         "created_at": ("TIMESTAMP WITH TIME ZONE", False),
         "user_id": ("INTEGER", True),  # #109: his login (NULL = none)
+        "round_started_at": ("TIMESTAMP WITH TIME ZONE", True),  # #110: NULL = not on a round
+    },
+    # #110: latest position only, one row per delivery boy
+    "delivery_locations": {
+        "delivery_boy_id": ("INTEGER", False),
+        "latitude": ("NUMERIC(9, 6)", False),
+        "longitude": ("NUMERIC(9, 6)", False),
+        "accuracy_m": ("INTEGER", True),
+        "recorded_at": ("TIMESTAMP WITH TIME ZONE", False),
+        "updated_at": ("TIMESTAMP WITH TIME ZONE", False),
     },
     "delivery_areas": {
         "delivery_area_id": ("INTEGER", False),
@@ -268,6 +279,10 @@ def test_check_and_unique_constraints_have_readable_names(schema: Engine) -> Non
         "ck_subscriptions_delivery_latitude_range",
         "ck_subscriptions_delivery_longitude_range",
         "ck_subscriptions_map_pin_complete",
+        # #110
+        "ck_delivery_locations_latitude_range",
+        "ck_delivery_locations_longitude_range",
+        "ck_delivery_locations_accuracy_non_negative",
     }
     assert uniques == {
         "uq_customers_phone",

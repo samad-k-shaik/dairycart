@@ -5,7 +5,7 @@
 import { api } from "@/services/apiClient"
 import { USE_MOCKS } from "@/services/mockMode"
 import { ServiceError } from "@/services/serviceError"
-import type { DeliveryMe, DeliveryOrder, DeliveryStatus } from "@/types/delivery"
+import type { DeliveryMe, DeliveryOrder, DeliveryStatus, LocationBody, RoundState } from "@/types/delivery"
 
 function needsBackend(): Promise<never> {
   return Promise.reject(
@@ -34,4 +34,22 @@ export function getMyDeliveries(date?: string): Promise<DeliveryOrder[]> {
 export function updateDeliveryStatus(orderId: number, status: DeliveryStatus): Promise<DeliveryOrder> {
   if (USE_MOCKS) return needsBackend()
   return api.patch(`/delivery/me/orders/${orderId}/status`, { status })
+}
+
+/** #110: start sharing his location. */
+export function startRound(): Promise<RoundState> {
+  if (USE_MOCKS) return needsBackend()
+  return api.post("/delivery/me/round/start", {})
+}
+
+/** #110: stop sharing; the backend deletes his last position. */
+export function stopRound(): Promise<RoundState> {
+  if (USE_MOCKS) return needsBackend()
+  return api.post("/delivery/me/round/stop", {})
+}
+
+/** #110: one GPS reading → 204. 409 ROUND_NOT_STARTED if the round was stopped. */
+export function sendLocation(body: LocationBody): Promise<void> {
+  if (USE_MOCKS) return needsBackend()
+  return api.put("/delivery/me/location", body)
 }

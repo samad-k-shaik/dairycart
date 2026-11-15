@@ -57,6 +57,9 @@
 | GET | `/delivery/me` | Logged-in delivery boy: his record and areas *(#109)* | 200 |
 | GET | `/delivery/me/orders` | His day's orders (his PIN codes, not cancelled) *(#109)* | 200 |
 | PATCH | `/delivery/me/orders/{id}/status` | Mark his order out for delivery / delivered *(#109)* | 200 |
+| POST | `/delivery/me/round/start` | Start his round: location sharing on *(#110)* | 200 |
+| POST | `/delivery/me/round/stop` | Stop his round; his position is deleted *(#110)* | 200 |
+| PUT | `/delivery/me/location` | His latest GPS reading *(#110)* | 204 |
 | GET | `/admin/users/{id}` | One user with order count and amount spent *(#101)* | 200 |
 | GET | `/admin/users/{id}/orders` | All orders of one user *(#101)* | 200 |
 
@@ -583,8 +586,10 @@ For a logged-in **DELIVERY_BOY** whose delivery boy record is **active**: **401*
 
 ```json
 { "delivery_boy_id": 1, "name": "Ravi Kumar", "phone": "9876500001",
-  "areas": [ { "pincode": "500016", "area_name": "Ameerpet" } ] }
+  "areas": [ { "pincode": "500016", "area_name": "Ameerpet" } ],
+  "on_round": true, "round_started_at": "2026-11-16T02:30:00Z" }
 ```
+`on_round` / `round_started_at` *(#110)*: whether he is sharing his location now.
 
 ### GET /api/v1/delivery/me/orders?date=YYYY-MM-DD
 
@@ -601,6 +606,20 @@ An invalid `date` → **422**.
 ### PATCH /api/v1/delivery/me/orders/{id}/status
 
 Body `{ "status": "OUT_FOR_DELIVERY" }` or `{ "status": "DELIVERED" }`; any other status → **422** (confirming and cancelling stay with the admin). The normal transition rules apply: `CONFIRMED → OUT_FOR_DELIVERY → DELIVERED`, otherwise **409 `INVALID_STATUS_TRANSITION`**. An order outside his areas → **404** (like a missing one). **200** with the order in the shape above.
+
+### Live location (#110)
+
+Privacy (NFR-17): a position is accepted **only during a round**, the round's start screen tells him what is shared, stopping the round (or logging out) **deletes** his position, there is **no history**, and coordinates are never logged.
+
+- `POST /delivery/me/round/start` → **200** `{ "on_round": true, "round_started_at": "2026-11-16T02:30:00Z" }` (pressing it again keeps the first time).
+- `POST /delivery/me/round/stop` → **200** `{ "on_round": false, "round_started_at": null }`; his saved position is deleted.
+- `PUT /delivery/me/location` with
+  ```json
+  { "latitude": 17.4375, "longitude": 78.4483, "accuracy_m": 12, "recorded_at": "2026-11-16T02:31:10Z" }
+  ```
+  → **204**. `accuracy_m` is optional (0–10 000). `recorded_at` must include a time zone. Only the **latest** position is kept (one row, updated in place); a reading **older** than the saved one is ignored (still 204), and a `recorded_at` in the future is treated as now. Not on a round → **409 `ROUND_NOT_STARTED`**; out-of-range values, a time without a zone or unknown fields → **422**.
+
+The phone sends a reading every 10 s, or after moving 20 m, never more than every 5 s, and skips readings less precise than 100 m.
 
 ### GET /api/v1/admin/users/{id} *(ADMIN)*
 
@@ -718,12 +737,12 @@ Errors that do not come from a specific endpoint use the same shape: an unknown 
 |---|---|
 | 200 | Success |
 | 201 | Order, product or user created |
-| 204 | Deleted (no body) |
+| 204 | Deleted, or a location saved (#110) (no body) |
 | 400 | Request is well-formed but breaks a simple rule (duplicate product) |
 | 401 | Not logged in, invalid/expired token, or wrong login details |
 | 403 | Logged in, but not allowed (a `USER` on an admin endpoint) |
 | 404 | Resource not found |
-| 409 | Conflicts with current state (unavailable product, illegal transition, duplicate product name + size, deleting an ordered product, mobile number already registered (#121), a second active subscription or cancelling one that is not active (#97), a full delivery slot, deleting a booked slot or switching off the last active one (#100), more than 10 saved addresses (#102), a delivery boy phone or PIN code already taken (#103)) |
+| 409 | Conflicts with current state (unavailable product, illegal transition, duplicate product name + size, deleting an ordered product, mobile number already registered (#121), a second active subscription or cancelling one that is not active (#97), a full delivery slot, deleting a booked slot or switching off the last active one (#100), more than 10 saved addresses (#102), a delivery boy phone or PIN code already taken (#103), another account already using a delivery boy's number (#109), a location sent outside a round (#110)) |
 | 422 | Schema validation failed |
 | 500 | Unexpected server error (details only in logs) |
 | 503 | Dependency (database) unavailable |

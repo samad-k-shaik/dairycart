@@ -7,10 +7,11 @@ Only what he needs to deliver: no prices per item, no account details of the cus
 from datetime import date
 from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from app.models import DeliveryBoy, Order, OrderStatus
-from app.schemas.common import Money
+from app.schemas.address import Latitude, Longitude
+from app.schemas.common import Money, UtcDateTime
 from app.schemas.delivery_boy import AreaRead
 
 
@@ -21,6 +22,9 @@ class DeliveryMeRead(BaseModel):
     name: str
     phone: str
     areas: list[AreaRead]
+    # #110: whether he is sharing his location now, and since when.
+    on_round: bool
+    round_started_at: UtcDateTime | None
 
     @classmethod
     def from_boy(cls, boy: DeliveryBoy) -> Self:
@@ -29,7 +33,33 @@ class DeliveryMeRead(BaseModel):
             name=boy.name,
             phone=boy.phone,
             areas=[AreaRead.model_validate(area) for area in boy.areas],
+            on_round=boy.round_started_at is not None,
+            round_started_at=boy.round_started_at,
         )
+
+
+class RoundRead(BaseModel):
+    """POST /delivery/me/round/start and /stop (#110)."""
+
+    on_round: bool
+    round_started_at: UtcDateTime | None
+
+    @classmethod
+    def from_boy(cls, boy: DeliveryBoy) -> Self:
+        return cls(on_round=boy.round_started_at is not None, round_started_at=boy.round_started_at)
+
+
+class LocationUpdate(BaseModel):
+    """PUT /delivery/me/location (#110): one GPS reading from his phone."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    latitude: Latitude
+    longitude: Longitude
+    # The phone's own precision estimate in metres (optional).
+    accuracy_m: int | None = Field(default=None, ge=0, le=10_000)
+    # When the phone read it, WITH a time zone (e.g. "2026-11-16T03:15:00Z").
+    recorded_at: AwareDatetime
 
 
 class DeliveryLine(BaseModel):

@@ -1,6 +1,7 @@
 /**
  * DeliveryLayout (#109): the delivery boy's pages, made for a phone held in one hand.
  * A slim header (logo, his name, Log out) and one column of content.
+ * #110: Log out first stops his round, so his last position is not kept after he leaves.
  */
 import { Outlet, useNavigate } from "react-router"
 import { LogOut } from "lucide-react"
@@ -8,12 +9,15 @@ import { LogOut } from "lucide-react"
 import { Logo } from "@/components/common/Logo"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/useAuth"
+import { stopRound } from "@/services/deliveryService"
 
 function DeliveryLayout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
 
-  function handleLogout() {
+  async function handleLogout() {
+    // Stopping a round that is not running does nothing; a network error must not block logout.
+    await stopRound().catch(() => {})
     logout()
     navigate("/login", { replace: true })
   }
