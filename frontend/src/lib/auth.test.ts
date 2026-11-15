@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { describe, it } from "node:test"
+import { describe, it } from "vitest"
 
 import type { User } from "../types/auth.ts"
 import { parseSession, sessionFromLogin } from "./authSession.ts"

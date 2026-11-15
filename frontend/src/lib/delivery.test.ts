@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { describe, it } from "node:test"
+import { describe, it } from "vitest"
 
 import { mapLink, nextDeliveryAction, summarize, waitingNote } from "./delivery.ts"
 import type { DeliveryOrder } from "../types/delivery.ts"

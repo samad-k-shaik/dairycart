@@ -1,6 +1,6 @@
 /** Tests for checkout validation, the order request and IST date formatting. */
 import assert from "node:assert/strict"
-import { describe, it } from "node:test"
+import { describe, it } from "vitest"
 
 import { formatDate, formatDateTime, istDateKey } from "./format.ts"
 import { buildCreateOrderRequest } from "./orderRequest.ts"

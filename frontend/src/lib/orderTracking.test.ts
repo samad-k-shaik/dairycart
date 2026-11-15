@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { describe, it } from "node:test"
+import { describe, it } from "vitest"
 
 import { trackingHeadline, trackingMarkers } from "./orderTracking.ts"
 import type { OrderTracking } from "../types/tracking.ts"

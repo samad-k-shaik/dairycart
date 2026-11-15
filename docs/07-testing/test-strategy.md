@@ -23,7 +23,7 @@ flowchart TB
 | Backend unit | pytest | Services: total calculation, transitions, validation | `backend/tests/unit/` |
 | Backend API | pytest + FastAPI `TestClient` (httpx) | Each endpoint: success + every documented error | `backend/tests/api/` |
 | Database | pytest against PostgreSQL (Docker locally, service container in CI) | Migrations apply cleanly; constraints enforced | `backend/tests/db/` |
-| Frontend unit | Vitest + React Testing Library | Hooks, utils (`formatCurrency`), cart logic, components | `frontend/src/**/*.test.tsx` |
+| Frontend unit | Vitest + React Testing Library (jsdom) | Hooks, utils (`formatCurrency`), cart logic, components | `frontend/src/**/*.test.ts` (logic), `frontend/src/**/*.test.tsx` (components); `npm test`, `npm run test:coverage` |
 | Manual smoke | Checklist | Full flow on local Compose and on Cloud Run | `docs/07-testing/` (checklist added in M4) |
 
 ## Must-have test cases

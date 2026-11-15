@@ -35,11 +35,13 @@ Use `npm ci` (not `npm install`) for normal setup so everyone gets identical dep
 | `npm run build` | Type-checks, then builds optimised production files into `dist/` |
 | `npm run preview` | Serves the built `dist/` locally to check the production build |
 | `npm run typecheck` | Type-checks all code without building (`tsc -b`) |
-| `npm test` | Runs unit tests (`src/**/*.test.ts`) with Node's built-in test runner |
+| `npm test` | Runs all tests once with **Vitest** (`src/**/*.test.ts(x)`) |
+| `npm run test:watch` | Re-runs the tests on every save |
+| `npm run test:coverage` | Tests + a coverage summary (HTML report in `coverage/`) |
 
-`npm test` uses Node's built-in runner, which runs TypeScript directly (needs Node ≥ 22.18; verified on Node 26). It is a stop-gap until Vitest is set up in M4-04 (#49). Because tests run in plain Node, test files and the modules they import must use relative imports with a `.ts` extension, not `@/`. Test files are type-checked by `tsconfig.node.json` and excluded from `tsconfig.app.json`.
+**Tests (#49, ADR-009):** Vitest uses the same settings as Vite (`vite.config.ts` → `test`), so `@/` imports and the React plugin work in tests. Tests run in **jsdom** (a browser simulated in Node). Pure logic is tested in `*.test.ts`; components with **React Testing Library** in `*.test.tsx`: render the component and find things the way a user does (`getByRole`, `getByLabelText`, `getByText`), then interact with `@testing-library/user-event`. `src/test/setup.ts` adds the jest-dom matchers (`toBeInTheDocument()`, `toBeDisabled()`…) and cleans up after each test. Tests are type-checked by `tsconfig.test.json`. (Before #49 the tests ran with Node's built-in runner; the older logic tests still use relative `.ts` imports from that time, which also work in Vitest.)
 
-`typecheck` uses `tsc -b` rather than `tsc --noEmit`: the root `tsconfig.json` only references `tsconfig.app.json` (app code) and `tsconfig.node.json` (`vite.config.ts`), so plain `tsc --noEmit` would check no files. Both referenced configs set `noEmit`, so nothing is written.
+`typecheck` uses `tsc -b` rather than `tsc --noEmit`: the root `tsconfig.json` only references `tsconfig.app.json` (app code), `tsconfig.node.json` (`vite.config.ts`) and `tsconfig.test.json` (tests, #49), so plain `tsc --noEmit` would check no files. Both referenced configs set `noEmit`, so nothing is written.
 
 ## Conventions
 

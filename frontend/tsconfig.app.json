@@ -30,6 +30,6 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"],
-  /* Tests run in Node and are type-checked by tsconfig.node.json. */
-  "exclude": ["src/**/*.test.ts"]
+  /* Tests and their setup are type-checked by tsconfig.test.json (#49). */
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/test"]
 }

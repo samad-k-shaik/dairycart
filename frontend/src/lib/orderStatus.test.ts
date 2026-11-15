@@ -1,6 +1,6 @@
 /** Timeline tests for all five statuses (M2-10 acceptance criterion). */
 import assert from "node:assert/strict"
-import { describe, it } from "node:test"
+import { describe, it } from "vitest"
 
 import { ORDER_STATUSES } from "../types/order.ts"
 import {

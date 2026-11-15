@@ -3,7 +3,7 @@
  * Runs with Node's built-in test runner (`npm test`); Vitest replaces it in M4-04 (#49).
  */
 import assert from "node:assert/strict"
-import { describe, it } from "node:test"
+import { describe, it } from "vitest"
 
 import { formatCurrency } from "./format.ts"
 
