@@ -168,6 +168,10 @@ What makes the order code safe:
 - **Delivery slots (#100):** rules in `app/services/delivery_slot_service.py`. Booking (subscribe or change time) locks the slot row (`SELECT … FOR UPDATE`) and counts its ACTIVE subscriptions against `capacity`, so a slot is never overbooked. Switching off or deleting first locks all active slots in id order (no deadlock) and refuses to leave none. Orders get a text copy of the slot (`orders.delivery_slot`). The migration creates the standard Morning 08:00–09:00 and Evening 17:00–18:00 slots.
 - Tests: `tests/test_subscription_service.py` (fixed dates), `tests/api/test_subscriptions.py`, `tests/test_background.py` (the loop), `tests/test_delivery_slot_service.py` and `tests/api/test_delivery_slots.py` (#100).
 
+## Income (#105)
+
+`GET /api/v1/admin/income?from=YYYY-MM-DD&to=YYYY-MM-DD` (ADMIN): the Income tab's data. Income = DELIVERED orders, counted on the delivery day (`IncomeRepository.DELIVERY_DAY`: `delivery_date` for subscription orders, else `timezone('Asia/Kolkata', order_date)::date`), compared with the previous period of the same length. All figures come from a few grouped queries in `app/repositories/income_repository.py`; `app/services/income_service.py` adds them up (litres from product sizes, shares, growth, insights). Max 366 days. Tests: `tests/test_income_service.py`.
+
 ## Delivery boys (#103)
 
 | Endpoint | Does | Errors |

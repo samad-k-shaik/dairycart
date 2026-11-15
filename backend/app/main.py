@@ -23,6 +23,7 @@ from app.routers import (
     addresses,
     admin_delivery_boys,
     admin_delivery_slots,
+    admin_income,
     admin_orders,
     admin_products,
     admin_subscriptions,
@@ -95,3 +96,4 @@ app.include_router(delivery_slots.router, prefix=API_PREFIX)  # #100
 app.include_router(admin_delivery_slots.router, prefix=API_PREFIX)  # #100
 app.include_router(addresses.router, prefix=API_PREFIX)  # #102
 app.include_router(admin_delivery_boys.router, prefix=API_PREFIX)  # #103
+app.include_router(admin_income.router, prefix=API_PREFIX)  # #105

@@ -29,6 +29,7 @@
 | A7 | View subscriptions; their delivery orders are created automatically *(added by #97, #99)* |
 | A8 | Manage delivery time slots: add, edit, set capacity, switch off, delete *(added by #100)* |
 | A9 | Daily deliveries per user with status, and each user's full order list *(added by #101; the daily view is the Orders board since #104)* |
+| A11 | Income tab: income from delivered orders for a chosen period, with charts and comparisons to the previous period *(added by #105, approved scope change; no expenses or profit)* |
 | A10 | Keep a list of delivery boys and allocate areas (PIN codes) to them; deliveries are split per delivery boy *(added by #103; delivery boys do not log in, so the delivery partner app stays out of scope)* |
 
 ## Out of scope
@@ -43,7 +44,7 @@
 | Google Maps | External API, cost | Saved addresses exist since #102 (`addresses` table); a map / geocoding could be added on top |
 | WhatsApp notifications | External API | Status changes go through one service function, a natural hook point |
 | AI chatbot / Agentic AI | Not needed to prove the POC | API-first design makes it possible to add later |
-| Demand forecasting / advanced analytics | Needs historical data | Orders are stored in normalized tables, ready for analysis |
+| Demand forecasting / advanced analytics *(a basic income report is in scope since #105)* | Needs historical data | Orders are stored in normalized tables, ready for analysis |
 
 ## Simplifying assumptions
 

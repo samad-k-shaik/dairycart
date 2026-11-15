@@ -46,6 +46,7 @@
 | POST | `/addresses/{id}/default` | Make it the default *(#102)* | 200 |
 | DELETE | `/addresses/{id}` | Delete an address *(#102)* | 204 |
 | PATCH | `/subscriptions/{id}/address` | Change a subscription's address (owner) *(#102)* | 200 |
+| GET | `/admin/income?from=&to=` | Income overview for a period *(#105)* | 200 |
 | GET | `/admin/delivery-boys` | Delivery boys with areas and today's orders *(#103)* | 200 |
 | POST | `/admin/delivery-boys` | Add a delivery boy *(#103)* | 201 |
 | PATCH | `/admin/delivery-boys/{id}` | Edit a delivery boy *(#103)* | 200 |
@@ -515,6 +516,38 @@ Send only the fields that change (at least one, no `null`). **200** with the adm
 | 422 | `VALIDATION_ERROR` | Bad name, time or capacity, or end not after start |
 
 ---
+
+## Income (#105) *(ADMIN)*
+
+### GET /api/v1/admin/income?from=YYYY-MM-DD&to=YYYY-MM-DD
+
+Income overview for a period of India days (both included). Default: this month so far. `to` before `from`, more than 366 days, or a badly formatted date → **422**.
+
+Rules:
+- **Income = DELIVERED orders** (cash on delivery). Placed / confirmed / out-for-delivery orders are `pending`; cancelled orders count nowhere.
+- An order counts on its **delivery day**: subscription orders on `delivery_date`, one-time orders on the India day they were placed (the Orders board rule, #104).
+- Every `*_change` / `growth` is the percent change vs the **previous period of the same length** right before it (`previous_start`–`previous_end`), rounded to 1 decimal; `null` when the previous period had nothing.
+- `litres` count only milk products, from their size text ("500 ml" = 0.5, "1 Litre" = 1); other products have `litres: null`.
+- Not available (no data in the app): delivery charges, expenses, profit, payment status.
+
+```json
+{
+  "start": "2026-11-01", "end": "2026-11-15", "previous_start": "2026-10-17", "previous_end": "2026-10-31", "days": 15,
+  "summary": { "litres": 22.5, "litres_change": 12.5, "income": "3035.00", "income_change": 8.5,
+               "avg_daily_income": "202.33", "avg_daily_change": 8.5, "delivered_orders": 22, "delivered_orders_change": 4.8,
+               "pending_income": "3645.00", "pending_orders": 36 },
+  "daily": [ { "date": "2026-11-01", "income": "0.00", "orders": 0 } ],
+  "monthly": [ { "month": "2026-11", "income": "3035.00", "orders": 22 } ],
+  "by_type": [ { "type": "SUBSCRIPTION", "income": "1110.00", "orders": 12, "share": 36.6 },
+               { "type": "ONE_TIME", "income": "1925.00", "orders": 10, "share": 63.4 } ],
+  "by_product": [ { "product_id": 2, "name": "Cow Milk", "size": "1 Litre", "quantity": 11, "litres": 11.0, "income": "660.00", "share": 21.7 } ],
+  "by_area": [ { "pincode": "100001", "area_name": "Gachibowli", "litres": 1.0, "income": "290.00", "orders": 2, "customers": 2, "growth": null } ],
+  "subscriptions": { "active": 13, "income": "1110.00", "income_change": null },
+  "recent": [ { "order_id": 60, "date": "2026-11-15", "customer_name": "Amer", "type": "SUBSCRIPTION", "amount": "65.00" } ],
+  "insights": [ "Subscriptions bring 36.6% of the income." ]
+}
+```
+`daily` has every day of the period (0 when nothing was delivered); `monthly` the 6 months up to `end`; `by_product` and `by_area` are sorted by income (an area `pincode: null` = orders without an address, before #102; `area_name` comes from a delivery boy area, #103); `recent` has the latest 8 delivered orders.
 
 ## Delivery boys (#103) *(ADMIN)*
 

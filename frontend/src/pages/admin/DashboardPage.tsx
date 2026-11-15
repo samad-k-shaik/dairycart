@@ -10,7 +10,7 @@
  *   backend field would be needed once there are more than 100 orders.
  */
 import { Link } from "react-router"
-import { CalendarDays, CheckCircle2, ChevronRight, ClipboardList, PackageCheck, ShoppingBag, Truck, XCircle, type LucideIcon } from "lucide-react"
+import { CalendarDays, CheckCircle2, ChevronRight, ClipboardList, IndianRupee, PackageCheck, ShoppingBag, Truck, XCircle, type LucideIcon } from "lucide-react"
 
 import { EmptyState } from "@/components/common/EmptyState"
 import { ErrorState } from "@/components/common/ErrorState"
@@ -41,6 +41,14 @@ function DashboardPage() {
       <div className="space-y-1">
         <h1 className="text-h1 font-bold">Dashboard</h1>
         <p className="text-muted-foreground">Today at a glance.</p>
+        {/* #105: the Income tab (in the sidebar; phones reach it from here) */}
+        <Link
+          to="/admin/income"
+          className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-primary hover:underline"
+        >
+          <IndianRupee className="size-4" aria-hidden="true" />
+          Income overview
+        </Link>
       </div>
 
       {isPending ? (

@@ -4,7 +4,7 @@
  * Each admin page renders inside <Outlet />.
  */
 import { NavLink, Outlet, useNavigate } from "react-router"
-import { Bike, ClipboardList, Clock, LayoutDashboard, LogOut, Package, Repeat, Store, Users } from "lucide-react"
+import { Bike, ClipboardList, Clock, IndianRupee, LayoutDashboard, LogOut, Package, Repeat, Store, Users } from "lucide-react"
 
 import { DevCrashProbe } from "@/components/common/DevMockSwitch"
 import { Logo } from "@/components/common/Logo"
@@ -16,6 +16,8 @@ const adminLinks = [
   // `end`: "/admin" is active only on the dashboard, not on /admin/orders too.
   { to: "/admin", label: "Dashboard", short: "Home", Icon: LayoutDashboard, end: true }, // short: 6 tabs at 360px (#100)
   { to: "/admin/orders", label: "Orders", Icon: ClipboardList, end: false },
+  // #105. Not in the phone tab bar (full); on phones it is linked from the Dashboard.
+  { to: "/admin/income", label: "Income", Icon: IndianRupee, end: false, phone: false },
   // #103 (#104: in the phone tab bar again, now that Deliveries joined Orders).
   { to: "/admin/delivery-boys", label: "Delivery boys", short: "Boys", Icon: Bike, end: false },
   { to: "/admin/products", label: "Products", Icon: Package, end: false },

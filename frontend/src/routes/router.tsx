@@ -85,6 +85,8 @@ export const router = createBrowserRouter([
       // #104: the Deliveries page was merged into the Orders board.
       { path: "deliveries", element: <Navigate to="/admin/orders" replace /> },
       { path: "delivery-boys", element: <DeliveryBoysPage /> }, // #103
+      // #105: loaded only when opened, so Recharts (~120 kB gzip) is not in everyone's bundle.
+      { path: "income", lazy: async () => ({ Component: (await import("@/pages/admin/IncomePage")).default }) },
       { path: "subscriptions", element: <AdminSubscriptionsPage /> }, // #97
       { path: "delivery-slots", element: <DeliverySlotsPage /> }, // #100
       { path: "*", element: <NotFoundPage homePath="/admin" /> },
