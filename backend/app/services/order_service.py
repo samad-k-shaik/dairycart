@@ -42,9 +42,7 @@ from app.services import address_service
 # DELIVERED and CANCELLED are final: nothing can follow them.
 ALLOWED_TRANSITIONS: dict[OrderStatus, frozenset[OrderStatus]] = {
     OrderStatus.PLACED: frozenset({OrderStatus.CONFIRMED, OrderStatus.CANCELLED}),
-    OrderStatus.CONFIRMED: frozenset(
-        {OrderStatus.OUT_FOR_DELIVERY, OrderStatus.CANCELLED}
-    ),
+    OrderStatus.CONFIRMED: frozenset({OrderStatus.OUT_FOR_DELIVERY, OrderStatus.CANCELLED}),
     OrderStatus.OUT_FOR_DELIVERY: frozenset({OrderStatus.DELIVERED}),
     OrderStatus.DELIVERED: frozenset(),
     OrderStatus.CANCELLED: frozenset(),
@@ -93,11 +91,7 @@ def check_items(db: Session, items: Sequence[OrderItemIn]) -> dict[int, Product]
             raise InsufficientStockError(
                 f"Only a limited quantity of '{product.name} {product.size}' is "
                 "left. Please reduce the quantity.",
-                details=[
-                    ErrorDetail(
-                        field=f"items[{index}].quantity", issue="more than in stock"
-                    )
-                ],
+                details=[ErrorDetail(field=f"items[{index}].quantity", issue="more than in stock")],
             )
     return products
 
@@ -220,11 +214,7 @@ def list_admin_orders(
         total=total,
         status_counts=repository.count_by_status(filters),
         boy_counts=sorted(
-            (
-                (boys[boy_id], count)
-                for boy_id, count in per_boy.items()
-                if boy_id in boys
-            ),
+            ((boys[boy_id], count) for boy_id, count in per_boy.items() if boy_id in boys),
             key=lambda pair: pair[0].name.lower(),
         ),
         unassigned_count=unassigned,

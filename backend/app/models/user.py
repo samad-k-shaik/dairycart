@@ -30,9 +30,7 @@ _ROLE_VALUES_SQL = ",".join(f"'{role.value}'" for role in UserRole)
 
 class User(Base):
     __tablename__ = "users"
-    __table_args__ = (
-        CheckConstraint(f"role IN ({_ROLE_VALUES_SQL})", name="role_allowed"),
-    )
+    __table_args__ = (CheckConstraint(f"role IN ({_ROLE_VALUES_SQL})", name="role_allowed"),)
 
     user_id: Mapped[int] = mapped_column(primary_key=True)
     full_name: Mapped[str] = mapped_column(String(100))
@@ -55,9 +53,7 @@ class User(Base):
         default=UserRole.USER,
         server_default=UserRole.USER.value,
     )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self) -> str:
         # Never include the email or the hash: reprs end up in logs.

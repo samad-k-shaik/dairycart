@@ -25,9 +25,7 @@ def _password_rules(value: str) -> str:
     return value
 
 
-FullName = Annotated[
-    str, StringConstraints(strip_whitespace=True, min_length=2, max_length=100)
-]
+FullName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=100)]
 # Simple shape check (something@something.something); the real proof that an email
 # works would be a confirmation email, which is out of scope for the POC.
 Email = Annotated[
@@ -52,9 +50,7 @@ Username = Annotated[
     ),
 ]
 # Not stripped: spaces in a password are allowed and count.
-Password = Annotated[
-    str, Field(min_length=PASSWORD_MIN), AfterValidator(_password_rules)
-]
+Password = Annotated[str, Field(min_length=PASSWORD_MIN), AfterValidator(_password_rules)]
 
 
 class RegisterRequest(BaseModel):

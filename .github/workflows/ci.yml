@@ -86,7 +86,11 @@ jobs:
         run: createdb -h localhost -U milk_user milk_delivery_test
 
       - name: Tests with coverage
-        run: pytest --cov=app --cov-report=term-missing:skip-covered
+        run: pytest --cov --cov-report=term
+
+      - name: Service coverage at least 70 % (NFR-12)
+        # Fails the job if app/services drops below 70 % (settings in backend/pyproject.toml).
+        run: coverage report --include="app/services/*" --fail-under=70
 
   frontend:
     runs-on: ubuntu-latest

@@ -38,9 +38,7 @@ def _error(description: str) -> dict:
     return {"model": ErrorResponse, "description": description}
 
 
-@router.get(
-    "", response_model=list[AdminProductRead], summary="All products with stock"
-)
+@router.get("", response_model=list[AdminProductRead], summary="All products with stock")
 def list_products(db: DbSession) -> list[AdminProductRead]:
     """Every product, including unavailable ones, with `stock_quantity` (#92)."""
     products = product_service.list_products(db, include_unavailable=True)
@@ -73,13 +71,9 @@ def create_product(data: ProductCreate, db: DbSession) -> AdminProductRead:
         422: _error("Invalid fields"),
     },
 )
-def update_product(
-    product_id: ProductId, data: ProductUpdate, db: DbSession
-) -> AdminProductRead:
+def update_product(product_id: ProductId, data: ProductUpdate, db: DbSession) -> AdminProductRead:
     """Send only the fields that change. Old orders keep the price they were placed at."""
-    return AdminProductRead.model_validate(
-        product_service.update_product(db, product_id, data)
-    )
+    return AdminProductRead.model_validate(product_service.update_product(db, product_id, data))
 
 
 @router.delete(

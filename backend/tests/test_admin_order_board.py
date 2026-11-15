@@ -78,18 +78,10 @@ def test_one_time_orders_count_on_the_india_day_they_were_placed(
 ) -> None:
     # 23:59 IST on the 20th → not the 21st; 00:00 IST on the 21st → yes;
     # 23:59 IST on the 21st → yes; 00:00 IST on the 22nd → no.
-    before = one_time_order(
-        db_session, datetime(2026, 11, 20, 18, 29, tzinfo=UTC), (milk, 1)
-    )
-    first = one_time_order(
-        db_session, datetime(2026, 11, 20, 18, 30, tzinfo=UTC), (milk, 1)
-    )
-    last = one_time_order(
-        db_session, datetime(2026, 11, 21, 18, 29, tzinfo=UTC), (milk, 1)
-    )
-    after = one_time_order(
-        db_session, datetime(2026, 11, 21, 18, 30, tzinfo=UTC), (milk, 1)
-    )
+    before = one_time_order(db_session, datetime(2026, 11, 20, 18, 29, tzinfo=UTC), (milk, 1))
+    first = one_time_order(db_session, datetime(2026, 11, 20, 18, 30, tzinfo=UTC), (milk, 1))
+    last = one_time_order(db_session, datetime(2026, 11, 21, 18, 29, tzinfo=UTC), (milk, 1))
+    after = one_time_order(db_session, datetime(2026, 11, 21, 18, 30, tzinfo=UTC), (milk, 1))
 
     day_ids = ids(db_session, day=DAY)
 
@@ -110,16 +102,10 @@ def test_subscription_orders_count_on_their_delivery_date(
 
 
 def test_newest_first(db_session: Session, milk: Product) -> None:
-    older = one_time_order(
-        db_session, datetime(2026, 11, 21, 3, 0, tzinfo=UTC), (milk, 1)
-    )
-    newer = one_time_order(
-        db_session, datetime(2026, 11, 21, 5, 0, tzinfo=UTC), (milk, 1)
-    )
+    older = one_time_order(db_session, datetime(2026, 11, 21, 3, 0, tzinfo=UTC), (milk, 1))
+    newer = one_time_order(db_session, datetime(2026, 11, 21, 5, 0, tzinfo=UTC), (milk, 1))
 
-    mine = [
-        i for i in ids(db_session, day=DAY) if i in {older.order_id, newer.order_id}
-    ]
+    mine = [i for i in ids(db_session, day=DAY) if i in {older.order_id, newer.order_id}]
 
     assert mine == [newer.order_id, older.order_id]
 
@@ -128,9 +114,7 @@ def test_rows_have_username_and_items(db_session: Session, milk: Product) -> Non
     user = factories.make_user(db_session, full_name="Ravi Kumar")
     order = subscription_order(db_session, user, milk)
 
-    [(row, username, boy)] = [
-        r for r in board(db_session, day=DAY).rows if r[0] == order
-    ]
+    [(row, username, boy)] = [r for r in board(db_session, day=DAY).rows if r[0] == order]
 
     assert (username, boy) == (user.username, None)
     assert [(i.product.name, i.quantity) for i in row.items] == [("Cow Milk", 2)]
@@ -140,18 +124,14 @@ def test_rows_have_username_and_items(db_session: Session, milk: Product) -> Non
 def test_search_by_name_phone_or_order_number(
     db_session: Session, milk: Product, query: str
 ) -> None:
-    customer = factories.make_customer(
-        db_session, name="Meena Iyer", phone="9876512399"
-    )
+    customer = factories.make_customer(db_session, name="Meena Iyer", phone="9876512399")
     order = factories.make_order(db_session, customer=customer, items=[(milk, 1)])
     factories.make_order(db_session, items=[(milk, 1)])  # someone else
 
     found = ids(db_session, q=query.format(id=order.order_id))
 
     assert order.order_id in found
-    if (
-        query == "#{id}"
-    ):  # "#42" means the order number only (a plain 42 may match phones)
+    if query == "#{id}":  # "#42" means the order number only (a plain 42 may match phones)
         assert found == [order.order_id]
 
 

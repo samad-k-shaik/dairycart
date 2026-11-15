@@ -30,8 +30,7 @@ from app.schemas.common import ErrorDetail
 from app.schemas.delivery_slot import DeliverySlotCreate, DeliverySlotUpdate
 
 IN_USE_MESSAGE = (
-    "This delivery time has been booked, so it cannot be deleted. "
-    "Switch it off instead."
+    "This delivery time has been booked, so it cannot be deleted. Switch it off instead."
 )
 LAST_ACTIVE_MESSAGE = (
     "Customers need at least one delivery time. Add or switch on another slot first."

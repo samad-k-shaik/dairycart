@@ -56,9 +56,7 @@ def test_health_is_503_when_the_database_fails(
 
 
 def test_health_appears_in_the_docs() -> None:
-    operation = (
-        TestClient(app).get("/openapi.json").json()["paths"]["/api/v1/health"]["get"]
-    )
+    operation = TestClient(app).get("/openapi.json").json()["paths"]["/api/v1/health"]["get"]
 
     assert operation["tags"] == ["health"]
     assert {"200", "503"} <= set(operation["responses"])

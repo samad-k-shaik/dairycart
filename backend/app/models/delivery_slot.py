@@ -37,9 +37,7 @@ class DeliverySlot(Base):
     __tablename__ = "delivery_slots"
     __table_args__ = (
         CheckConstraint("end_time > start_time", name="end_after_start"),
-        CheckConstraint(
-            f"capacity BETWEEN 1 AND {MAX_SLOT_CAPACITY}", name="capacity_range"
-        ),
+        CheckConstraint(f"capacity BETWEEN 1 AND {MAX_SLOT_CAPACITY}", name="capacity_range"),
         # Two slots with exactly the same times would confuse customers.
         UniqueConstraint("start_time", "end_time", name="uq_delivery_slots_times"),
     )
@@ -52,12 +50,8 @@ class DeliverySlot(Base):
     # How many ACTIVE subscriptions may book this slot.
     capacity: Mapped[int]
     # Switched off: hidden from new subscribers; existing bookings keep it.
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, server_default=true(), default=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    is_active: Mapped[bool] = mapped_column(Boolean, server_default=true(), default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     @property
     def label(self) -> str:

@@ -45,9 +45,7 @@ DOMAIN_ERRORS: dict[str, DomainError] = {
         "Product 'Buffalo Milk 1 Litre' is currently unavailable.",
         details=[ErrorDetail(field="items[1].product_id", issue="unavailable")],
     ),
-    "transition": InvalidStatusTransitionError(
-        "Cannot change status from DELIVERED to PLACED."
-    ),
+    "transition": InvalidStatusTransitionError("Cannot change status from DELIVERED to PLACED."),
     "duplicate": DuplicateProductError("The same product appears more than once."),
 }
 
@@ -97,9 +95,7 @@ def assert_error_shape(response_json: dict, code: str) -> dict:
         ("duplicate", 400, "DUPLICATE_PRODUCT"),
     ],
 )
-def test_domain_errors_map_to_status_and_code(
-    name: str, status: int, code: str
-) -> None:
+def test_domain_errors_map_to_status_and_code(name: str, status: int, code: str) -> None:
     response = client.get(f"/domain/{name}")
 
     assert response.status_code == status
@@ -111,18 +107,14 @@ def test_domain_errors_map_to_status_and_code(
 def test_domain_error_details_are_returned() -> None:
     error = client.get("/domain/unavailable").json()["error"]
 
-    assert error["details"] == [
-        {"field": "items[1].product_id", "issue": "unavailable"}
-    ]
+    assert error["details"] == [{"field": "items[1].product_id", "issue": "unavailable"}]
 
 
 # ---- 404 / 405 from routing ----
 
 
 def test_unknown_url_returns_standard_404() -> None:
-    response = TestClient(main_app).get(
-        "/no-such-page", headers={REQUEST_ID_HEADER: "req-404"}
-    )
+    response = TestClient(main_app).get("/no-such-page", headers={REQUEST_ID_HEADER: "req-404"})
 
     assert response.status_code == 404
     error = assert_error_shape(response.json(), "NOT_FOUND")

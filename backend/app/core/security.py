@@ -31,9 +31,7 @@ _DUMMY_HASH = bcrypt.hashpw(b"no-such-user-password", bcrypt.gensalt(BCRYPT_ROUN
 
 
 def hash_password(password: str) -> str:
-    return bcrypt.hashpw(
-        password.encode("utf-8"), bcrypt.gensalt(BCRYPT_ROUNDS)
-    ).decode("ascii")
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(BCRYPT_ROUNDS)).decode("ascii")
 
 
 def verify_password(password: str, password_hash: str | None) -> bool:
@@ -46,9 +44,7 @@ def verify_password(password: str, password_hash: str | None) -> bool:
     return bcrypt.checkpw(candidate, password_hash.encode("ascii"))
 
 
-def create_access_token(
-    user_id: int, role: str, *, now: datetime | None = None
-) -> tuple[str, int]:
+def create_access_token(user_id: int, role: str, *, now: datetime | None = None) -> tuple[str, int]:
     """A signed token for this user. Returns (token, seconds until it expires)."""
     settings = get_settings()
     issued = now or datetime.now(UTC)
@@ -59,9 +55,7 @@ def create_access_token(
         "iat": issued,  # issued at
         "exp": issued + lifetime,  # expires at; PyJWT rejects the token after this
     }
-    token = jwt.encode(
-        claims, settings.jwt_secret_key.get_secret_value(), algorithm=ALGORITHM
-    )
+    token = jwt.encode(claims, settings.jwt_secret_key.get_secret_value(), algorithm=ALGORITHM)
     return token, int(lifetime.total_seconds())
 
 

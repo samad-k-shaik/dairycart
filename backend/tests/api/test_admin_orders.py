@@ -30,9 +30,7 @@ def test_list_newest_first_with_counts_across_all_orders(
     client: TestClient, db_session: Session, product
 ) -> None:
     placed = factories.make_order(db_session, items=[(product, 1)])
-    delivered = factories.make_order(
-        db_session, items=[(product, 2)], status=OrderStatus.DELIVERED
-    )
+    delivered = factories.make_order(db_session, items=[(product, 2)], status=OrderStatus.DELIVERED)
 
     page = client.get(URL, params={"status": "DELIVERED"}).json()
 
@@ -102,9 +100,7 @@ ALL_PAIRS = list(itertools.product(OrderStatus, OrderStatus))
 
 
 @pytest.mark.parametrize(("current", "new"), ALL_PAIRS, ids=lambda s: s.value)
-def test_every_status_pair(
-    client: TestClient, db_session: Session, product, current, new
-) -> None:
+def test_every_status_pair(client: TestClient, db_session: Session, product, current, new) -> None:
     order = factories.make_order(db_session, items=[(product, 1)], status=current)
 
     response = client.patch(f"{URL}/{order.order_id}/status", json={"status": new})
@@ -142,9 +138,7 @@ def test_full_lifecycle_updates_the_dashboard_counts(
 ) -> None:
     order = factories.make_order(db_session, items=[(product, 1)])
     for status in ["CONFIRMED", "OUT_FOR_DELIVERY", "DELIVERED"]:
-        response = client.patch(
-            f"{URL}/{order.order_id}/status", json={"status": status}
-        )
+        response = client.patch(f"{URL}/{order.order_id}/status", json={"status": status})
         assert response.status_code == 200
 
     counts = client.get(URL).json()["status_counts"]
@@ -163,6 +157,4 @@ def test_status_update_invalid_body_is_422(
 ) -> None:
     order = factories.make_order(db_session, items=[(product, 1)])
 
-    assert (
-        client.patch(f"{URL}/{order.order_id}/status", json=payload).status_code == 422
-    )
+    assert client.patch(f"{URL}/{order.order_id}/status", json=payload).status_code == 422

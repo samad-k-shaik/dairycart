@@ -41,24 +41,18 @@ def anonymous(client: TestClient) -> TestClient:
 
 @pytest.fixture
 def cow_1l(db_session: Session):
-    return factories.make_product(
-        db_session, name="Cow Milk", size="1 Litre", price="60.00"
-    )
+    return factories.make_product(db_session, name="Cow Milk", size="1 Litre", price="60.00")
 
 
 @pytest.fixture
 def buffalo_500(db_session: Session):
-    return factories.make_product(
-        db_session, name="Buffalo Milk", size="500 ml", price="35.00"
-    )
+    return factories.make_product(db_session, name="Buffalo Milk", size="500 ml", price="35.00")
 
 
 # ---- POST /orders ----
 
 
-def test_create_matches_the_contract_example(
-    client: TestClient, cow_1l, buffalo_500
-) -> None:
+def test_create_matches_the_contract_example(client: TestClient, cow_1l, buffalo_500) -> None:
     response = client.post(
         URL,
         json=body(
@@ -102,9 +96,7 @@ def test_prices_or_totals_from_the_client_are_rejected(
     assert response.status_code == 422
 
 
-def test_duplicate_product_is_400(
-    client: TestClient, db_session: Session, cow_1l
-) -> None:
+def test_duplicate_product_is_400(client: TestClient, db_session: Session, cow_1l) -> None:
     item = {"product_id": cow_1l.product_id, "quantity": 1}
 
     response = client.post(URL, json=body(items=[item, item]))
@@ -141,9 +133,7 @@ def test_unavailable_product_is_409(client: TestClient, db_session: Session) -> 
         db_session, name="Buffalo Milk", size="1 Litre", is_available=False
     )
 
-    response = client.post(
-        URL, json=body(items=[{"product_id": hidden.product_id, "quantity": 1}])
-    )
+    response = client.post(URL, json=body(items=[{"product_id": hidden.product_id, "quantity": 1}]))
 
     assert response.status_code == 409
     assert response.json()["error"]["code"] == "PRODUCT_UNAVAILABLE"
@@ -216,9 +206,7 @@ def test_price_change_does_not_alter_placed_orders(
 def test_order_endpoints_need_login(
     anonymous: TestClient, db_session: Session, method: str, url: str
 ) -> None:
-    response = anonymous.request(
-        method, url, json=body(items=[{"product_id": 1, "quantity": 1}])
-    )
+    response = anonymous.request(method, url, json=body(items=[{"product_id": 1, "quantity": 1}]))
 
     assert response.status_code == 401
     assert response.json()["error"]["code"] == "UNAUTHORIZED"
@@ -271,17 +259,13 @@ def test_another_user_gets_404_like_a_missing_order(
 
     assert response.status_code == 404
     # Same message as for an id that does not exist: no hint that the order exists.
-    assert (
-        response.json()["error"]["message"] == f"Order {order.order_id} was not found."
-    )
+    assert response.json()["error"]["message"] == f"Order {order.order_id} was not found."
 
 
 def test_admin_can_see_any_order_including_old_guest_orders(
     client: TestClient, db_session: Session, admin_user: User, normal_user: User, cow_1l
 ) -> None:
-    users_order = factories.make_order(
-        db_session, items=[(cow_1l, 1)], user=normal_user
-    )
+    users_order = factories.make_order(db_session, items=[(cow_1l, 1)], user=normal_user)
     guest_order = factories.make_order(db_session, items=[(cow_1l, 1)])  # before #90
     admin = factories.auth_header(admin_user)
 
@@ -308,9 +292,7 @@ def test_my_orders_newest_first_with_item_count(
     newer = factories.make_order(
         db_session, items=[(cow_1l, 1), (buffalo_500, 2)], user=normal_user
     )
-    factories.make_order(
-        db_session, items=[(cow_1l, 1)], user=factories.make_user(db_session)
-    )
+    factories.make_order(db_session, items=[(cow_1l, 1)], user=factories.make_user(db_session))
     factories.make_order(db_session, items=[(cow_1l, 1)])  # old guest order
 
     response = client.get(URL + "/mine")
@@ -346,9 +328,7 @@ def test_phone_lookup_was_removed(client: TestClient) -> None:
 def test_order_item_lines_are_stored_with_database_prices(
     client: TestClient, db_session: Session, cow_1l
 ) -> None:
-    client.post(
-        URL, json=body(items=[{"product_id": cow_1l.product_id, "quantity": 4}])
-    )
+    client.post(URL, json=body(items=[{"product_id": cow_1l.product_id, "quantity": 4}]))
 
     item = db_session.scalars(select(OrderItem)).one()
     assert (str(item.unit_price), str(item.subtotal)) == ("60.00", "240.00")

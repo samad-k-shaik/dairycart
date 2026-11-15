@@ -1,10 +1,11 @@
-"""Create an ADMIN account, or make an existing user an admin (#89).
+r"""Create an ADMIN account, or make an existing user an admin (#89).
 
 This is the ONLY way to get the ADMIN role: the API never gives it. Running this needs
 access to the server and its database, which is the "authorized process".
 
     cd backend
-    python -m app.scripts.create_admin --username admin --email admin@dairycart.local --full-name "Dairy Admin"
+    python -m app.scripts.create_admin --username admin --email admin@dairycart.local \
+        --full-name "Dairy Admin"
         → asks for the password twice (it is not shown and not saved in your shell history)
 
     python -m app.scripts.create_admin --promote ravi
@@ -42,9 +43,7 @@ def create_admin(db: Session, data: RegisterRequest) -> User:
     """Create a new ADMIN account. Raises ValueError if the email or username is taken."""
     repository = UserRepository(db)
     if repository.email_taken(data.email) or repository.username_taken(data.username):
-        raise ValueError(
-            "That email or username already exists. Use --promote <username> instead."
-        )
+        raise ValueError("That email or username already exists. Use --promote <username> instead.")
     user = repository.add(
         User(
             full_name=data.full_name,

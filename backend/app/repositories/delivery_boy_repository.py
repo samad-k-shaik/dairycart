@@ -29,9 +29,7 @@ class DeliveryBoyRepository:
         )
         return self.db.scalars(query).first()
 
-    def find_by_phone(
-        self, phone: str, *, exclude_id: int | None = None
-    ) -> DeliveryBoy | None:
+    def find_by_phone(self, phone: str, *, exclude_id: int | None = None) -> DeliveryBoy | None:
         query = select(DeliveryBoy).where(DeliveryBoy.phone == phone)
         if exclude_id is not None:
             query = query.where(DeliveryBoy.delivery_boy_id != exclude_id)
@@ -51,9 +49,7 @@ class DeliveryBoyRepository:
         so their areas count as not assigned). One query."""
         query = (
             select(DeliveryArea.pincode, DeliveryBoy)
-            .join(
-                DeliveryBoy, DeliveryBoy.delivery_boy_id == DeliveryArea.delivery_boy_id
-            )
+            .join(DeliveryBoy, DeliveryBoy.delivery_boy_id == DeliveryArea.delivery_boy_id)
             .where(DeliveryBoy.is_active.is_(True))
         )
         return {pincode: boy for pincode, boy in self.db.execute(query).all()}

@@ -51,9 +51,7 @@ def _area_taken(pincode: str, owner: str) -> AreaAlreadyAllocatedError:
     )
 
 
-def _raise_for_integrity_error(
-    db: Session, error: IntegrityError, value: str
-) -> NoReturn:
+def _raise_for_integrity_error(db: Session, error: IntegrityError, value: str) -> NoReturn:
     """Two admins saving the same phone / PIN code at once: the database's UNIQUE
     constraint stops the second one; answer 409 instead of 500."""
     db.rollback()
@@ -78,9 +76,7 @@ def create_delivery_boy(db: Session, data: DeliveryBoyCreate) -> DeliveryBoy:
     return get_delivery_boy(db, boy.delivery_boy_id)
 
 
-def update_delivery_boy(
-    db: Session, delivery_boy_id: int, data: DeliveryBoyUpdate
-) -> DeliveryBoy:
+def update_delivery_boy(db: Session, delivery_boy_id: int, data: DeliveryBoyUpdate) -> DeliveryBoy:
     repository = DeliveryBoyRepository(db)
     boy = get_delivery_boy(db, delivery_boy_id)
     changes = data.changes()

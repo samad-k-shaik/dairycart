@@ -53,9 +53,7 @@ def _error(description: str) -> dict:
 )
 def list_orders(
     db: DbSession,
-    status: Annotated[
-        OrderStatus | None, Query(description="Only orders with this status")
-    ] = None,
+    status: Annotated[OrderStatus | None, Query(description="Only orders with this status")] = None,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
     day: Annotated[
@@ -73,9 +71,7 @@ def list_orders(
     """Newest first. `status_counts` follow `date`, `boy` and `q` but ignore `status`
     (so without those filters they count ALL orders); `boy_counts` and
     `unassigned_count` follow `date` and `q`."""
-    filters = AdminOrderFilters(
-        day=day, boy=_read_boy(boy), q=(q or "").strip() or None
-    )
+    filters = AdminOrderFilters(day=day, boy=_read_boy(boy), q=(q or "").strip() or None)
     board = order_service.list_admin_orders(
         db, status=status, page=page, page_size=page_size, filters=filters
     )

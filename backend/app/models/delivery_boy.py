@@ -40,12 +40,8 @@ class DeliveryBoy(Base):
     # 10-digit Indian mobile number, like customers' phones.
     phone: Mapped[str] = mapped_column(String(10))
     # Inactive: keeps his areas, but his orders show as "Not assigned".
-    is_active: Mapped[bool] = mapped_column(
-        Boolean, server_default=true(), default=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    is_active: Mapped[bool] = mapped_column(Boolean, server_default=true(), default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     areas: Mapped[list[DeliveryArea]] = relationship(
         back_populates="delivery_boy",
@@ -56,9 +52,7 @@ class DeliveryBoy(Base):
 
     def __repr__(self) -> str:
         # No phone number: personal data.
-        return (
-            f"DeliveryBoy(delivery_boy_id={self.delivery_boy_id!r}, name={self.name!r})"
-        )
+        return f"DeliveryBoy(delivery_boy_id={self.delivery_boy_id!r}, name={self.name!r})"
 
 
 class DeliveryArea(Base):

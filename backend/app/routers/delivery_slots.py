@@ -19,9 +19,7 @@ router = APIRouter(prefix="/delivery-slots", tags=["delivery slots"])
 DbSession = Annotated[Session, Depends(get_db)]
 
 
-@router.get(
-    "", response_model=list[DeliverySlotRead], summary="Delivery times to choose from"
-)
+@router.get("", response_model=list[DeliverySlotRead], summary="Delivery times to choose from")
 def list_delivery_slots(db: DbSession) -> list[DeliverySlotRead]:
     """A full slot is still listed (`is_full: true`) so the page can show "Full"."""
     return [

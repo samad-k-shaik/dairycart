@@ -33,9 +33,7 @@ def test_order_with_two_items_links_them_correctly() -> None:
         subtotal=Decimal("35.00"),
     )
 
-    order = Order(
-        customer=customer, total_amount=Decimal("155.00"), items=[first, second]
-    )
+    order = Order(customer=customer, total_amount=Decimal("155.00"), items=[first, second])
 
     assert order.items == [first, second]
     assert first.order is order and second.order is order  # item → order
@@ -72,9 +70,7 @@ def test_all_tables_are_registered_for_alembic() -> None:
 
 
 def test_reprs_never_contain_the_phone_number() -> None:
-    assert "9876543210" not in repr(
-        Customer(customer_id=1, name="Ravi", phone="9876543210")
-    )
+    assert "9876543210" not in repr(Customer(customer_id=1, name="Ravi", phone="9876543210"))
 
 
 # ---- generated schema vs the ERD (needs PostgreSQL) ----
@@ -198,8 +194,7 @@ def test_columns_types_and_not_null_match_the_erd(schema: Engine, table: str) ->
         return str(column_type)
 
     columns = {
-        c["name"]: (sql_type(c["type"]), c["nullable"])
-        for c in inspect(schema).get_columns(table)
+        c["name"]: (sql_type(c["type"]), c["nullable"]) for c in inspect(schema).get_columns(table)
     }
 
     assert columns == ERD_COLUMNS[table]
@@ -214,17 +209,13 @@ def test_primary_keys_are_serial(schema: Engine) -> None:
         ("order_items", "order_item_id"),
     ]:
         assert inspector.get_pk_constraint(table)["constrained_columns"] == [pk]
-        default = next(c for c in inspector.get_columns(table) if c["name"] == pk)[
-            "default"
-        ]
+        default = next(c for c in inspector.get_columns(table) if c["name"] == pk)["default"]
         assert default.startswith("nextval(")  # SERIAL = integer + sequence
 
 
 def test_server_defaults(schema: Engine) -> None:
     def default(table: str, column: str) -> str:
-        return next(
-            c for c in inspect(schema).get_columns(table) if c["name"] == column
-        )["default"]
+        return next(c for c in inspect(schema).get_columns(table) if c["name"] == column)["default"]
 
     assert default("customers", "created_at") == "now()"
     assert default("products", "created_at") == "now()"
@@ -235,12 +226,8 @@ def test_server_defaults(schema: Engine) -> None:
 
 def test_check_and_unique_constraints_have_readable_names(schema: Engine) -> None:
     inspector = inspect(schema)
-    checks = {
-        c["name"] for t in ERD_COLUMNS for c in inspector.get_check_constraints(t)
-    }
-    uniques = {
-        c["name"] for t in ERD_COLUMNS for c in inspector.get_unique_constraints(t)
-    }
+    checks = {c["name"] for t in ERD_COLUMNS for c in inspector.get_check_constraints(t)}
+    uniques = {c["name"] for t in ERD_COLUMNS for c in inspector.get_unique_constraints(t)}
 
     assert checks == {
         "ck_products_price_positive",
@@ -344,9 +331,7 @@ def make_order(db: Session, quantity: int = 2) -> Order:
         customer=factories.make_customer(db, name="Ravi Kumar", phone="9876543210"),
         items=[
             (
-                factories.make_product(
-                    db, name="Cow Milk", size="1 Litre", price="60.00"
-                ),
+                factories.make_product(db, name="Cow Milk", size="1 Litre", price="60.00"),
                 quantity,
             )
         ],
@@ -371,9 +356,7 @@ def test_saved_order_gets_defaults_and_exact_decimals(session: Session) -> None:
     saved = session.scalars(select(Order)).one()
     assert saved.status is OrderStatus.PLACED
     assert saved.order_date.tzinfo is not None  # TIMESTAMPTZ
-    assert saved.total_amount == Decimal("120.00") and isinstance(
-        saved.total_amount, Decimal
-    )
+    assert saved.total_amount == Decimal("120.00") and isinstance(saved.total_amount, Decimal)
     assert saved.items[0].product.is_available is True
     assert saved.customer.orders == [saved]
     assert order.order_id == saved.order_id
@@ -390,9 +373,7 @@ def test_quantity_must_be_between_1_and_20(session: Session, quantity: int) -> N
 def test_price_must_be_positive(session: Session) -> None:
     assert rejected(
         session,
-        lambda: session.add(
-            Product(name="Free Milk", size="1 Litre", price=Decimal("0.00"))
-        ),
+        lambda: session.add(Product(name="Free Milk", size="1 Litre", price=Decimal("0.00"))),
     )
 
 
@@ -413,18 +394,14 @@ def test_duplicate_product_name_and_size_is_rejected(session: Session) -> None:
 
     assert rejected(
         session,
-        lambda: session.add(
-            Product(name="Cow Milk", size="1 Litre", price=Decimal("61.00"))
-        ),
+        lambda: session.add(Product(name="Cow Milk", size="1 Litre", price=Decimal("61.00"))),
     )
 
 
 def test_duplicate_phone_is_rejected(session: Session) -> None:
     make_order(session)
 
-    assert rejected(
-        session, lambda: session.add(Customer(name="Someone", phone="9876543210"))
-    )
+    assert rejected(session, lambda: session.add(Customer(name="Someone", phone="9876543210")))
 
 
 def test_product_used_in_an_order_cannot_be_deleted(session: Session) -> None:
@@ -433,9 +410,7 @@ def test_product_used_in_an_order_cannot_be_deleted(session: Session) -> None:
 
     assert rejected(
         session,
-        lambda: session.execute(
-            delete(Product).where(Product.product_id == product_id)
-        ),
+        lambda: session.execute(delete(Product).where(Product.product_id == product_id)),
     )
 
 
@@ -446,7 +421,4 @@ def test_deleting_an_order_deletes_its_items(session: Session) -> None:
     session.execute(delete(Order).where(Order.order_id == order_id))
     session.expire_all()
 
-    assert (
-        session.scalars(select(OrderItem).where(OrderItem.order_id == order_id)).all()
-        == []
-    )
+    assert session.scalars(select(OrderItem).where(OrderItem.order_id == order_id)).all() == []

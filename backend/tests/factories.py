@@ -183,9 +183,7 @@ def make_slot(
     if start is None:
         n = next(_sequence) % 600
         start = (datetime(2000, 1, 1, 10, 0) + timedelta(minutes=n)).time()
-    end = (
-        datetime.combine(datetime(2000, 1, 1), start) + timedelta(minutes=minutes)
-    ).time()
+    end = (datetime.combine(datetime(2000, 1, 1), start) + timedelta(minutes=minutes)).time()
     slot = DeliverySlot(
         name=name,
         start_time=start,

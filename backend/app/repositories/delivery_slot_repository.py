@@ -26,9 +26,7 @@ class DeliverySlotRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def list_with_booked(
-        self, *, only_active: bool = False
-    ) -> list[tuple[DeliverySlot, int]]:
+    def list_with_booked(self, *, only_active: bool = False) -> list[tuple[DeliverySlot, int]]:
         """Slots by start time, each with its number of ACTIVE subscriptions."""
         query = select(DeliverySlot, _booked()).order_by(
             DeliverySlot.start_time, DeliverySlot.end_time

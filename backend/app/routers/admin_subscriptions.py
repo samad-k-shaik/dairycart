@@ -33,14 +33,10 @@ router = APIRouter(
 DbSession = Annotated[Session, Depends(get_db)]
 
 
-@router.get(
-    "", response_model=list[AdminSubscriptionSummary], summary="All subscriptions"
-)
+@router.get("", response_model=list[AdminSubscriptionSummary], summary="All subscriptions")
 def list_subscriptions(
     db: DbSession,
-    status: Annotated[
-        SubscriptionStatus | None, Query(description="Only this status")
-    ] = None,
+    status: Annotated[SubscriptionStatus | None, Query(description="Only this status")] = None,
     user_id: Annotated[
         int | None, Query(gt=0, description="Only this user's subscriptions (#101)")
     ] = None,

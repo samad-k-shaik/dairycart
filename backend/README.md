@@ -261,7 +261,8 @@ pytest                                # all tests
 pytest -q                             # short output
 pytest tests/api/test_products.py     # one file
 pytest -k products                    # tests whose name contains "products"
-pytest --cov=app                      # with coverage
+pytest --cov                          # with coverage (settings in pyproject.toml, incl. branches)
+coverage report --include="app/services/*" --fail-under=70   # the service-layer gate CI uses
 ```
 
 - **Real PostgreSQL, never the dev database.** Tests use `TEST_DATABASE_URL` (default `postgresql+psycopg://milk_user:…@localhost:5432/milk_delivery_test`). It is forced into `DATABASE_URL` before the app loads, so your `.env` is ignored, and pytest refuses to start unless the database name ends in `_test`. Create the test database once (see *Local database*).
@@ -365,8 +366,12 @@ Note: FastAPI's `TestClient` currently prints a `StarletteDeprecationWarning` su
 |---|---|
 | `uvicorn app.main:app --reload --port 8000` | Start the dev server |
 | `pytest` | Run the tests in `tests/` (configured in `pyproject.toml`) |
-| `ruff check .` | Lint |
-| `ruff format .` | Format |
+| `ruff check .` | Lint: rules E, F, I, B, UP (pyflakes, import order, likely bugs, modern syntax), line length 100 |
+| `ruff check --fix .` | Lint and fix what can be fixed automatically |
+| `ruff format .` | Format all files (`ruff format --check .` only reports; CI uses that) |
+| `pytest --cov` then `coverage report --include="app/services/*" --fail-under=70` | Coverage, and the ≥ 70 % service-layer minimum (NFR-12) that CI enforces |
+
+Ruff and coverage are configured in `pyproject.toml` (#51, #53). CI fails if Ruff reports anything, if a file is not formatted, or if service coverage drops below 70 %.
 
 ## Folder structure
 

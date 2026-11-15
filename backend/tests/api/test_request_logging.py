@@ -140,9 +140,7 @@ def test_crashing_endpoint_still_logs_status_500(
 
 
 def make_record(message: str = "hello", **extra: object) -> logging.LogRecord:
-    record = logging.LogRecord(
-        "app.test", logging.WARNING, __file__, 1, message, None, None
-    )
+    record = logging.LogRecord("app.test", logging.WARNING, __file__, 1, message, None, None)
     for key, value in extra.items():
         setattr(record, key, value)
     return record

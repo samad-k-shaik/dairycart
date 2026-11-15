@@ -47,9 +47,7 @@ def upgrade() -> None:
         sa.Column("name", sa.String(length=100), nullable=False),
         sa.Column("size", sa.String(length=20), nullable=False),
         sa.Column("price", sa.Numeric(precision=10, scale=2), nullable=False),
-        sa.Column(
-            "is_available", sa.Boolean(), server_default=sa.text("true"), nullable=False
-        ),
+        sa.Column("is_available", sa.Boolean(), server_default=sa.text("true"), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -71,16 +69,12 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("total_amount", sa.Numeric(precision=10, scale=2), nullable=False),
-        sa.Column(
-            "status", sa.String(length=20), server_default="PLACED", nullable=False
-        ),
+        sa.Column("status", sa.String(length=20), server_default="PLACED", nullable=False),
         sa.CheckConstraint(
             "status IN ('PLACED','CONFIRMED','OUT_FOR_DELIVERY','DELIVERED','CANCELLED')",
             name=op.f("ck_orders_status_allowed"),
         ),
-        sa.CheckConstraint(
-            "total_amount >= 0", name=op.f("ck_orders_total_amount_non_negative")
-        ),
+        sa.CheckConstraint("total_amount >= 0", name=op.f("ck_orders_total_amount_non_negative")),
         sa.ForeignKeyConstraint(
             ["customer_id"],
             ["customers.customer_id"],
@@ -99,15 +93,9 @@ def upgrade() -> None:
         sa.Column("quantity", sa.Integer(), nullable=False),
         sa.Column("unit_price", sa.Numeric(precision=10, scale=2), nullable=False),
         sa.Column("subtotal", sa.Numeric(precision=10, scale=2), nullable=False),
-        sa.CheckConstraint(
-            "quantity BETWEEN 1 AND 20", name=op.f("ck_order_items_quantity_range")
-        ),
-        sa.CheckConstraint(
-            "subtotal >= 0", name=op.f("ck_order_items_subtotal_non_negative")
-        ),
-        sa.CheckConstraint(
-            "unit_price > 0", name=op.f("ck_order_items_unit_price_positive")
-        ),
+        sa.CheckConstraint("quantity BETWEEN 1 AND 20", name=op.f("ck_order_items_quantity_range")),
+        sa.CheckConstraint("subtotal >= 0", name=op.f("ck_order_items_subtotal_non_negative")),
+        sa.CheckConstraint("unit_price > 0", name=op.f("ck_order_items_unit_price_positive")),
         sa.ForeignKeyConstraint(
             ["order_id"],
             ["orders.order_id"],
@@ -121,9 +109,7 @@ def upgrade() -> None:
             ondelete="RESTRICT",
         ),
         sa.PrimaryKeyConstraint("order_item_id", name=op.f("order_items_pkey")),
-        sa.UniqueConstraint(
-            "order_id", "product_id", name="uq_order_items_order_product"
-        ),
+        sa.UniqueConstraint("order_id", "product_id", name="uq_order_items_order_product"),
     )
     op.create_index("idx_order_items_order", "order_items", ["order_id"], unique=False)
     # ### end Alembic commands ###

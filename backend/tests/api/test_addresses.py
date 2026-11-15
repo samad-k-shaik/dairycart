@@ -88,16 +88,11 @@ def test_default_rules(client: TestClient, as_fresh) -> None:
 
     made = client.post(f"{URL}/{first['address_id']}/default", headers=as_fresh)
     assert made.status_code == 200
-    defaults = [
-        a["label"] for a in client.get(URL, headers=as_fresh).json() if a["is_default"]
-    ]
+    defaults = [a["label"] for a in client.get(URL, headers=as_fresh).json() if a["is_default"]]
     assert defaults == ["Home"]
 
     # Deleting the default makes the oldest remaining one (Office) the default.
-    assert (
-        client.delete(f"{URL}/{first['address_id']}", headers=as_fresh).status_code
-        == 204
-    )
+    assert client.delete(f"{URL}/{first['address_id']}", headers=as_fresh).status_code == 204
     left = client.get(URL, headers=as_fresh).json()
     assert [(a["label"], a["is_default"]) for a in left] == [
         ("Office", True),
@@ -116,10 +111,7 @@ def test_edit_and_remove_the_landmark(client: TestClient, as_fresh) -> None:
 
     assert edited.status_code == 200
     assert (edited.json()["street"], edited.json()["landmark"]) == ("Madhapur", None)
-    assert (
-        edited.json()["full_text"]
-        == "Plot 5, Cyber Towers, Madhapur, Hyderabad - 500081"
-    )
+    assert edited.json()["full_text"] == "Plot 5, Cyber Towers, Madhapur, Hyderabad - 500081"
 
 
 @pytest.mark.parametrize(
@@ -155,9 +147,7 @@ def test_at_most_ten_addresses(client: TestClient, as_fresh) -> None:
     assert response.json()["error"]["code"] == "ADDRESS_LIMIT_REACHED"
 
 
-def test_someone_elses_address_is_404(
-    client: TestClient, db_session: Session, as_fresh
-) -> None:
+def test_someone_elses_address_is_404(client: TestClient, db_session: Session, as_fresh) -> None:
     other = factories.make_user(db_session)  # has a default address
     [theirs] = client.get(URL, headers=factories.auth_header(other)).json()
     url = f"{URL}/{theirs['address_id']}"
@@ -178,17 +168,13 @@ def test_ordering_without_any_address_is_refused(
     response = client.post(ORDERS, json=order_body(milk), headers=as_fresh)
 
     assert response.status_code == 422
-    assert response.json()["error"]["details"] == [
-        {"field": "address_id", "issue": "required"}
-    ]
+    assert response.json()["error"]["details"] == [{"field": "address_id", "issue": "required"}]
 
 
 def test_order_uses_the_default_or_the_chosen_address(
     client: TestClient, milk: Product, as_fresh
 ) -> None:
-    home = add(
-        client, as_fresh, label="Home", house="12-3 Sai Residency", street="MG Road"
-    )
+    home = add(client, as_fresh, label="Home", house="12-3 Sai Residency", street="MG Road")
     office = add(client, as_fresh)
 
     by_default = client.post(ORDERS, json=order_body(milk), headers=as_fresh).json()
@@ -220,9 +206,7 @@ def test_order_with_someone_elses_address_is_refused(
     other = factories.make_user(db_session)
     [theirs] = client.get(URL, headers=factories.auth_header(other)).json()
 
-    response = client.post(
-        ORDERS, json=order_body(milk, theirs["address_id"]), headers=as_fresh
-    )
+    response = client.post(ORDERS, json=order_body(milk, theirs["address_id"]), headers=as_fresh)
 
     assert response.status_code == 422
     assert response.json()["error"]["details"] == [
@@ -248,17 +232,12 @@ def test_subscription_copies_the_address_onto_every_delivery(
             "items": [{"product_id": milk.product_id, "quantity": 1}],
         }
     )
-    subscription = subscription_service.create_subscription(
-        db_session, data, user, today=today
-    )
+    subscription = subscription_service.create_subscription(db_session, data, user, today=today)
     assert (
-        subscription.delivery_address
-        == "12-3 Sai Residency, MG Road, Ameerpet, Hyderabad - 500016"
+        subscription.delivery_address == "12-3 Sai Residency, MG Road, Ameerpet, Hyderabad - 500016"
     )
 
-    [(_, order_id)] = subscription_service.generate_orders_for(
-        db_session, start
-    ).created
+    [(_, order_id)] = subscription_service.generate_orders_for(db_session, start).created
 
     order = db_session.get(Order, order_id)
     assert order is not None and order.delivery_address == subscription.delivery_address
@@ -283,9 +262,7 @@ def test_change_subscription_address(
     ).json()
     url = f"{SUBSCRIPTIONS}/{created['subscription_id']}/address"
 
-    changed = client.patch(
-        url, json={"address_id": office["address_id"]}, headers=headers
-    )
+    changed = client.patch(url, json={"address_id": office["address_id"]}, headers=headers)
 
     assert changed.status_code == 200
     assert changed.json()["delivery_address"] == office["full_text"]

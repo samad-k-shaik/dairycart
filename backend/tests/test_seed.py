@@ -33,9 +33,9 @@ def test_prices_and_sizes_match_the_catalogue(db_session: Session) -> None:
     seed(db_session)
 
     rows = db_session.execute(
-        select(
-            Product.name, Product.size, Product.price, Product.is_available
-        ).order_by(Product.product_id)
+        select(Product.name, Product.size, Product.price, Product.is_available).order_by(
+            Product.product_id
+        )
     ).all()
 
     assert [tuple(r) for r in rows] == [
@@ -66,9 +66,7 @@ def test_catalogue_matches_database_seed_sql() -> None:
     sql = SEED_SQL.read_text(encoding="utf-8")
     sql_products = [
         (name, size, Decimal(price))
-        for name, size, price in re.findall(
-            r"\('([^']+)',\s*'([^']+)',\s*([\d.]+),", sql
-        )
+        for name, size, price in re.findall(r"\('([^']+)',\s*'([^']+)',\s*([\d.]+),", sql)
     ]
     sql_customer = re.search(r"\('([^']+)',\s*'(\d{10})'\)", sql)
 

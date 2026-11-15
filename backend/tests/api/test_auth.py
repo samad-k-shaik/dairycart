@@ -76,9 +76,7 @@ def test_register_cannot_choose_the_admin_role(client: TestClient) -> None:
         ({"password": "a1" + "é" * 40}, "password"),  # 82 bytes > bcrypt's 72
     ],
 )
-def test_register_validates_fields(
-    client: TestClient, change: dict, field: str
-) -> None:
+def test_register_validates_fields(client: TestClient, change: dict, field: str) -> None:
     response = client.post(REGISTER, json=NEW_USER | change)
 
     assert response.status_code == 422
@@ -128,9 +126,7 @@ def test_duplicates_ignore_letter_case(client: TestClient) -> None:
 
 
 @pytest.mark.parametrize("login", ["ravi_k", "RAVI_K", "ravi.kumar@example.com"])
-def test_new_user_can_log_in_with_username_or_email(
-    client: TestClient, login: str
-) -> None:
+def test_new_user_can_log_in_with_username_or_email(client: TestClient, login: str) -> None:
     client.post(REGISTER, json=NEW_USER)
 
     response = client.post(LOGIN, json={"login": login, "password": "milk1234"})
@@ -151,9 +147,7 @@ def test_new_user_can_log_in_with_username_or_email(
         {"login": "nobody", "password": "milk1234"},  # unknown user
     ],
 )
-def test_invalid_credentials_get_the_same_401(
-    client: TestClient, credentials: dict
-) -> None:
+def test_invalid_credentials_get_the_same_401(client: TestClient, credentials: dict) -> None:
     client.post(REGISTER, json=NEW_USER)
 
     response = client.post(LOGIN, json=credentials)
@@ -187,9 +181,7 @@ def test_me_with_a_bad_token_is_401(client: TestClient, header: str) -> None:
     assert client.get(ME, headers={"Authorization": header}).status_code == 401
 
 
-def test_token_of_a_deleted_user_is_401(
-    client: TestClient, db_session: Session
-) -> None:
+def test_token_of_a_deleted_user_is_401(client: TestClient, db_session: Session) -> None:
     user = factories.make_user(db_session)
     headers = factories.auth_header(user)
     db_session.delete(user)
@@ -211,9 +203,7 @@ ADMIN_CALLS = [
 
 
 @pytest.mark.parametrize(("method", "url"), ADMIN_CALLS)
-def test_admin_apis_refuse_anonymous_requests(
-    client: TestClient, method: str, url: str
-) -> None:
+def test_admin_apis_refuse_anonymous_requests(client: TestClient, method: str, url: str) -> None:
     response = client.request(method, url, json={})
 
     assert response.status_code == 401
@@ -223,9 +213,7 @@ def test_admin_apis_refuse_anonymous_requests(
 def test_admin_apis_refuse_normal_users(
     client: TestClient, normal_user: User, method: str, url: str
 ) -> None:
-    response = client.request(
-        method, url, json={}, headers=factories.auth_header(normal_user)
-    )
+    response = client.request(method, url, json={}, headers=factories.auth_header(normal_user))
 
     assert response.status_code == 403
     assert code(response) == "FORBIDDEN"
@@ -235,9 +223,7 @@ def test_admin_apis_refuse_normal_users(
 def test_admin_sees_all_users_without_password_hashes(
     client: TestClient, admin_user: User, normal_user: User
 ) -> None:
-    response = client.get(
-        "/api/v1/admin/users", headers=factories.auth_header(admin_user)
-    )
+    response = client.get("/api/v1/admin/users", headers=factories.auth_header(admin_user))
 
     assert response.status_code == 200
     users = response.json()

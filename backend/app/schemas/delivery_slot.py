@@ -29,9 +29,7 @@ def _whole_minutes(value: time) -> time:
 
 
 SlotTime = Annotated[time, AfterValidator(_whole_minutes)]
-SlotName = Annotated[
-    str, StringConstraints(strip_whitespace=True, min_length=2, max_length=50)
-]
+SlotName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=50)]
 Capacity = Annotated[int, Field(ge=1, le=MAX_SLOT_CAPACITY)]
 
 

@@ -48,9 +48,7 @@ def _error(description: str) -> dict:
     return {"model": ErrorResponse, "description": description}
 
 
-def _read(
-    db: Session, boy: DeliveryBoy, counts: dict[int, int] | None = None
-) -> DeliveryBoyRead:
+def _read(db: Session, boy: DeliveryBoy, counts: dict[int, int] | None = None) -> DeliveryBoyRead:
     if counts is None:
         counts = delivery_service.todays_orders_per_boy(db, today_ist())
     read = DeliveryBoyRead.model_validate(boy)
@@ -62,9 +60,7 @@ def _read(
 def list_delivery_boys(db: DbSession) -> list[DeliveryBoyRead]:
     """Active first, then by name. `today_orders`: today's orders in his areas."""
     counts = delivery_service.todays_orders_per_boy(db, today_ist())
-    return [
-        _read(db, boy, counts) for boy in delivery_boy_service.list_delivery_boys(db)
-    ]
+    return [_read(db, boy, counts) for boy in delivery_boy_service.list_delivery_boys(db)]
 
 
 @router.post(
@@ -94,9 +90,7 @@ def update_delivery_boy(
     delivery_boy_id: BoyId, data: DeliveryBoyUpdate, db: DbSession
 ) -> DeliveryBoyRead:
     """Switching him off keeps his areas; his orders then show as not assigned."""
-    return _read(
-        db, delivery_boy_service.update_delivery_boy(db, delivery_boy_id, data)
-    )
+    return _read(db, delivery_boy_service.update_delivery_boy(db, delivery_boy_id, data))
 
 
 @router.delete(
@@ -120,9 +114,7 @@ def delete_delivery_boy(delivery_boy_id: BoyId, db: DbSession) -> Response:
         422: _error("Invalid PIN code"),
     },
 )
-def add_area(
-    delivery_boy_id: BoyId, data: AreaCreate, db: DbSession
-) -> DeliveryBoyRead:
+def add_area(delivery_boy_id: BoyId, data: AreaCreate, db: DbSession) -> DeliveryBoyRead:
     """One delivery boy per PIN code: remove it from the other one first."""
     return _read(db, delivery_boy_service.add_area(db, delivery_boy_id, data))
 
@@ -133,7 +125,5 @@ def add_area(
     summary="Remove an area",
     responses={404: _error("Not one of his areas")},
 )
-def remove_area(
-    delivery_boy_id: BoyId, pincode: Pincode, db: DbSession
-) -> DeliveryBoyRead:
+def remove_area(delivery_boy_id: BoyId, pincode: Pincode, db: DbSession) -> DeliveryBoyRead:
     return _read(db, delivery_boy_service.remove_area(db, delivery_boy_id, pincode))

@@ -101,9 +101,7 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
     """Runs around every request: assigns the request ID, times the request,
     adds the X-Request-ID header and writes one JSON log line."""
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         request_id = _incoming_or_new_request_id(request)
         request.state.request_id = request_id
         token = request_id_var.set(request_id)

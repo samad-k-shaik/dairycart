@@ -31,18 +31,14 @@ def upgrade() -> None:
         sa.Column("delivery_boy_id", sa.Integer(), nullable=False),
         sa.Column("name", sa.String(length=100), nullable=False),
         sa.Column("phone", sa.String(length=10), nullable=False),
-        sa.Column(
-            "is_active", sa.Boolean(), server_default=sa.text("true"), nullable=False
-        ),
+        sa.Column("is_active", sa.Boolean(), server_default=sa.text("true"), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.CheckConstraint(
-            "phone ~ '^[6-9][0-9]{9}$'", name=op.f("ck_delivery_boys_phone_format")
-        ),
+        sa.CheckConstraint("phone ~ '^[6-9][0-9]{9}$'", name=op.f("ck_delivery_boys_phone_format")),
         sa.PrimaryKeyConstraint("delivery_boy_id", name=op.f("delivery_boys_pkey")),
         sa.UniqueConstraint("phone", name="uq_delivery_boys_phone"),
     )
@@ -70,9 +66,7 @@ def upgrade() -> None:
         ["delivery_boy_id"],
         unique=False,
     )
-    op.add_column(
-        "orders", sa.Column("delivery_pincode", sa.String(length=6), nullable=True)
-    )
+    op.add_column("orders", sa.Column("delivery_pincode", sa.String(length=6), nullable=True))
     op.add_column(
         "subscriptions",
         sa.Column("delivery_pincode", sa.String(length=6), nullable=True),

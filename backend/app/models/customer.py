@@ -24,9 +24,7 @@ class Customer(Base):
     # unique=True also creates the index used to find a customer by phone.
     phone: Mapped[str] = mapped_column(String(15), unique=True)
     # server_default: PostgreSQL fills it in with now() (UTC timestamp with time zone).
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # One customer → many orders. Customers with orders cannot be deleted (RESTRICT on
     # orders.customer_id), so no cascade here.

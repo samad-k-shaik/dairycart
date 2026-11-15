@@ -41,9 +41,7 @@ class ErrorDetail(BaseModel):
 
 
 class ErrorBody(BaseModel):
-    code: str = Field(
-        description="Machine-readable code, e.g. NOT_FOUND, VALIDATION_ERROR"
-    )
+    code: str = Field(description="Machine-readable code, e.g. NOT_FOUND, VALIDATION_ERROR")
     message: str = Field(description="Human-readable message, safe to show to users")
     details: list[ErrorDetail] = Field(default_factory=list)
     request_id: str | None = Field(
