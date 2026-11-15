@@ -188,9 +188,7 @@ class AdminOrderSummary(BaseModel):
     items: list[AdminOrderLine] = []
 
     @classmethod
-    def from_order(
-        cls, order: Order, username: str | None, boy: DeliveryBoy | None
-    ) -> Self:
+    def from_order(cls, order: Order, username: str | None, boy: DeliveryBoy | None) -> Self:
         lines = sorted(order.items, key=lambda i: i.order_item_id)
         return cls(
             order_id=order.order_id,
@@ -207,9 +205,7 @@ class AdminOrderSummary(BaseModel):
             delivery_date=order.delivery_date,
             delivery_pincode=order.delivery_pincode,
             delivery_boy=(
-                AssignedBoy(
-                    delivery_boy_id=boy.delivery_boy_id, name=boy.name, phone=boy.phone
-                )
+                AssignedBoy(delivery_boy_id=boy.delivery_boy_id, name=boy.name, phone=boy.phone)
                 if boy
                 else None
             ),

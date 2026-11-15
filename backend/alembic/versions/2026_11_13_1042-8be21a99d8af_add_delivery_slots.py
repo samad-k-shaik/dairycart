@@ -34,9 +34,7 @@ def upgrade() -> None:
         sa.Column("start_time", sa.Time(), nullable=False),
         sa.Column("end_time", sa.Time(), nullable=False),
         sa.Column("capacity", sa.Integer(), nullable=False),
-        sa.Column(
-            "is_active", sa.Boolean(), server_default=sa.text("true"), nullable=False
-        ),
+        sa.Column("is_active", sa.Boolean(), server_default=sa.text("true"), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -47,9 +45,7 @@ def upgrade() -> None:
             "capacity BETWEEN 1 AND 1000",
             name=op.f("ck_delivery_slots_capacity_range"),
         ),
-        sa.CheckConstraint(
-            "end_time > start_time", name=op.f("ck_delivery_slots_end_after_start")
-        ),
+        sa.CheckConstraint("end_time > start_time", name=op.f("ck_delivery_slots_end_after_start")),
         sa.PrimaryKeyConstraint("delivery_slot_id", name=op.f("delivery_slots_pkey")),
         sa.UniqueConstraint("start_time", "end_time", name="uq_delivery_slots_times"),
     )
@@ -71,12 +67,8 @@ def upgrade() -> None:
             },
         ],
     )
-    op.add_column(
-        "orders", sa.Column("delivery_slot", sa.String(length=100), nullable=True)
-    )
-    op.add_column(
-        "subscriptions", sa.Column("delivery_slot_id", sa.Integer(), nullable=True)
-    )
+    op.add_column("orders", sa.Column("delivery_slot", sa.String(length=100), nullable=True))
+    op.add_column("subscriptions", sa.Column("delivery_slot_id", sa.Integer(), nullable=True))
     op.create_index(
         "idx_subscriptions_delivery_slot_id",
         "subscriptions",

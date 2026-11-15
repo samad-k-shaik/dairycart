@@ -22,9 +22,7 @@ class UserRepository:
         return self.db.scalars(query).first()
 
     def email_taken(self, email: str) -> bool:
-        return (
-            self.db.scalar(select(User.user_id).where(User.email == email)) is not None
-        )
+        return self.db.scalar(select(User.user_id).where(User.email == email)) is not None
 
     def username_taken(self, username: str) -> bool:
         query = select(User.user_id).where(User.username == username)

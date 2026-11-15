@@ -88,12 +88,8 @@ def _string_enum(enum: type[StrEnum]) -> Enum:
 class Subscription(Base):
     __tablename__ = "subscriptions"
     __table_args__ = (
-        CheckConstraint(
-            f"plan IN ({_values_sql(SubscriptionPlan)})", name="plan_allowed"
-        ),
-        CheckConstraint(
-            f"status IN ({_values_sql(SubscriptionStatus)})", name="status_allowed"
-        ),
+        CheckConstraint(f"plan IN ({_values_sql(SubscriptionPlan)})", name="plan_allowed"),
+        CheckConstraint(f"status IN ({_values_sql(SubscriptionStatus)})", name="status_allowed"),
         CheckConstraint("end_date >= start_date", name="end_after_start"),
         CheckConstraint(
             f"every_n_days IN ({','.join(map(str, DELIVERY_INTERVALS))})",
@@ -116,9 +112,7 @@ class Subscription(Base):
 
     subscription_id: Mapped[int] = mapped_column(primary_key=True)
     # RESTRICT: an account or customer with subscriptions cannot be deleted (history).
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.user_id", ondelete="RESTRICT")
-    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="RESTRICT"))
     # Delivery contact (name + phone from the form), the same table orders use.
     customer_id: Mapped[int] = mapped_column(
         ForeignKey("customers.customer_id", ondelete="RESTRICT")
@@ -147,12 +141,8 @@ class Subscription(Base):
     delivery_pincode: Mapped[str | None] = mapped_column(String(6), default=None)
     # One delivery's total from the LOCKED prices (sum of the item subtotals).
     daily_total: Mapped[Decimal] = mapped_column(Numeric(10, 2))
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    cancelled_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), default=None
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
 
     customer: Mapped[Customer] = relationship()
     delivery_slot: Mapped[DeliverySlot | None] = relationship()
@@ -190,9 +180,7 @@ class SubscriptionItem(Base):
         CheckConstraint("quantity BETWEEN 1 AND 20", name="quantity_range"),
         CheckConstraint("unit_price > 0", name="unit_price_positive"),
         CheckConstraint("subtotal >= 0", name="subtotal_non_negative"),
-        UniqueConstraint(
-            "subscription_id", "product_id", name="uq_subscription_items_product"
-        ),
+        UniqueConstraint("subscription_id", "product_id", name="uq_subscription_items_product"),
     )
 
     subscription_item_id: Mapped[int] = mapped_column(primary_key=True)
@@ -200,9 +188,7 @@ class SubscriptionItem(Base):
         ForeignKey("subscriptions.subscription_id", ondelete="CASCADE")
     )
     # RESTRICT: a product in a subscription cannot be deleted (mark it unavailable).
-    product_id: Mapped[int] = mapped_column(
-        ForeignKey("products.product_id", ondelete="RESTRICT")
-    )
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.product_id", ondelete="RESTRICT"))
     quantity: Mapped[int]
     # Price when the user subscribed. Every day's order uses this price, so the plan
     # total shown at checkout stays true even if the product price changes (#97).

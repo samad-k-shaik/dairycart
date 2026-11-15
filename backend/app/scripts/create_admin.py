@@ -43,9 +43,7 @@ def create_admin(db: Session, data: RegisterRequest) -> User:
     """Create a new ADMIN account. Raises ValueError if the email or username is taken."""
     repository = UserRepository(db)
     if repository.email_taken(data.email) or repository.username_taken(data.username):
-        raise ValueError(
-            "That email or username already exists. Use --promote <username> instead."
-        )
+        raise ValueError("That email or username already exists. Use --promote <username> instead.")
     user = repository.add(
         User(
             full_name=data.full_name,

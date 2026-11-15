@@ -50,9 +50,7 @@ def without_ids(products: list[dict]) -> list[dict]:
 # ---- list ----
 
 
-def test_list_matches_the_contract_example(
-    client: TestClient, db_session: Session
-) -> None:
+def test_list_matches_the_contract_example(client: TestClient, db_session: Session) -> None:
     seed(db_session)
 
     response = client.get("/api/v1/products")
@@ -76,9 +74,7 @@ def test_list_hides_unavailable_products_by_default(
     assert [p["product_id"] for p in body] == [available.product_id]
 
 
-def test_include_unavailable_true_shows_them(
-    client: TestClient, db_session: Session
-) -> None:
+def test_include_unavailable_true_shows_them(client: TestClient, db_session: Session) -> None:
     available = factories.make_product(db_session)
     hidden = factories.make_product(db_session, is_available=False)
 
@@ -107,12 +103,8 @@ def test_include_unavailable_must_be_a_boolean(client: TestClient) -> None:
 # ---- details ----
 
 
-def test_details_match_the_contract_example(
-    client: TestClient, db_session: Session
-) -> None:
-    product = factories.make_product(
-        db_session, name="Cow Milk", size="1 Litre", price="60.00"
-    )
+def test_details_match_the_contract_example(client: TestClient, db_session: Session) -> None:
+    product = factories.make_product(db_session, name="Cow Milk", size="1 Litre", price="60.00")
 
     response = client.get(f"/api/v1/products/{product.product_id}")
 
@@ -127,9 +119,7 @@ def test_details_match_the_contract_example(
     }
 
 
-def test_details_also_return_unavailable_products(
-    client: TestClient, db_session: Session
-) -> None:
+def test_details_also_return_unavailable_products(client: TestClient, db_session: Session) -> None:
     product = factories.make_product(db_session, is_available=False)
 
     body = client.get(f"/api/v1/products/{product.product_id}").json()
@@ -145,9 +135,7 @@ def test_price_is_always_a_string_with_two_decimals(
 ) -> None:
     product = factories.make_product(db_session, price=price)
 
-    assert (
-        client.get(f"/api/v1/products/{product.product_id}").json()["price"] == expected
-    )
+    assert client.get(f"/api/v1/products/{product.product_id}").json()["price"] == expected
 
 
 def test_unknown_id_returns_404_not_found(client: TestClient) -> None:

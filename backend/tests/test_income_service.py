@@ -44,23 +44,17 @@ def one_time(
 
 @pytest.fixture
 def milk(db_session: Session) -> Product:
-    return factories.make_product(
-        db_session, name="Cow Milk", size="500 ml", price="30.00"
-    )
+    return factories.make_product(db_session, name="Cow Milk", size="500 ml", price="30.00")
 
 
 @pytest.fixture
 def litre(db_session: Session) -> Product:
-    return factories.make_product(
-        db_session, name="Buffalo Milk", size="1 Litre", price="70.00"
-    )
+    return factories.make_product(db_session, name="Buffalo Milk", size="1 Litre", price="70.00")
 
 
 @pytest.fixture
 def paneer(db_session: Session) -> Product:
-    return factories.make_product(
-        db_session, name="Paneer", size="200 g", price="90.00"
-    )
+    return factories.make_product(db_session, name="Paneer", size="200 g", price="90.00")
 
 
 # ---- helpers ----
@@ -147,9 +141,7 @@ def test_compared_with_the_previous_period(db_session: Session, milk: Product) -
     assert report.summary.delivered_orders_change == 0.0
 
 
-def test_types_products_and_areas(
-    db_session: Session, milk: Product, paneer: Product
-) -> None:
+def test_types_products_and_areas(db_session: Session, milk: Product, paneer: Product) -> None:
     one_time(db_session, START, (milk, 4), (paneer, 1), pincode="500016")  # 120 + 90
     one_time(db_session, START, (milk, 2), pincode="500081")  # 60
     one_time(db_session, date(2020, 2, 25), (milk, 1), pincode="500016")  # previous 30
@@ -195,9 +187,7 @@ def test_subscription_income(db_session: Session, milk: Product) -> None:
     assert report.recent[0].type == "SUBSCRIPTION"
 
 
-def test_monthly_has_six_months_ending_with_the_period(
-    db_session: Session, milk: Product
-) -> None:
+def test_monthly_has_six_months_ending_with_the_period(db_session: Session, milk: Product) -> None:
     one_time(db_session, date(2019, 12, 5), (milk, 1))
 
     report = income_report(db_session, START, END)
@@ -225,14 +215,10 @@ def test_an_empty_period(db_session: Session) -> None:
 
 def test_admin_only(client: TestClient, normal_user: User) -> None:
     assert client.get(URL).status_code == 401
-    assert (
-        client.get(URL, headers=factories.auth_header(normal_user)).status_code == 403
-    )
+    assert client.get(URL, headers=factories.auth_header(normal_user)).status_code == 403
 
 
-def test_api_default_period_and_validation(
-    client: TestClient, admin_user: User
-) -> None:
+def test_api_default_period_and_validation(client: TestClient, admin_user: User) -> None:
     headers = factories.auth_header(admin_user)
 
     ok = client.get(URL, headers=headers)
@@ -244,6 +230,4 @@ def test_api_default_period_and_validation(
         {"from": "2020-01-01", "to": "2021-01-02"},  # > 366 days
         {"from": "01-03-2020"},
     ):
-        assert client.get(URL, params=params, headers=headers).status_code == 422, (
-            params
-        )
+        assert client.get(URL, params=params, headers=headers).status_code == 422, params

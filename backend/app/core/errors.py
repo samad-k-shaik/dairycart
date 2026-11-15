@@ -228,9 +228,7 @@ def error_response(
             request_id=_request_id(request),
         )
     )
-    return JSONResponse(
-        status_code=status_code, content=body.model_dump(), headers=headers
-    )
+    return JSONResponse(status_code=status_code, content=body.model_dump(), headers=headers)
 
 
 def field_path(location: Sequence[str | int]) -> str:
@@ -270,19 +268,13 @@ async def _domain_error(request: Request, exc: Exception) -> JSONResponse:
 async def _validation_error(request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, RequestValidationError)
     # Only the field path and pydantic's message; never the submitted value (privacy).
-    details = [
-        ErrorDetail(field=field_path(e["loc"]), issue=e["msg"]) for e in exc.errors()
-    ]
-    return error_response(
-        request, 422, "VALIDATION_ERROR", "Request validation failed.", details
-    )
+    details = [ErrorDetail(field=field_path(e["loc"]), issue=e["msg"]) for e in exc.errors()]
+    return error_response(request, 422, "VALIDATION_ERROR", "Request validation failed.", details)
 
 
 async def _http_error(request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, StarletteHTTPException)
-    code, message = _HTTP_ERRORS.get(
-        exc.status_code, ("HTTP_ERROR", "The request failed.")
-    )
+    code, message = _HTTP_ERRORS.get(exc.status_code, ("HTTP_ERROR", "The request failed."))
     # Keep headers such as Allow (405).
     return error_response(request, exc.status_code, code, message, headers=exc.headers)
 
@@ -301,9 +293,7 @@ async def _unhandled_error(request: Request, exc: Exception) -> JSONResponse:
     )
     # This handler runs outside the request-ID middleware, so add the header here.
     headers = {REQUEST_ID_HEADER: request_id} if request_id else None
-    return error_response(
-        request, 500, "INTERNAL_ERROR", INTERNAL_ERROR_MESSAGE, headers=headers
-    )
+    return error_response(request, 500, "INTERNAL_ERROR", INTERNAL_ERROR_MESSAGE, headers=headers)
 
 
 def register_error_handlers(app: FastAPI) -> None:

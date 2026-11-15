@@ -35,9 +35,7 @@ def test_each_test_starts_with_an_empty_database(db_session: Session) -> None:
 def test_tests_never_use_the_development_database(db_engine: Engine) -> None:
     settings_db = get_settings().database_url.get_secret_value().rsplit("/", 1)[-1]
     with db_engine.connect() as connection:
-        connected_db = connection.execute(
-            text("SELECT current_database()")
-        ).scalar_one()
+        connected_db = connection.execute(text("SELECT current_database()")).scalar_one()
 
     assert settings_db == connected_db == "milk_delivery_test"
     assert connected_db.endswith("_test")
@@ -52,7 +50,4 @@ def test_factories_create_valid_linked_rows(db_session: Session) -> None:
     assert order.order_id is not None
     assert [i.subtotal for i in order.items] == [Decimal("120.00"), Decimal("35.00")]
     assert order.total_amount == Decimal("155.00")
-    assert (
-        factories.make_customer(db_session).phone
-        != factories.make_customer(db_session).phone
-    )
+    assert factories.make_customer(db_session).phone != factories.make_customer(db_session).phone

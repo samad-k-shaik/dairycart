@@ -13,9 +13,7 @@ from pydantic import ValidationError
 
 from app.core.config import Settings, SettingsError, get_settings
 
-LOCAL_URL = (
-    "postgresql+psycopg://milk_user:super_secret_pw@localhost:5432/milk_delivery"
-)
+LOCAL_URL = "postgresql+psycopg://milk_user:super_secret_pw@localhost:5432/milk_delivery"
 SETTINGS_VARS = ["DATABASE_URL", "CORS_ORIGINS", "LOG_LEVEL", "APP_ENV"]
 
 
@@ -79,9 +77,7 @@ def test_reads_from_a_dotenv_file_and_real_env_vars_win(
     clean_env: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     env_file = tmp_path / ".env"
-    env_file.write_text(
-        f"DATABASE_URL={LOCAL_URL}\nLOG_LEVEL=WARNING\n", encoding="utf-8"
-    )
+    env_file.write_text(f"DATABASE_URL={LOCAL_URL}\nLOG_LEVEL=WARNING\n", encoding="utf-8")
     clean_env.setenv("LOG_LEVEL", "ERROR")  # a real environment variable
 
     settings = Settings(_env_file=env_file)
@@ -94,9 +90,7 @@ def test_cors_origins_accepts_comma_separated_list(
     clean_env: pytest.MonkeyPatch,
 ) -> None:
     clean_env.setenv("DATABASE_URL", LOCAL_URL)
-    clean_env.setenv(
-        "CORS_ORIGINS", "http://localhost:5173, https://milk.example.com ,"
-    )
+    clean_env.setenv("CORS_ORIGINS", "http://localhost:5173, https://milk.example.com ,")
 
     settings = Settings(_env_file=None)
 

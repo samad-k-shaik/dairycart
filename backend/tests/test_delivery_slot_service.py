@@ -31,9 +31,7 @@ TODAY = date(2026, 11, 20)
 TOMORROW = TODAY + timedelta(days=1)
 
 
-def subscribe(
-    db: Session, slot: DeliverySlot, product: Product, user: User | None = None
-):
+def subscribe(db: Session, slot: DeliverySlot, product: Product, user: User | None = None):
     user = user or factories.make_user(db)
     data = SubscriptionCreate.model_validate(
         {
@@ -61,9 +59,7 @@ def booked(db: Session, slot: DeliverySlot) -> int:
 
 def test_the_migration_creates_the_two_standard_slots(db_session: Session) -> None:
     slots = db_session.scalars(
-        select(DeliverySlot).where(
-            DeliverySlot.start_time.in_([time(8, 0), time(17, 0)])
-        )
+        select(DeliverySlot).where(DeliverySlot.start_time.in_([time(8, 0), time(17, 0)]))
     ).all()
     assert sorted((s.label, s.capacity, s.is_active) for s in slots) == [
         ("Evening, 5:00 PM – 6:00 PM", 50, True),
@@ -87,9 +83,7 @@ def test_times_are_shown_the_way_customers_read_them(value: time, text: str) -> 
 # ---- booking and capacity ----
 
 
-def test_a_full_slot_refuses_the_next_subscription(
-    db_session: Session, milk: Product
-) -> None:
+def test_a_full_slot_refuses_the_next_subscription(db_session: Session, milk: Product) -> None:
     slot = factories.make_slot(db_session, capacity=2)
     subscribe(db_session, slot, milk)
     subscribe(db_session, slot, milk)
@@ -111,9 +105,7 @@ def test_cancelling_frees_the_place(db_session: Session, milk: Product) -> None:
     assert booked(db_session, slot) == 1
 
 
-def test_a_switched_off_slot_cannot_be_booked(
-    db_session: Session, milk: Product
-) -> None:
+def test_a_switched_off_slot_cannot_be_booked(db_session: Session, milk: Product) -> None:
     slot = factories.make_slot(db_session, is_active=False)
 
     with pytest.raises(InvalidFieldError) as error:
@@ -127,9 +119,7 @@ def test_an_unknown_slot_cannot_be_booked(db_session: Session, milk: Product) ->
         subscribe(db_session, ghost, milk)
 
 
-def test_lowering_the_capacity_keeps_existing_bookings(
-    db_session: Session, milk: Product
-) -> None:
+def test_lowering_the_capacity_keeps_existing_bookings(db_session: Session, milk: Product) -> None:
     slot = factories.make_slot(db_session, capacity=3)
     subscribe(db_session, slot, milk)
     subscribe(db_session, slot, milk)
@@ -169,9 +159,7 @@ def test_change_time_moves_the_booking(db_session: Session, milk: Product) -> No
     assert (booked(db_session, morning), booked(db_session, evening)) == (0, 1)
 
 
-def test_change_time_to_a_full_slot_is_refused(
-    db_session: Session, milk: Product
-) -> None:
+def test_change_time_to_a_full_slot_is_refused(db_session: Session, milk: Product) -> None:
     morning = factories.make_slot(db_session)
     full = factories.make_slot(db_session, capacity=1)
     subscribe(db_session, full, milk)
@@ -205,9 +193,7 @@ def test_choosing_the_same_slot_again_is_fine_even_when_full(
     assert same.delivery_slot_id == slot.delivery_slot_id
 
 
-def test_a_cancelled_subscription_cannot_change_time(
-    db_session: Session, milk: Product
-) -> None:
+def test_a_cancelled_subscription_cannot_change_time(db_session: Session, milk: Product) -> None:
     morning, evening = factories.make_slot(db_session), factories.make_slot(db_session)
     user = factories.make_user(db_session)
     subscription = subscribe(db_session, morning, milk, user)
@@ -236,9 +222,7 @@ def test_orders_keep_their_time_when_the_admin_edits_the_slot(
     delivery_slot_service.update_slot(
         db_session, slot.delivery_slot_id, DeliverySlotUpdate(name="Dawn")
     )
-    [(_, next_id)] = generate_orders_for(
-        db_session, TOMORROW + timedelta(days=1)
-    ).created
+    [(_, next_id)] = generate_orders_for(db_session, TOMORROW + timedelta(days=1)).created
 
     first, second = db_session.get(Order, order_id), db_session.get(Order, next_id)
     assert first is not None and second is not None
@@ -266,9 +250,7 @@ def test_same_times_twice_is_refused(db_session: Session) -> None:
     with pytest.raises(DeliverySlotAlreadyExistsError):
         delivery_slot_service.create_slot(
             db_session,
-            DeliverySlotCreate(
-                name="Copy", start_time=time(8, 0), end_time=time(9, 0), capacity=5
-            ),
+            DeliverySlotCreate(name="Copy", start_time=time(8, 0), end_time=time(9, 0), capacity=5),
         )
 
 
@@ -332,7 +314,5 @@ def test_a_slot_can_be_switched_off_while_another_is_active(
     )
 
     assert updated.is_active is False
-    available = [
-        s.delivery_slot_id for s, _ in delivery_slot_service.list_available(db_session)
-    ]
+    available = [s.delivery_slot_id for s, _ in delivery_slot_service.list_available(db_session)]
     assert slot.delivery_slot_id not in available

@@ -58,9 +58,7 @@ class Order(Base):
         Index("idx_orders_user_id", "user_id"),  # "My orders" (#90)
         # #97: at most ONE order per subscription per day, even if "generate orders" runs
         # twice at the same moment. One-time orders have NULL here, and NULLs never clash.
-        UniqueConstraint(
-            "subscription_id", "delivery_date", name="uq_orders_subscription_day"
-        ),
+        UniqueConstraint("subscription_id", "delivery_date", name="uq_orders_subscription_day"),
     )
 
     order_id: Mapped[int] = mapped_column(primary_key=True)
@@ -92,9 +90,7 @@ class Order(Base):
     # order to the delivery boy who covers the area. NULL when there is no address.
     delivery_pincode: Mapped[str | None] = mapped_column(String(6), default=None)
     # Stored in UTC (TIMESTAMPTZ); shown in IST by the frontend.
-    order_date: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    order_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     # Sum of the item subtotals, calculated by the backend service (never sent by clients).
     total_amount: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     # VARCHAR(20) + the CHECK above, not a native PostgreSQL enum (easier to change later).

@@ -153,9 +153,7 @@ class OrderRepository:
         )
         return self._rows(query)
 
-    def _admin_query(
-        self, filters: AdminOrderFilters, *, use_boy: bool = True
-    ) -> Select:
+    def _admin_query(self, filters: AdminOrderFilters, *, use_boy: bool = True) -> Select:
         """SELECT orders JOIN customers with the board filters (not the status)."""
         query = select(Order).join(Order.customer)
         if filters.day is not None:
@@ -174,9 +172,7 @@ class OrderRepository:
             else:
                 query = query.where(
                     Order.delivery_pincode.in_(
-                        select(areas.c.pincode).where(
-                            areas.c.delivery_boy_id == filters.boy
-                        )
+                        select(areas.c.pincode).where(areas.c.delivery_boy_id == filters.boy)
                     )
                 )
         return query
@@ -194,9 +190,7 @@ class OrderRepository:
         if status is not None:
             query = query.where(Order.status == status)
 
-        total = self.db.scalar(
-            select(func.count()).select_from(query.order_by(None).subquery())
-        )
+        total = self.db.scalar(select(func.count()).select_from(query.order_by(None).subquery()))
         page_query = _with_details(
             query.add_columns(User.username)
             .outerjoin(User, User.user_id == Order.user_id)
@@ -234,9 +228,7 @@ class OrderRepository:
         query = _with_details(
             select(Order, User.username, DeliverySlot.start_time)
             .outerjoin(User, User.user_id == Order.user_id)
-            .outerjoin(
-                Subscription, Subscription.subscription_id == Order.subscription_id
-            )
+            .outerjoin(Subscription, Subscription.subscription_id == Order.subscription_id)
             .outerjoin(
                 DeliverySlot,
                 DeliverySlot.delivery_slot_id == Subscription.delivery_slot_id,
@@ -269,16 +261,12 @@ class OrderRepository:
         ).one()
         return count, total
 
-    def count_by_status(
-        self, filters: AdminOrderFilters | None = None
-    ) -> dict[OrderStatus, int]:
+    def count_by_status(self, filters: AdminOrderFilters | None = None) -> dict[OrderStatus, int]:
         """How many orders have each status; statuses with no orders get 0.
         #104: only the orders matching the board filters (all orders without them)."""
         counts: dict[OrderStatus, int] = dict.fromkeys(OrderStatus, 0)
         base = self._admin_query(filters or AdminOrderFilters()).subquery()
-        rows = self.db.execute(
-            select(base.c.status, func.count()).group_by(base.c.status)
-        ).all()
+        rows = self.db.execute(select(base.c.status, func.count()).group_by(base.c.status)).all()
         for status, count in rows:
             counts[OrderStatus(status)] = count
         return counts

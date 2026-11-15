@@ -48,21 +48,15 @@ class Address(Base):
 
     address_id: Mapped[int] = mapped_column(primary_key=True)
     # CASCADE: the addresses belong to the account (orders keep their own copy).
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.user_id", ondelete="CASCADE")
-    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id", ondelete="CASCADE"))
     label: Mapped[str] = mapped_column(String(30))  # "Home", "Office"…
     house: Mapped[str] = mapped_column(String(100))  # house / flat number, building
     street: Mapped[str] = mapped_column(String(150))  # street / area
     landmark: Mapped[str | None] = mapped_column(String(100), default=None)
     city: Mapped[str] = mapped_column(String(50))
     pincode: Mapped[str] = mapped_column(String(6))
-    is_default: Mapped[bool] = mapped_column(
-        Boolean, server_default=false(), default=False
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    is_default: Mapped[bool] = mapped_column(Boolean, server_default=false(), default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     @property
     def full_text(self) -> str:

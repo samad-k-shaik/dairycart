@@ -21,9 +21,7 @@ from app.services import order_service
 from tests import factories
 
 
-def order_request(
-    items: list[tuple[int, int]], phone: str = "9876543210"
-) -> OrderCreate:
+def order_request(items: list[tuple[int, int]], phone: str = "9876543210") -> OrderCreate:
     return OrderCreate.model_validate(
         {
             "customer": {"name": "Ravi Kumar", "phone": phone},
@@ -129,9 +127,7 @@ def test_update_status_follows_the_rules(db_session: Session) -> None:
     product = factories.make_product(db_session)
     order = factories.make_order(db_session, items=[(product, 1)])
 
-    updated = order_service.update_status(
-        db_session, order.order_id, OrderStatus.CONFIRMED
-    )
+    updated = order_service.update_status(db_session, order.order_id, OrderStatus.CONFIRMED)
     assert updated.status == OrderStatus.CONFIRMED
 
     with pytest.raises(InvalidStatusTransitionError) as caught:
@@ -169,15 +165,15 @@ def test_order_with_items_loads_in_a_fixed_number_of_queries(
     db_session: Session,
 ) -> None:
     products = [factories.make_product(db_session) for _ in range(5)]
-    order_id = factories.make_order(
-        db_session, items=[(p, 1) for p in products]
-    ).order_id
+    order_id = factories.make_order(db_session, items=[(p, 1) for p in products]).order_id
     db_session.expire_all()  # forget everything loaded, like a fresh request
 
     statements: list[str] = []
     engine = db_session.get_bind()
+
     def listener(*args):
         statements.append(args[2])
+
     event.listen(engine, "before_cursor_execute", listener)
     try:
         loaded = OrderRepository(db_session).get_with_items(order_id)

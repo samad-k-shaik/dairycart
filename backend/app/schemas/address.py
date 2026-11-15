@@ -11,9 +11,7 @@ from app.models.address import PINCODE_PATTERN
 def _text(min_length: int, max_length: int) -> Any:
     return Annotated[
         str,
-        StringConstraints(
-            strip_whitespace=True, min_length=min_length, max_length=max_length
-        ),
+        StringConstraints(strip_whitespace=True, min_length=min_length, max_length=max_length),
     ]
 
 
@@ -22,9 +20,7 @@ House = _text(1, 100)
 Street = _text(2, 150)
 Landmark = _text(0, 100)
 City = _text(2, 50)
-Pincode = Annotated[
-    str, StringConstraints(strip_whitespace=True, pattern=PINCODE_PATTERN)
-]
+Pincode = Annotated[str, StringConstraints(strip_whitespace=True, pattern=PINCODE_PATTERN)]
 
 
 class AddressCreate(BaseModel):

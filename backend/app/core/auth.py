@@ -34,9 +34,7 @@ def get_current_user(
     user_id = read_access_token(credentials.credentials)
     user = UserRepository(db).get(user_id) if user_id is not None else None
     if user is None:  # bad signature, expired, or the user no longer exists
-        raise UnauthorizedError(
-            "Your session is invalid or has expired. Please log in again."
-        )
+        raise UnauthorizedError("Your session is invalid or has expired. Please log in again.")
     return user
 
 

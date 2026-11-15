@@ -31,9 +31,7 @@ def milk(db_session: Session) -> Product:
 @pytest.mark.parametrize("path", [ORDERS, f"{USERS}/1", f"{USERS}/1/orders"])
 def test_admin_only(client: TestClient, normal_user: User, path: str) -> None:
     assert client.get(path).status_code == 401
-    assert (
-        client.get(path, headers=factories.auth_header(normal_user)).status_code == 403
-    )
+    assert client.get(path, headers=factories.auth_header(normal_user)).status_code == 403
 
 
 # ---- the Orders board's day view (#101 Deliveries, moved to /admin/orders in #104) ----
@@ -44,9 +42,7 @@ def test_board_card_shape(
 ) -> None:
     order = factories.make_order(db_session, items=[(milk, 2)], user=normal_user)
 
-    response = client.get(
-        ORDERS, params={"date": today_ist().isoformat()}, headers=as_admin
-    )
+    response = client.get(ORDERS, params={"date": today_ist().isoformat()}, headers=as_admin)
 
     assert response.status_code == 200
     body = response.json()
@@ -89,27 +85,19 @@ def test_board_for_another_date(
     db_session.flush()
 
     on_day = client.get(ORDERS, params={"date": "2026-01-15"}, headers=as_admin).json()
-    next_day = client.get(
-        ORDERS, params={"date": "2026-01-16"}, headers=as_admin
-    ).json()
+    next_day = client.get(ORDERS, params={"date": "2026-01-16"}, headers=as_admin).json()
 
     assert order.order_id in [r["order_id"] for r in on_day["items"]]
     assert order.order_id not in [r["order_id"] for r in next_day["items"]]
     assert on_day["status_counts"]["PLACED"] == on_day["total"]
 
 
-def test_board_search(
-    client: TestClient, db_session: Session, milk: Product, as_admin
-) -> None:
-    customer = factories.make_customer(
-        db_session, name="Meena Iyer", phone="9876512399"
-    )
+def test_board_search(client: TestClient, db_session: Session, milk: Product, as_admin) -> None:
+    customer = factories.make_customer(db_session, name="Meena Iyer", phone="9876512399")
     order = factories.make_order(db_session, customer=customer, items=[(milk, 1)])
 
     by_name = client.get(ORDERS, params={"q": "meena"}, headers=as_admin).json()
-    by_number = client.get(
-        ORDERS, params={"q": f"#{order.order_id}"}, headers=as_admin
-    ).json()
+    by_number = client.get(ORDERS, params={"q": f"#{order.order_id}"}, headers=as_admin).json()
 
     assert order.order_id in [r["order_id"] for r in by_name["items"]]
     assert [r["order_id"] for r in by_number["items"]] == [order.order_id]
@@ -154,9 +142,7 @@ def test_user_orders_newest_first_only_theirs(
     older = factories.make_order(db_session, items=[(milk, 1)], user=normal_user)
     older.order_date = datetime.now(UTC) - timedelta(days=2)
     newer = factories.make_order(db_session, items=[(milk, 2)], user=normal_user)
-    factories.make_order(
-        db_session, items=[(milk, 1)], user=factories.make_user(db_session)
-    )
+    factories.make_order(db_session, items=[(milk, 1)], user=factories.make_user(db_session))
     db_session.flush()
 
     response = client.get(f"{USERS}/{normal_user.user_id}/orders", headers=as_admin)
@@ -187,9 +173,7 @@ def test_admin_subscriptions_filter_by_user(
         "/api/v1/subscriptions", json=body, headers=factories.auth_header(normal_user)
     ).json()
     other = factories.make_user(db_session)
-    client.post(
-        "/api/v1/subscriptions", json=body, headers=factories.auth_header(other)
-    )
+    client.post("/api/v1/subscriptions", json=body, headers=factories.auth_header(other))
 
     rows = client.get(
         "/api/v1/admin/subscriptions",

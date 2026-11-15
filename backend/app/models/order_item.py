@@ -33,14 +33,10 @@ class OrderItem(Base):
 
     order_item_id: Mapped[int] = mapped_column(primary_key=True)
     # CASCADE: deleting an order deletes its lines (they mean nothing on their own).
-    order_id: Mapped[int] = mapped_column(
-        ForeignKey("orders.order_id", ondelete="CASCADE")
-    )
+    order_id: Mapped[int] = mapped_column(ForeignKey("orders.order_id", ondelete="CASCADE"))
     # RESTRICT: a product that appears in any order cannot be deleted (set
     # is_available = false instead), so order history always shows what was bought.
-    product_id: Mapped[int] = mapped_column(
-        ForeignKey("products.product_id", ondelete="RESTRICT")
-    )
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.product_id", ondelete="RESTRICT"))
     quantity: Mapped[int]
     # Price SNAPSHOT copied from products.price at order time (BR-1): later price changes
     # do not change old orders.

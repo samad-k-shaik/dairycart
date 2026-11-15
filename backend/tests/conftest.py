@@ -23,7 +23,9 @@ from pathlib import Path
 import pytest
 from sqlalchemy import make_url
 
-DEFAULT_TEST_DATABASE_URL = "postgresql+psycopg://milk_user:milk_password_local_only@localhost:5432/milk_delivery_test"
+DEFAULT_TEST_DATABASE_URL = (
+    "postgresql+psycopg://milk_user:milk_password_local_only@localhost:5432/milk_delivery_test"
+)
 TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", DEFAULT_TEST_DATABASE_URL)
 
 # Safety guard: refuse to run the test suite against anything but a *_test database.

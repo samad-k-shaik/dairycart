@@ -40,9 +40,7 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.CheckConstraint(
-            "role IN ('USER','ADMIN')", name=op.f("ck_users_role_allowed")
-        ),
+        sa.CheckConstraint("role IN ('USER','ADMIN')", name=op.f("ck_users_role_allowed")),
         sa.PrimaryKeyConstraint("user_id", name=op.f("users_pkey")),
         sa.UniqueConstraint("email", name=op.f("uq_users_email")),
         sa.UniqueConstraint("username", name=op.f("uq_users_username")),

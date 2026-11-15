@@ -337,9 +337,7 @@ def generate_orders_for(db: Session, day: date) -> GenerateResult:
     return result
 
 
-def _create_daily_order(
-    db: Session, subscription: Subscription, day: date
-) -> Order | str | None:
+def _create_daily_order(db: Session, subscription: Subscription, day: date) -> Order | str | None:
     """The order, or the reason it was skipped, or None if another run made it first."""
     quantities = {item.product_id: item.quantity for item in subscription.items}
     products = ProductRepository(db).get_many_for_update(quantities)  # locked

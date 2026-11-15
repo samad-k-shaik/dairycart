@@ -45,8 +45,7 @@ def create_address(db: Session, user_id: int, data: AddressCreate) -> Address:
         existing = repository.lock_user_addresses(user_id)
         if len(existing) >= MAX_ADDRESSES_PER_USER:
             raise AddressLimitReachedError(
-                f"You can save up to {MAX_ADDRESSES_PER_USER} addresses. "
-                "Delete one to add another."
+                f"You can save up to {MAX_ADDRESSES_PER_USER} addresses. Delete one to add another."
             )
         address = repository.add(Address(user_id=user_id, **data.values()))
         if data.is_default or not existing:
@@ -58,9 +57,7 @@ def create_address(db: Session, user_id: int, data: AddressCreate) -> Address:
     return address
 
 
-def update_address(
-    db: Session, user_id: int, address_id: int, data: AddressUpdate
-) -> Address:
+def update_address(db: Session, user_id: int, address_id: int, data: AddressUpdate) -> Address:
     """Orders already placed keep their own copy of the old text."""
     address = AddressRepository(db).get_for_user(address_id, user_id)
     if address is None:
@@ -118,9 +115,7 @@ class DeliveryAddressCopy:
     pincode: str
 
 
-def delivery_copy_for(
-    db: Session, user_id: int, address_id: int | None
-) -> DeliveryAddressCopy:
+def delivery_copy_for(db: Session, user_id: int, address_id: int | None) -> DeliveryAddressCopy:
     """The address to copy onto an order or subscription.
 
     `address_id` given → that address, which must be the user's own. Not given → the

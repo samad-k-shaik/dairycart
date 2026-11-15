@@ -43,12 +43,8 @@ class Product(Base):
     # Money: NUMERIC(10,2) in the database, exact Decimal in Python. Never float.
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     # Hidden from customers when False. Products are never deleted once ordered.
-    is_available: Mapped[bool] = mapped_column(
-        Boolean, server_default=true(), default=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    is_available: Mapped[bool] = mapped_column(Boolean, server_default=true(), default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     # How many bottles are left (#92). ADMIN-only: the public API never returns the
     # number, only `in_stock`. Orders reduce it; cancelling an order puts it back.
     stock_quantity: Mapped[int] = mapped_column(server_default="0", default=0)

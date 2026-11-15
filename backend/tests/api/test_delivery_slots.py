@@ -81,9 +81,7 @@ def test_a_full_slot_is_listed_as_full(
     assert created.status_code == 201
 
     listed = next(
-        s
-        for s in client.get(SLOTS).json()
-        if s["delivery_slot_id"] == slot.delivery_slot_id
+        s for s in client.get(SLOTS).json() if s["delivery_slot_id"] == slot.delivery_slot_id
     )
     assert (listed["spaces_left"], listed["is_full"]) == (0, True)
 
@@ -97,18 +95,14 @@ def test_a_full_slot_is_listed_as_full(
     assert refused.json()["error"]["code"] == "DELIVERY_SLOT_FULL"
 
 
-def test_subscribing_without_a_slot_is_refused(
-    client: TestClient, milk: Product, as_user
-) -> None:
+def test_subscribing_without_a_slot_is_refused(client: TestClient, milk: Product, as_user) -> None:
     body = subscribe_body(milk, 1)
     del body["delivery_slot_id"]
 
     response = client.post(SUBSCRIPTIONS, json=body, headers=as_user)
 
     assert response.status_code == 422
-    assert "delivery_slot_id" in [
-        d["field"] for d in response.json()["error"]["details"]
-    ]
+    assert "delivery_slot_id" in [d["field"] for d in response.json()["error"]["details"]]
 
 
 def test_subscribing_to_a_switched_off_slot_is_refused(
@@ -169,9 +163,7 @@ def test_someone_else_cannot_change_the_time(
 
 
 def test_change_time_needs_login(client: TestClient) -> None:
-    response = client.patch(
-        f"{SUBSCRIPTIONS}/1/delivery-slot", json={"delivery_slot_id": 1}
-    )
+    response = client.patch(f"{SUBSCRIPTIONS}/1/delivery-slot", json={"delivery_slot_id": 1})
     assert response.status_code == 401
 
 
@@ -258,9 +250,7 @@ def test_admin_cannot_delete_a_booked_slot(
     client: TestClient, db_session: Session, milk: Product, as_user, as_admin
 ) -> None:
     slot = factories.make_slot(db_session)
-    client.post(
-        SUBSCRIPTIONS, json=subscribe_body(milk, slot.delivery_slot_id), headers=as_user
-    )
+    client.post(SUBSCRIPTIONS, json=subscribe_body(milk, slot.delivery_slot_id), headers=as_user)
 
     response = client.delete(f"{ADMIN}/{slot.delivery_slot_id}", headers=as_admin)
 

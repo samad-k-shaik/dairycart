@@ -47,9 +47,7 @@ def _read(db: Session, slot: DeliverySlot) -> AdminDeliverySlotRead:
     return AdminDeliverySlotRead.from_slot(slot, booked)
 
 
-@router.get(
-    "", response_model=list[AdminDeliverySlotRead], summary="All delivery slots"
-)
+@router.get("", response_model=list[AdminDeliverySlotRead], summary="All delivery slots")
 def list_slots(db: DbSession) -> list[AdminDeliverySlotRead]:
     """Switched-off slots too, by start time. `booked` = ACTIVE subscriptions."""
     return [
@@ -83,9 +81,7 @@ def create_slot(data: DeliverySlotCreate, db: DbSession) -> AdminDeliverySlotRea
         422: _error("Invalid fields"),
     },
 )
-def update_slot(
-    slot_id: SlotId, data: DeliverySlotUpdate, db: DbSession
-) -> AdminDeliverySlotRead:
+def update_slot(slot_id: SlotId, data: DeliverySlotUpdate, db: DbSession) -> AdminDeliverySlotRead:
     """Send only the fields that change. Orders already created keep their time."""
     return _read(db, delivery_slot_service.update_slot(db, slot_id, data))
 

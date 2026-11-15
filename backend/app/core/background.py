@@ -48,9 +48,7 @@ def run_subscription_orders_once(
             "subscription orders created",
             extra={
                 "delivery_date": result.delivery_date.isoformat(),
-                "orders_created": len(
-                    result.created
-                ),  # not "created": a LogRecord field
+                "orders_created": len(result.created),  # not "created": a LogRecord field
                 "already_created": result.already_created,
                 "skipped": [f"#{s}: {reason}" for s, reason in result.skipped],
                 "completed": result.completed,

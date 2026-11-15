@@ -89,9 +89,7 @@ def test_unsigned_none_algorithm_token_is_rejected() -> None:
     "claims", [{"sub": "1"}, {"exp": 9999999999}, {"sub": "x", "exp": 9999999999}]
 )
 def test_token_without_expiry_or_valid_subject_is_rejected(claims: dict) -> None:
-    token = jwt.encode(
-        claims, get_settings().jwt_secret_key.get_secret_value(), algorithm="HS256"
-    )
+    token = jwt.encode(claims, get_settings().jwt_secret_key.get_secret_value(), algorithm="HS256")
 
     assert security.read_access_token(token) is None
 

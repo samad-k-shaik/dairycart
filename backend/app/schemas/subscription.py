@@ -101,9 +101,7 @@ class SubscriptionRead(BaseModel):
                     unit_price=item.unit_price,
                     subtotal=item.subtotal,
                 )
-                for item in sorted(
-                    subscription.items, key=lambda i: i.subscription_item_id
-                )
+                for item in sorted(subscription.items, key=lambda i: i.subscription_item_id)
             ],
             daily_total=subscription.daily_total,
             plan_total=subscription.daily_total * subscription.deliveries,

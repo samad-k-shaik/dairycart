@@ -89,9 +89,7 @@ class IncomeRepository:
             .join(OrderItem, OrderItem.order_id == Order.order_id)
             .join(Product, Product.product_id == OrderItem.product_id)
             .where(Order.status == OrderStatus.DELIVERED, _in_range(start, end))
-            .group_by(
-                Order.delivery_pincode, Product.product_id, Product.name, Product.size
-            )
+            .group_by(Order.delivery_pincode, Product.product_id, Product.name, Product.size)
         ).all()
 
     def by_area(self, start: date, end: date) -> Sequence[Row]:
@@ -140,9 +138,7 @@ class IncomeRepository:
         """(order_id, day, customer name, is_subscription, total) newest first."""
         day = DELIVERY_DAY.label("day")
         return self.db.execute(
-            select(
-                Order.order_id, day, Customer.name, IS_SUBSCRIPTION, Order.total_amount
-            )
+            select(Order.order_id, day, Customer.name, IS_SUBSCRIPTION, Order.total_amount)
             .join(Customer, Customer.customer_id == Order.customer_id)
             .where(Order.status == OrderStatus.DELIVERED, _in_range(start, end))
             .order_by(day.desc(), Order.order_id.desc())

@@ -103,9 +103,7 @@ def test_end_date_counts_the_first_day() -> None:
     assert end_date_for(date(2026, 11, 1), 7) == date(2026, 11, 7)
 
 
-@pytest.mark.parametrize(
-    "start", [TODAY, TODAY - timedelta(days=1), TODAY + timedelta(days=31)]
-)
+@pytest.mark.parametrize("start", [TODAY, TODAY - timedelta(days=1), TODAY + timedelta(days=31)])
 def test_start_must_be_tomorrow_up_to_30_days_ahead(
     db_session: Session, user: User, milk: Product, start: date
 ) -> None:
@@ -114,12 +112,8 @@ def test_start_must_be_tomorrow_up_to_30_days_ahead(
     assert error.value.details[0].field == "start_date"
 
 
-def test_start_30_days_ahead_is_allowed(
-    db_session: Session, user: User, milk: Product
-) -> None:
-    subscription = subscribe(
-        db_session, user, (milk, 1), start=TODAY + timedelta(days=30)
-    )
+def test_start_30_days_ahead_is_allowed(db_session: Session, user: User, milk: Product) -> None:
+    subscription = subscribe(db_session, user, (milk, 1), start=TODAY + timedelta(days=30))
     assert subscription.start_date == TODAY + timedelta(days=30)
 
 
@@ -149,9 +143,7 @@ def test_a_finished_plan_does_not_block_a_new_one(
     first = subscribe(db_session, user, (milk, 1))  # 21st-27th Nov
     later = date(2026, 11, 28)
 
-    second = subscribe(
-        db_session, user, (milk, 1), today=later, start=later + timedelta(days=1)
-    )
+    second = subscribe(db_session, user, (milk, 1), today=later, start=later + timedelta(days=1))
 
     db_session.refresh(first)
     assert first.status == SubscriptionStatus.COMPLETED
@@ -191,22 +183,16 @@ def test_the_database_refuses_a_second_active_subscription(
 # ---- cancel ----
 
 
-def test_cancel_sets_status_and_time(
-    db_session: Session, user: User, milk: Product
-) -> None:
+def test_cancel_sets_status_and_time(db_session: Session, user: User, milk: Product) -> None:
     subscription = subscribe(db_session, user, (milk, 1))
 
-    cancelled = cancel_subscription(
-        db_session, subscription.subscription_id, user, today=TODAY
-    )
+    cancelled = cancel_subscription(db_session, subscription.subscription_id, user, today=TODAY)
 
     assert cancelled.status == SubscriptionStatus.CANCELLED
     assert cancelled.cancelled_at is not None
 
 
-def test_cancelling_twice_is_refused(
-    db_session: Session, user: User, milk: Product
-) -> None:
+def test_cancelling_twice_is_refused(db_session: Session, user: User, milk: Product) -> None:
     subscription = subscribe(db_session, user, (milk, 1))
     cancel_subscription(db_session, subscription.subscription_id, user, today=TODAY)
 
@@ -220,9 +206,7 @@ def test_a_completed_plan_cannot_be_cancelled(
     subscription = subscribe(db_session, user, (milk, 1))
 
     with pytest.raises(SubscriptionNotActiveError, match="already completed"):
-        cancel_subscription(
-            db_session, subscription.subscription_id, user, today=date(2026, 12, 1)
-        )
+        cancel_subscription(db_session, subscription.subscription_id, user, today=date(2026, 12, 1))
 
 
 def test_my_list_shows_finished_plans_as_completed(
@@ -230,9 +214,7 @@ def test_my_list_shows_finished_plans_as_completed(
 ) -> None:
     subscribe(db_session, user, (milk, 1))
 
-    [(subscription, count)] = list_my_subscriptions(
-        db_session, user, today=date(2026, 12, 1)
-    )
+    [(subscription, count)] = list_my_subscriptions(db_session, user, today=date(2026, 12, 1))
 
     assert (subscription.status, count) == (SubscriptionStatus.COMPLETED, 0)
 
@@ -259,9 +241,7 @@ def test_generate_creates_one_order_with_the_locked_price(
     assert milk.stock_quantity == 98  # stock reduced like a normal order
 
 
-def test_generate_twice_never_duplicates(
-    db_session: Session, user: User, milk: Product
-) -> None:
+def test_generate_twice_never_duplicates(db_session: Session, user: User, milk: Product) -> None:
     subscription = subscribe(db_session, user, (milk, 1))
     generate_orders_for(db_session, TOMORROW)
 
@@ -271,9 +251,7 @@ def test_generate_twice_never_duplicates(
     assert len(orders_of(db_session, subscription)) == 1
 
 
-def test_one_order_per_day_over_the_plan(
-    db_session: Session, user: User, milk: Product
-) -> None:
+def test_one_order_per_day_over_the_plan(db_session: Session, user: User, milk: Product) -> None:
     subscription = subscribe(db_session, user, (milk, 1))  # 21st-27th Nov
 
     for offset in range(-1, 9):  # 20th Nov to 29th Nov
@@ -380,9 +358,7 @@ def test_orders_only_on_delivery_days(
     every_n_days: int,
     delivery_days: list[int],
 ) -> None:
-    subscription = subscribe(
-        db_session, user, (milk, 1), plan=plan, every_n_days=every_n_days
-    )
+    subscription = subscribe(db_session, user, (milk, 1), plan=plan, every_n_days=every_n_days)
 
     for offset in range(20):  # 21 Nov to 10 Dec, more than the plan
         generate_orders_for(db_session, TOMORROW + timedelta(days=offset))
@@ -393,14 +369,10 @@ def test_orders_only_on_delivery_days(
     assert len(made) == subscription.deliveries
 
 
-def test_delivers_on_matches_the_rhythm(
-    db_session: Session, user: User, milk: Product
-) -> None:
+def test_delivers_on_matches_the_rhythm(db_session: Session, user: User, milk: Product) -> None:
     subscription = subscribe(db_session, user, (milk, 1), every_n_days=2)
 
-    assert [
-        subscription.delivers_on(TOMORROW + timedelta(days=n)) for n in range(-1, 8)
-    ] == [
+    assert [subscription.delivers_on(TOMORROW + timedelta(days=n)) for n in range(-1, 8)] == [
         False,  # the day before the start
         True,
         False,

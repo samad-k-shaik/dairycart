@@ -37,9 +37,7 @@ MAX_DAYS = 366
 MONTHS = 6
 RECENT = 8
 ZERO = Decimal("0.00")
-_SIZE = re.compile(
-    r"(\d+(?:\.\d+)?)\s*(ml|l|lt|ltr|litre|litres|liter|liters)\b", re.IGNORECASE
-)
+_SIZE = re.compile(r"(\d+(?:\.\d+)?)\s*(ml|l|lt|ltr|litre|litres|liter|liters)\b", re.IGNORECASE)
 
 
 def litres_per_unit(name: str, size: str) -> float | None:
@@ -112,9 +110,7 @@ def income_report(db: Session, start: date, end: date) -> IncomeReport:
     previous_start = previous_end - timedelta(days=days - 1)
 
     # ---- the period, day by day (missing days = 0) ----
-    per_day = {
-        day: (income, orders) for day, income, orders in repository.daily(start, end)
-    }
+    per_day = {day: (income, orders) for day, income, orders in repository.daily(start, end)}
     daily = [
         DailyIncome(
             date=start + timedelta(days=i),
@@ -127,9 +123,7 @@ def income_report(db: Session, start: date, end: date) -> IncomeReport:
     now = _Totals(
         income=sum((d.income for d in daily), ZERO),
         orders=sum(d.orders for d in daily),
-        litres=round(
-            sum(q * (litres_per_unit(n, s) or 0) for _, _, n, s, q, _ in lines), 2
-        ),
+        litres=round(sum(q * (litres_per_unit(n, s) or 0) for _, _, n, s, q, _ in lines), 2),
     )
     before = _totals(repository, previous_start, previous_end)
     pending_income, pending_orders = repository.pending(start, end)
@@ -152,22 +146,17 @@ def income_report(db: Session, start: date, end: date) -> IncomeReport:
     # ---- last 6 months up to the end of the period ----
     month_rows = {
         month: (income, orders)
-        for month, income, orders in repository.monthly(
-            _months_back(end, MONTHS - 1), end
-        )
+        for month, income, orders in repository.monthly(_months_back(end, MONTHS - 1), end)
     }
     monthly = []
     for back in range(MONTHS - 1, -1, -1):
         first = _months_back(end, back)
         income, orders = month_rows.get(first, (ZERO, 0))
-        monthly.append(
-            MonthlyIncome(month=f"{first:%Y-%m}", income=income, orders=orders)
-        )
+        monthly.append(MonthlyIncome(month=f"{first:%Y-%m}", income=income, orders=orders))
 
     # ---- subscription vs one-time ----
     type_rows = {
-        is_sub: (income, orders)
-        for is_sub, income, orders in repository.by_type(start, end)
+        is_sub: (income, orders) for is_sub, income, orders in repository.by_type(start, end)
     }
     by_type = [
         IncomeByType(
@@ -205,9 +194,7 @@ def income_report(db: Session, start: date, end: date) -> IncomeReport:
                 name=p["name"],
                 size=p["size"],
                 quantity=p["quantity"],
-                litres=round(p["quantity"] * p["per_unit"], 2)
-                if p["per_unit"]
-                else None,
+                litres=round(p["quantity"] * p["per_unit"], 2) if p["per_unit"] else None,
                 income=p["income"],
                 share=_share(p["income"], now.income),
             )
@@ -220,8 +207,7 @@ def income_report(db: Session, start: date, end: date) -> IncomeReport:
     # ---- areas (PIN codes), with growth vs the previous period ----
     names = repository.area_names()
     previous_area = {
-        pin: income
-        for pin, income, _, _ in repository.by_area(previous_start, previous_end)
+        pin: income for pin, income, _, _ in repository.by_area(previous_start, previous_end)
     }
     by_area = sorted(
         (
@@ -242,8 +228,7 @@ def income_report(db: Session, start: date, end: date) -> IncomeReport:
 
     # ---- subscriptions ----
     previous_types = {
-        is_sub: income
-        for is_sub, income, _ in repository.by_type(previous_start, previous_end)
+        is_sub: income for is_sub, income, _ in repository.by_type(previous_start, previous_end)
     }
     subscriptions = SubscriptionIncome(
         active=repository.active_subscriptions(),
@@ -301,16 +286,12 @@ def insights(
     change = summary.income_change
     if change is not None:
         direction = "up" if change >= 0 else "down"
-        lines.append(
-            f"Income is {direction} {abs(change)}% compared to the previous period."
-        )
+        lines.append(f"Income is {direction} {abs(change)}% compared to the previous period.")
     subscription = by_type[0]
     lines.append(f"Subscriptions bring {subscription.share}% of the income.")
     if by_product:
         top = by_product[0]
-        lines.append(
-            f"{top.name} {top.size} is the best seller ({_rupees(top.income)})."
-        )
+        lines.append(f"{top.name} {top.size} is the best seller ({_rupees(top.income)}).")
     known_areas = [a for a in by_area if a.pincode]
     if known_areas:
         best = known_areas[0]

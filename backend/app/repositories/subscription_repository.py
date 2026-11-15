@@ -78,9 +78,7 @@ class SubscriptionRepository:
     def get_for_update(self, subscription_id: int) -> Subscription | None:
         """LOCKS the row until commit, so a cancel and a "generate orders" run on the
         same subscription cannot overlap."""
-        query = select(Subscription).where(
-            Subscription.subscription_id == subscription_id
-        )
+        query = select(Subscription).where(Subscription.subscription_id == subscription_id)
         return self.db.scalars(query.with_for_update()).first()
 
     def has_active(self, user_id: int) -> bool:

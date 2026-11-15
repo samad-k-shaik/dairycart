@@ -33,9 +33,7 @@ def error_fields(response) -> set[str]:
 # ---- POST: add ----
 
 
-def test_create_returns_201_with_the_new_product(
-    client: TestClient, db_session: Session
-) -> None:
+def test_create_returns_201_with_the_new_product(client: TestClient, db_session: Session) -> None:
     response = client.post(URL, json=NEW_PRODUCT)
 
     assert response.status_code == 201
@@ -122,9 +120,7 @@ def test_same_name_with_a_different_size_is_allowed(
         ({"product_id": 7}, "product_id"),  # unknown/extra field
     ],
 )
-def test_create_validates_every_field(
-    client: TestClient, change: dict, field: str
-) -> None:
+def test_create_validates_every_field(client: TestClient, change: dict, field: str) -> None:
     response = client.post(URL, json=NEW_PRODUCT | change)
 
     assert response.status_code == 422
@@ -145,12 +141,8 @@ def test_create_requires_name_size_and_price(client: TestClient, missing: str) -
 # ---- PATCH: edit ----
 
 
-def test_update_changes_only_the_fields_sent(
-    client: TestClient, db_session: Session
-) -> None:
-    product = factories.make_product(
-        db_session, name="Cow Milk", size="1 Litre", price="60.00"
-    )
+def test_update_changes_only_the_fields_sent(client: TestClient, db_session: Session) -> None:
+    product = factories.make_product(db_session, name="Cow Milk", size="1 Litre", price="60.00")
 
     response = client.patch(f"{URL}/{product.product_id}", json={"price": "65.00"})
 
@@ -184,9 +176,7 @@ def test_update_can_change_every_field(client: TestClient, db_session: Session) 
     }
 
 
-def test_mark_unavailable_hides_it_from_customers(
-    client: TestClient, db_session: Session
-) -> None:
+def test_mark_unavailable_hides_it_from_customers(client: TestClient, db_session: Session) -> None:
     product = factories.make_product(db_session)
 
     client.patch(f"{URL}/{product.product_id}", json={"is_available": False})
@@ -195,9 +185,7 @@ def test_mark_unavailable_hides_it_from_customers(
     assert product.product_id not in listed_ids
 
 
-def test_price_change_does_not_change_old_orders(
-    client: TestClient, db_session: Session
-) -> None:
+def test_price_change_does_not_change_old_orders(client: TestClient, db_session: Session) -> None:
     product = factories.make_product(db_session, price="60.00")
     order = factories.make_order(db_session, items=[(product, 2)])
 
@@ -242,9 +230,7 @@ def test_saving_a_product_with_its_own_name_and_size_is_fine(
         {"unknown": 1},
     ],
 )
-def test_update_validates_the_body(
-    client: TestClient, db_session: Session, body: dict
-) -> None:
+def test_update_validates_the_body(client: TestClient, db_session: Session, body: dict) -> None:
     product = factories.make_product(db_session)
 
     response = client.patch(f"{URL}/{product.product_id}", json=body)
@@ -263,9 +249,7 @@ def test_update_unknown_product_is_404(client: TestClient) -> None:
 # ---- DELETE ----
 
 
-def test_delete_a_product_that_was_never_ordered(
-    client: TestClient, db_session: Session
-) -> None:
+def test_delete_a_product_that_was_never_ordered(client: TestClient, db_session: Session) -> None:
     product = factories.make_product(db_session)
     product_id = product.product_id
 
@@ -278,9 +262,7 @@ def test_delete_a_product_that_was_never_ordered(
     assert client.get(f"/api/v1/products/{product_id}").status_code == 404
 
 
-def test_delete_an_ordered_product_is_refused(
-    client: TestClient, db_session: Session
-) -> None:
+def test_delete_an_ordered_product_is_refused(client: TestClient, db_session: Session) -> None:
     product = factories.make_product(db_session)
     factories.make_order(db_session, items=[(product, 1)])
 
@@ -315,6 +297,4 @@ def test_admin_product_endpoints_are_documented(client: TestClient) -> None:
     assert set(paths[URL]) == {"get", "post"}  # GET: admin list with stock (#92)
     assert set(paths[URL + "/{product_id}"]) == {"patch", "delete"}
     assert {"201", "409", "422"} <= set(paths[URL]["post"]["responses"])
-    assert {"204", "404", "409"} <= set(
-        paths[URL + "/{product_id}"]["delete"]["responses"]
-    )
+    assert {"204", "404", "409"} <= set(paths[URL + "/{product_id}"]["delete"]["responses"])

@@ -34,15 +34,11 @@ class AddressRepository:
 
     def get_for_user(self, address_id: int, user_id: int) -> Address | None:
         """The address only if it belongs to this user (else None)."""
-        query = select(Address).where(
-            Address.address_id == address_id, Address.user_id == user_id
-        )
+        query = select(Address).where(Address.address_id == address_id, Address.user_id == user_id)
         return self.db.scalars(query).first()
 
     def get_default(self, user_id: int) -> Address | None:
-        query = select(Address).where(
-            Address.user_id == user_id, Address.is_default.is_(True)
-        )
+        query = select(Address).where(Address.user_id == user_id, Address.is_default.is_(True))
         return self.db.scalars(query).first()
 
     def count(self, user_id: int) -> int:
