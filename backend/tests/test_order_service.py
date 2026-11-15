@@ -176,7 +176,8 @@ def test_order_with_items_loads_in_a_fixed_number_of_queries(
 
     statements: list[str] = []
     engine = db_session.get_bind()
-    listener = lambda *args: statements.append(args[2])
+    def listener(*args):
+        statements.append(args[2])
     event.listen(engine, "before_cursor_execute", listener)
     try:
         loaded = OrderRepository(db_session).get_with_items(order_id)

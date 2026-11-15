@@ -3,8 +3,10 @@
 
 Services raise domain exceptions without knowing about HTTP:
 
-    raise ProductUnavailableError("Product 'Buffalo Milk 1 Litre' is currently unavailable.",
-                                  details=[ErrorDetail(field="items[1].product_id", issue="unavailable")])
+    raise ProductUnavailableError(
+        "Product 'Buffalo Milk 1 Litre' is currently unavailable.",
+        details=[ErrorDetail(field="items[1].product_id", issue="unavailable")],
+    )
 
 `register_error_handlers(app)` maps them, FastAPI's validation errors, Starlette's HTTP errors
 (unknown URL, wrong method) and any unexpected crash to:

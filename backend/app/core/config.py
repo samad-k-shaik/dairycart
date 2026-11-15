@@ -1,4 +1,6 @@
-"""Application settings, loaded from environment variables (Twelve-Factor: config in the environment).
+"""Application settings, loaded from environment variables.
+
+Twelve-Factor: config lives in the environment, not in the code.
 
 Values come from, in order of priority:
 1. real environment variables (Docker, Cloud Run, CI, your shell);

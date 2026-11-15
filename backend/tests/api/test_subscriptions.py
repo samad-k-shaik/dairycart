@@ -350,7 +350,8 @@ def test_automatic_run_creates_todays_orders_once(
 ) -> None:
     """#99: the background job's single run, given the test's own session."""
     subscription_id = starting_today(db_session, normal_user, milk)
-    same_session = lambda: nullcontext(db_session)
+    def same_session():
+        return nullcontext(db_session)
 
     first = run_subscription_orders_once(same_session)
     second = run_subscription_orders_once(same_session)

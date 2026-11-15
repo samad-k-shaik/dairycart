@@ -1,5 +1,8 @@
-"""#101 / #104 API: the admin Orders board's day view (GET /admin/orders?date=), GET /admin/users/{id}, GET /admin/users/{id}/orders,
-and GET /admin/subscriptions?user_id=. ADMIN only."""
+"""#101 / #104 API (ADMIN only).
+
+The admin Orders board's day view (GET /admin/orders?date=), GET /admin/users/{id},
+GET /admin/users/{id}/orders and GET /admin/subscriptions?user_id=.
+"""
 
 from datetime import UTC, datetime, timedelta
 

@@ -7,6 +7,32 @@ pythonpath = ["."]
 # SQLAlchemy warnings usually mean a real mistake (e.g. objects skipped on flush): fail.
 filterwarnings = ["error::sqlalchemy.exc.SAWarning"]
 
+[tool.ruff]
+# M4-06 (#51, ADR-010). `ruff check .` lints, `ruff format .` formats (CI checks both).
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/F: pycodestyle errors + pyflakes (real mistakes), I: import order,
+# B: bugbear (likely bugs), UP: modern Python 3.12 syntax.
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# conftest.py must set DATABASE_URL etc. BEFORE importing the app (the app reads its
+# settings on import), so these imports are deliberately not at the top of the file.
+"tests/conftest.py" = ["E402"]
+
+[tool.coverage.run]
+# M4-08 (#53): `pytest --cov` measures app/, including branches (both sides of every if).
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+# NFR-12: the business rules live in app/services/, so that is where the minimum applies.
+# Checked with: pytest --cov --cov-report=term && coverage report --include="app/services/*" --fail-under=70
+skip_covered = true
+show_missing = true
+
 [tool.ruff.lint.isort]
 # Our migrations folder is named alembic/, which makes Ruff think `alembic` is our own
 # code. It is the installed library: sort it with the other third-party imports.

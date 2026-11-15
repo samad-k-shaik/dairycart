@@ -1,4 +1,7 @@
-"""ORDER_ITEMS table: the junction between orders and products (docs/04-architecture/database-erd.md)."""
+"""ORDER_ITEMS table: the junction between orders and products.
+
+See docs/04-architecture/database-erd.md.
+"""
 
 from __future__ import annotations
 
