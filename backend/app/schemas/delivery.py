@@ -154,3 +154,35 @@ class LiveBoyRead(BaseModel):
     # Null when he is not on a round, or on a round but no reading has arrived yet.
     position: LivePosition | None
     orders: list[LiveOrderPin]
+
+
+# ---- Customer order tracking (#112) ----
+
+
+class TrackingPoint(BaseModel):
+    latitude: float
+    longitude: float
+
+
+class TrackingBoy(BaseModel):
+    """The delivery boy as the customer sees him: first name and position only (no phone,
+    no history, NFR-17)."""
+
+    name: str
+    position: TrackingPoint
+    updated_at: UtcDateTime
+    is_stale: bool
+
+
+class TrackingRead(BaseModel):
+    """GET /orders/{id}/tracking"""
+
+    order_id: int
+    status: OrderStatus
+    # Only while OUT_FOR_DELIVERY and the delivery boy is on a round with a position.
+    delivery_boy: TrackingBoy | None
+    # The order's map pin (#108), if the address had one.
+    destination: TrackingPoint | None
+    # Straight-line distance and estimate; null unless both points are known.
+    distance_km: float | None
+    eta_minutes: int | None

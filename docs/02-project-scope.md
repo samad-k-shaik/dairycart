@@ -39,7 +39,7 @@ Not built yet. Built only with free, open-source tools (ADR-018). Privacy rules:
 | # | Capability | Issue |
 |---|---|---|
 | C10 | Drop a map pin on a saved address; orders and subscriptions keep a copy of it | #108 |
-| C11 | Track an order that is out for delivery on a map, with distance and estimated arrival time | #112 |
+| C11 | Track an order that is out for delivery on a map, with distance and estimated arrival time *(built: #112)* | #112 |
 | D1 | Delivery boys log in on a phone web page and see today's deliveries for their areas; they mark orders out for delivery / delivered *(built: #109)* | #109 |
 | D2 | Delivery boys share their location only while a delivery round is started *(built: #110)* | #110 |
 | A12 | Admin live map of delivery boys on a round *(built: #111, Admin → Live map)* | #111 |

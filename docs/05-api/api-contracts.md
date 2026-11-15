@@ -18,6 +18,7 @@
 | GET | `/products/{id}` | Product details | 200 |
 | POST | `/orders` | Place an order | 201 |
 | GET | `/orders/{id}` | Order details | 200 |
+| GET | `/orders/{id}/tracking` | Where is my order? Delivery boy, distance, ETA *(#112)* | 200 |
 | GET | `/orders/mine` | The logged-in user's orders *(#90)* | 200 |
 | GET | `/admin/orders` | Orders board: filter (status, day, delivery boy, search), paginate *(#104)* | 200 |
 | PATCH | `/admin/orders/{id}/status` | Update order status | 200 |
@@ -188,6 +189,20 @@ Needs a logged-in user (#90). Only the user who placed the order, or an ADMIN, m
 | 401 `UNAUTHORIZED` | Not logged in |
 
 ---
+
+## GET /api/v1/orders/{id}/tracking *(#112)*
+
+Same visibility as `GET /orders/{id}`: the order's **owner** or an ADMIN; anyone else → **404**, without login → **401**. The order page asks every 10 s while the order is out for delivery.
+```json
+{ "order_id": 41, "status": "OUT_FOR_DELIVERY",
+  "delivery_boy": { "name": "Ravi", "position": { "latitude": 17.4465, "longitude": 78.4483 },
+                    "updated_at": "2026-11-16T02:41:05Z", "is_stale": false },
+  "destination": { "latitude": 17.4375, "longitude": 78.4483 },
+  "distance_km": 1.0, "eta_minutes": 3 }
+```
+- `delivery_boy` is set **only** while the order is `OUT_FOR_DELIVERY` **and** the delivery boy covering its PIN code is on a round with a position (#110); otherwise `null` (privacy, NFR-17). First name only: never his phone number or past positions. `is_stale`: no update for more than 2 minutes.
+- `destination`: the order's map pin (#108), or `null`.
+- `distance_km`: straight-line (Haversine) distance, 1 decimal; `eta_minutes`: at an average **20 km/h**, rounded up, at least 1. Both `null` unless both points are known. Roads are longer than a straight line, so this is an estimate.
 
 ## GET /api/v1/orders/mine *(#90)*
 

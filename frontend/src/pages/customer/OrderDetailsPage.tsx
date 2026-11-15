@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/common/StatusBadge"
 import { OrderItemsList } from "@/components/orders/OrderItemsList"
 import { OrderLoadProblem } from "@/components/orders/OrderLoadProblem"
 import { OrderStatusTimeline } from "@/components/orders/OrderStatusTimeline"
+import { OrderTrackingPanel } from "@/components/orders/OrderTrackingPanel"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useOrder } from "@/hooks/useOrder"
 import { formatDateTime } from "@/lib/format"
@@ -64,6 +65,9 @@ function OrderDetailsPage() {
                 and drop the status colour. */}
             <StatusBadge status={order.status} className="px-3 py-1 text-sm" />
           </header>
+
+          {/* #112: only while it is on its way (no polling otherwise). */}
+          {order.status === "OUT_FOR_DELIVERY" && <OrderTrackingPanel orderId={order.order_id} />}
 
           <div className="grid gap-4 md:grid-cols-[240px_1fr]">
             <section aria-labelledby="timeline-heading" className="space-y-4 rounded-2xl bg-surface p-4 shadow-card md:p-5">
