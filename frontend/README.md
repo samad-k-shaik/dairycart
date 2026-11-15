@@ -80,7 +80,7 @@ React Router (`react-router`, ADR-011) maps URLs to pages in `src/routes/router.
   | `getProduct(id)` | `GET /products/{id}` |
   | `createOrder(request)` | `POST /orders` |
   | `getOrder(id)` | `GET /orders/{id}` |
-  | `getOrdersByPhone(phone)` | `GET /orders?phone=` (proposed, ADR-005) |
+  | `getMyOrders()` | `GET /orders/mine` (#90) |
   | `getAdminOrders({ status?, page?, page_size? })` | `GET /admin/orders` |
   | `updateOrderStatus(id, status)` | `PATCH /admin/orders/{id}/status` |
   | `createProduct` / `updateProduct` / `deleteProduct` | `POST` / `PATCH` / `DELETE /admin/products` (#86) |
@@ -125,10 +125,9 @@ The cart lives in the browser (ADR-004): React context + `useReducer`, saved to 
 
 ## Order history (M2-10, #29)
 
-- `/orders?phone=9876543210`: the phone is a URL query parameter (bookmarkable, Back button works; the confirmation page links straight to it). The last valid phone is remembered in `localStorage` (`milk-last-phone-v1`) and reused when `/orders` is opened without one.
-- `useOrdersByPhone(phone)` only fetches when the phone is valid (`enabled` in `useQuery`). Orders appear newest first as `OrderCard`s (IST date, item count, total, `StatusBadge`). Unknown phone → "No orders found"; invalid phone → error message.
+- **Since #90** `/orders` is "My orders": the logged-in user's orders from `GET /orders/mine` (`useMyOrders`). The phone search was removed. Orders appear newest first as `OrderCard`s (IST date, item count, total, `StatusBadge`).
 - `/orders/:id` (route added in this issue) shows the order with `OrderStatusTimeline`: Placed → Confirmed → Out for delivery → Delivered, or Placed → Cancelled. Timeline steps come from `getTimelineSteps()` in `lib/orderStatus.ts` (unit-tested for all five statuses).
-- **Privacy note (ADR-003):** there is no login in the POC, so anyone who knows a phone number can see its orders. Do not show more personal data here than the contract returns.
+- **Privacy (#90):** only the owner or an admin can open an order; others see "Order not found".
 - Do not pass custom font-size tokens (`text-body`, `text-small`, `text-h3` …) to components through `cn()` together with a text colour: the class merger treats them as colours and drops the colour. Use Tailwind's `text-sm`/`text-xs` there.
 
 ## Admin dashboard (M2-11, #30)
@@ -162,6 +161,44 @@ Every data screen uses the same three building blocks:
 - **Crashes (bugs):** React Router's `errorElement` (`RouteErrorFallback`) and a top-level `ErrorBoundary` (in `main.tsx`) show `AppErrorFallback` ("Something went wrong", Reload / Go to the shop) instead of a blank page. Technical details are shown only in development.
 - **Dev-only mock switch (only with `VITE_USE_MOCKS=true`):** a "Mock: …" button at the bottom-left (development only) sets the mock services to *Normal*, *Slow (3 s)*, *Fail every call (500)* or *Empty lists*, and can crash the current page to test the fallback. The mode is stored in `localStorage` (`dairycart-mock-mode-v1`). It is not included in production builds.
 - With "Fail every call", the error state appears after about 4–7 s because queries retry 5xx errors twice (see `lib/queryClient.ts`).
+
+## Subscriptions (#97)
+
+- **Checkout** has a choice: *Order once* (as before) or *Subscribe*. Subscribing shows plan buttons (1 week / 15 days / 1 month), **How often** (every day / every 2 days / every 3 days, #99), a *First delivery* date (default tomorrow, allowed up to 30 days ahead), the delivery days and the per-delivery and plan totals (estimates). It sends only plan, frequency, start date, contact, product ids and quantities (`buildCreateSubscriptionRequest`).
+- **`/subscriptions`** ("My subscriptions", login required): each plan with dates, items, totals, deliveries so far and **Cancel subscription** (confirmation dialog). Header link with a repeat icon; also on the Account page.
+- **Admin `/admin/subscriptions`**: list with a status filter and each plan's frequency. Delivery orders are created automatically by the backend (#99), so there is no button. The phone tab bar calls it "Plans".
+- Orders made from a subscription show a **Subscription** badge in My orders and "Subscription delivery for <date>" on the order page.
+- **Delivery time slots (#100):** checkout's Subscribe section has a **Delivery time** choice (slots from `GET /delivery-slots`, each with "N places left"; full slots show "Full" and are disabled; the first open slot is chosen by default). My subscriptions shows the booked time and a **Change time** dialog. Orders show their delivery time (My orders, order page, admin Orders list and sheet).
+- **Admin `/admin/delivery-slots`** ("Times" in the phone tab bar; the Dashboard tab is "Home" there so 6 tabs fit at 360px): table with booked / capacity and On/Off, an add/edit side panel (`components/admin/DeliverySlotFormSheet.tsx`) and a delete dialog. Server rules (last active slot, booked slot) are shown as messages.
+- **Admin `/admin/income` (#105):** the Income tab (`pages/admin/IncomePage.tsx`): period presets / custom range in the URL (`?from=&to=`; This month = no parameters), five cards with "vs. last period", and **Recharts** (ADR-016, pinned 3.10.1) area, bar and donut charts, the area table, recent delivered orders and key insights. Data: `services/incomeService.ts`, `hooks/useIncome.ts` (key under `["orders", …]`, so marking an order Delivered refreshes it), `types/income.ts`; helpers `lib/income.ts` (periods, change labels, litres, axis money; tested in `lib/income.test.ts`). In the sidebar; on phones it is linked from the Dashboard.
+- **Admin `/admin/delivery-boys` (#103):** cards per delivery boy (phone, Active/Inactive, today's orders, areas as removable PIN chips, an "Add area" form), add/edit side panel (`components/admin/DeliveryBoyFormSheet.tsx`) and delete dialog. The Orders board filters by delivery boy (`?boy=<id>|unassigned`). In the phone tab bar as "Boys" since #104. Code: `services/deliveryBoyService.ts`, `hooks/useDeliveryBoys.ts`, `types/deliveryBoy.ts`, `lib/deliveryBoy.ts` (tested in `lib/deliveryBoy.test.ts`). `api.del` is now generic so a DELETE can return a body.
+- **Delivery addresses (#102):** Account page tabs *Details* / *Addresses* (`?tab=addresses`); the Addresses tab (`components/address/AddressesPanel.tsx`) adds, edits, deletes and makes default. Checkout has a required **Delivery address** (`components/address/AddressPicker.tsx`, default chosen first, "+ Add new address" opens `AddressFormSheet`) and sends `address_id`. My subscriptions shows the address and **Change address**; the order page and the admin order panel show `delivery_address`. Code: `services/addressService.ts`, `hooks/useAddresses.ts`, `types/address.ts`, `lib/address.ts` (form rules, tested in `lib/address.test.ts`).
+- **Admin `/admin/orders`: the Orders board (#104)** (Orders and the #101 Deliveries page combined; `/admin/deliveries` redirects here). Status chips with counts, a search box (name, phone, #order; waits 300 ms after typing), a day (Today by default, ‹ ›, date picker) or **All dates**, a delivery boy filter, and a grid of cards (`components/admin/OrderBoardCard.tsx`: 4 / 3 / 2 / 1 per row) with "Load more" (`hooks/useOrderBoard.ts`, `useInfiniteQuery`, 24 per page). A card opens the order panel. All state is in the URL (`?status=&date=YYYY-MM-DD|all&boy=&q=&order=`). Helpers: `lib/orderBoard.ts` (tested). The phone tab bar has Home, Orders, Boys, Products, Users, Plans; Delivery slots is linked from the Subscriptions page on phones.
+- **Admin `/admin/users/:userId` (#101)**: names on the Users page open the user's page: details, order count, amount spent, subscriptions and all orders; "View" opens the order details panel. Code: `services/adminService.ts`, `hooks/useAdminViews.ts` (keys under `["orders", …]`, so a status change refreshes them), `lib/deliveries.ts` (day helpers, tested in `lib/deliveries.test.ts`).
+- Code (#100): `services/deliverySlotService.ts`, `hooks/useDeliverySlots.ts`, `types/deliverySlot.ts`, and `lib/deliverySlot.ts` (time formatting, form rules; tested in `lib/deliverySlot.test.ts`). Subscribing, cancelling or changing a time refreshes the slots' places left.
+- Code: `services/subscriptionService.ts` (real backend only; with `VITE_USE_MOCKS=true` it answers "needs the real backend"), `hooks/useSubscriptions.ts`, `types/subscription.ts`, and the pure helpers in `lib/subscription.ts` (India-time dates, plan lengths, validation; tested in `lib/subscription.test.ts`).
+- With 5 header links, the "DairyCart" text in the header hides below 420px (the logo icon stays) so everything fits on a 360px phone.
+
+## Stock (#92)
+
+- **Admin:** Products table has a **Stock** column (0 in red, "Out of stock"); the Add/Edit form has a **Stock (bottles)** field (whole number 0–100000, `validateStock` in `lib/productForm.ts`). Data: `getAdminProducts()` → `GET /admin/products` (ADMIN only), type `AdminProduct`.
+- **Shop:** customers never get the number, only `in_stock`. Out-of-stock products show "Out of stock" on the card and details page, with no add-to-cart button.
+- **Checkout:** if stock ran out after the cart was filled, the backend's `INSUFFICIENT_STOCK` message ("Only a limited quantity of … is left") is shown.
+
+## Sign-up, login and roles (#89)
+
+| Route | Page | Who |
+|---|---|---|
+| `/signup` | `pages/auth/SignUpPage.tsx` | Anyone |
+| `/login` | `pages/auth/LoginPage.tsx` (username or email + password) | Anyone |
+| `/account` | `pages/customer/UserDashboardPage.tsx` (the User Dashboard) | Logged-in users |
+| `/admin/*` | Dashboard, Orders, Products, `pages/admin/UsersPage.tsx` | **ADMIN only** |
+
+- **Session:** `lib/authSession.ts` (pure rules, tested in `auth.test.ts`) and `lib/sessionStore.ts` keep the token, its expiry and the user in **`sessionStorage`** (`dairycart-session-v1`), so **each tab has its own login** (#91): a user in one tab and an admin in another. A reload keeps the tab's login; a new tab opened by typing the address starts logged out; logout affects only that tab. `apiClient.ts` sends `Authorization: Bearer <token>` on every call; a `401` clears the session.
+- **`AuthProvider` / `useAuth()`** (`hooks/auth/`): `user`, `isAdmin`, `login()`, `logout()`. It checks the saved session with `GET /auth/me` on start, follows logins/logouts in other tabs, and logs out when the token expires. Logout also clears every cached query, so the next person doesn't see the previous user's data.
+- **`RequireAuth`** (`components/auth/RequireAuth.tsx`) guards pages: not logged in → `/login?next=…` (back to that page afterwards); a USER on `/admin` → "Admins only". This only hides pages; the **backend** is the real protection (401/403).
+- After login: `?next=` if it is a safe in-app path (never another website), else `/admin` for an ADMIN and `/account` for a USER (`pathAfterLogin` in `lib/authValidation.ts`).
+- **Ordering needs an account (#90):** the cart works logged out (its button says "Log in to checkout"), but `/checkout`, `/orders` (My orders), `/orders/:id` and the confirmation page are wrapped in `RequireAuth`. After login the visitor comes back to `/checkout` with the same cart; the name is pre-filled from the account.
 
 ## Styling and design tokens
 

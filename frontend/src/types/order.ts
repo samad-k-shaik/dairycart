@@ -51,18 +51,40 @@ export type Order = {
   status: OrderStatus
   items: OrderItem[]
   total_amount: Money
+  /** #97: the subscription this order came from; null for a one-time order. */
+  subscription_id?: number | null
+  /** #100: delivery time of a subscription order, e.g. "Morning, 8:00 AM – 9:00 AM". */
+  delivery_slot?: string | null
+  /** #102: where to deliver (copy of the address; null for orders before #102). */
+  delivery_address?: string | null
+  /** #97: the day ("2026-11-21") a subscription order is for; null for one-time orders. */
+  delivery_date?: string | null
 }
 
-/** Customer order history row: GET /orders?phone= (proposed, ADR-005). */
+/** "My orders" row: GET /orders/mine (#90). */
 export type OrderSummary = {
   order_id: number
   order_date: IsoDateTime
   status: OrderStatus
   total_amount: Money
   item_count: number
+  /** #97: set for orders created from a subscription. */
+  subscription_id?: number | null
+  /** #100: delivery time of a subscription order, e.g. "Morning, 8:00 AM – 9:00 AM". */
+  delivery_slot?: string | null
 }
 
-/** Admin order list row: one entry of GET /admin/orders `items`. */
+/** #104: one item on an Orders board card. */
+export type AdminOrderLine = {
+  product_id: number
+  product_name: string
+  size: string
+  quantity: number
+  unit_price: Money
+  subtotal: Money
+}
+
+/** Admin order list row / Orders board card: one entry of GET /admin/orders `items`. */
 export type AdminOrderSummary = {
   order_id: number
   customer_name: string
@@ -71,6 +93,17 @@ export type AdminOrderSummary = {
   status: OrderStatus
   total_amount: Money
   item_count: number
+  /** #97: set for orders created from a subscription. */
+  subscription_id?: number | null
+  /** #100: delivery time of a subscription order, e.g. "Morning, 8:00 AM – 9:00 AM". */
+  delivery_slot?: string | null
+  /** #104: card details (optional: the offline M2 mocks do not send them). */
+  user_id?: number | null
+  username?: string | null
+  delivery_date?: string | null
+  delivery_pincode?: string | null
+  delivery_boy?: { delivery_boy_id: number; name: string; phone: string } | null
+  items?: AdminOrderLine[]
 }
 
 /** GET /admin/orders response (one page plus dashboard counts). */
@@ -79,8 +112,12 @@ export type AdminOrderPage = {
   page: number
   page_size: number
   total: number
-  /** Counts across ALL orders, ignoring filters. Feeds the admin dashboard. */
+  /** Counts ignoring the status filter; they follow date / boy / q (#104). Without
+   *  those filters: all orders (feeds the admin dashboard). */
   status_counts: Record<OrderStatus, number>
+  /** #104: orders per active delivery boy and unassigned ones (ignores boy + status). */
+  boy_counts?: { delivery_boy_id: number; name: string; orders: number }[]
+  unassigned_count?: number
 }
 
 /** Query options for GET /admin/orders. */
@@ -88,6 +125,12 @@ export type AdminOrderQuery = {
   status?: OrderStatus
   page?: number
   page_size?: number
+  /** #104: India delivery day "YYYY-MM-DD" (no value = all dates). */
+  date?: string
+  /** #104: a delivery boy's id, or "unassigned". */
+  boy?: string
+  /** #104: customer name, phone or order number. */
+  q?: string
 }
 
 /**
@@ -99,6 +142,8 @@ export type CreateOrderRequest = {
     name: string
     phone: string
   }
+  /** #102: one of the user's saved addresses. */
+  address_id: number
   items: {
     product_id: number
     quantity: number

@@ -27,6 +27,14 @@ class ProductRead(BaseModel):
     size: str
     price: Money  # "60.00"
     is_available: bool
+    # True/false only: customers may see "Out of stock", never the number (#92).
+    in_stock: bool
+
+
+class AdminProductRead(ProductRead):
+    """A product as ADMINS see it: also the stock number (#92)."""
+
+    stock_quantity: int
 
 
 # ---- Admin input (issue #86) ----
@@ -52,6 +60,8 @@ ProductName = Annotated[
 ProductSize = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=20)
 ]
+# 0–100 000 bottles (#92).
+StockQuantity = Annotated[int, Field(ge=0, le=100_000)]
 PriceInput = Annotated[
     Decimal,
     BeforeValidator(_money_must_be_a_string),
@@ -68,6 +78,7 @@ class ProductCreate(BaseModel):
     size: ProductSize
     price: PriceInput
     is_available: bool = True
+    stock_quantity: StockQuantity = 0  # #92
 
 
 class ProductUpdate(BaseModel):
@@ -83,6 +94,7 @@ class ProductUpdate(BaseModel):
     size: ProductSize | None = None
     price: PriceInput | None = None
     is_available: bool | None = None
+    stock_quantity: StockQuantity | None = None  # #92
 
     @model_validator(mode="after")
     def _check_sent_fields(self) -> Self:

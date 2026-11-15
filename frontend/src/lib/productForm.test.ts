@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 
-import type { Product } from "../types/product.ts"
+import type { AdminProduct } from "../types/product.ts"
 import {
   changedFields,
   findDuplicate,
@@ -14,8 +14,8 @@ import {
   validateProductSize,
 } from "./productForm.ts"
 
-const COW_1L: Product = { product_id: 2, name: "Cow Milk", size: "1 Litre", price: "60.00", is_available: true }
-const COW_500: Product = { product_id: 1, name: "Cow Milk", size: "500 ml", price: "30.00", is_available: true }
+const COW_1L: AdminProduct = { product_id: 2, name: "Cow Milk", size: "1 Litre", price: "60.00", is_available: true, in_stock: true, stock_quantity: 40 }
+const COW_500: AdminProduct = { product_id: 1, name: "Cow Milk", size: "500 ml", price: "30.00", is_available: true, in_stock: true, stock_quantity: 0 }
 
 describe("validateProductName (2–100 characters, like the backend)", () => {
   it("accepts normal names and ignores spaces around them", () => {
@@ -72,8 +72,8 @@ describe("normalizePrice (the contract's money format)", () => {
 
 describe("validateProductForm", () => {
   it("returns one message per invalid field", () => {
-    const errors = validateProductForm({ name: "A", size: "", price: "0", is_available: true })
-    assert.deepEqual(Object.keys(errors).sort(), ["name", "price", "size"])
+    const errors = validateProductForm({ name: "A", size: "", price: "0", stock: "-1", is_available: true })
+    assert.deepEqual(Object.keys(errors).sort(), ["name", "price", "size", "stock"])
   })
 
   it("returns no errors for a valid form", () => {
@@ -83,17 +83,18 @@ describe("validateProductForm", () => {
 
 describe("toProductInput and changedFields (what is sent to the API)", () => {
   it("trims text and formats the price", () => {
-    assert.deepEqual(toProductInput({ name: " Toned Milk ", size: "500 ml ", price: "28.5", is_available: false }), {
+    assert.deepEqual(toProductInput({ name: " Toned Milk ", size: "500 ml ", price: "28.5", stock: " 25 ", is_available: false }), {
       name: "Toned Milk",
       size: "500 ml",
       price: "28.50",
+      stock_quantity: 25,
       is_available: false,
     })
   })
 
   it("PATCH sends only the fields that changed", () => {
-    const values = { ...toFormValues(COW_1L), price: "65", is_available: false }
-    assert.deepEqual(changedFields(COW_1L, values), { price: "65.00", is_available: false })
+    const values = { ...toFormValues(COW_1L), price: "65", stock: "35", is_available: false }
+    assert.deepEqual(changedFields(COW_1L, values), { price: "65.00", stock_quantity: 35, is_available: false })
   })
 
   it("an untouched form has nothing to save (60 and 60.00 are the same price)", () => {
@@ -116,5 +117,19 @@ describe("findDuplicate (same name AND size, any letter case)", () => {
   it("ignores the product being edited", () => {
     assert.equal(findDuplicate(products, "Cow Milk", "1 Litre", COW_1L.product_id), undefined)
     assert.equal(findDuplicate(products, "Cow Milk", "1 Litre", COW_500.product_id), COW_1L)
+  })
+})
+
+describe("validateStock (#92: whole number 0–100000)", () => {
+  it("accepts 0 and whole numbers up to 100000", async () => {
+    const { validateStock } = await import("./productForm.ts")
+    for (const ok of ["0", "7", " 50 ", "100000"]) assert.equal(validateStock(ok), null, ok)
+  })
+
+  it("rejects empty, negative, decimals, text and too big", async () => {
+    const { validateStock } = await import("./productForm.ts")
+    assert.equal(validateStock(""), "Please enter how many are in stock (0 if none).")
+    for (const bad of ["-1", "2.5", "lots", "1e3"]) assert.equal(validateStock(bad), "Enter a whole number, e.g. 50.", bad)
+    assert.equal(validateStock("100001"), "Stock can be at most 100000.")
   })
 })

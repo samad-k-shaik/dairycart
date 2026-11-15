@@ -7,7 +7,7 @@
  */
 import { useQuery } from "@tanstack/react-query"
 
-import { getProducts } from "@/services/productService"
+import { getAdminProducts, getProducts } from "@/services/productService"
 
 export const productKeys = {
   all: ["products"] as const,
@@ -22,10 +22,11 @@ export function useProducts() {
   })
 }
 
-/** Admin products table: ALL products, including unavailable ones (FR-A5, ADR-006). */
+/** Admin products table: ALL products, including unavailable ones, WITH stock numbers
+ *  (FR-A5, #92). ADMIN only: GET /admin/products. */
 export function useAdminProducts() {
   return useQuery({
     queryKey: productKeys.admin,
-    queryFn: () => getProducts({ includeUnavailable: true }),
+    queryFn: getAdminProducts,
   })
 }

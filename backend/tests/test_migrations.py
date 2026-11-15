@@ -9,7 +9,19 @@ from sqlalchemy import Engine, inspect
 from app.database.base import Base
 from tests.conftest import alembic_config
 
-APP_TABLES = {"customers", "products", "orders", "order_items"}
+APP_TABLES = {
+    "customers",
+    "products",
+    "orders",
+    "order_items",
+    "users",
+    "subscriptions",  # #97
+    "subscription_items",  # #97
+    "delivery_slots",  # #100
+    "addresses",  # #102
+    "delivery_boys",  # #103
+    "delivery_areas",  # #103
+}
 
 
 def app_tables(engine: Engine) -> set[str]:

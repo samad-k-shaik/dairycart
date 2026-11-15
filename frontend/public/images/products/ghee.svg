@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="Jar of ghee">
+  <!-- DairyCart original illustration (#94, see ../README.md). No brand artwork used. -->
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="70%">
+      <stop offset="0" stop-color="#b9c79e"/>
+      <stop offset="1" stop-color="#8e9d72"/>
+    </radialGradient>
+    <clipPath id="jar"><path d="M126 140 Q126 124 142 124 L258 124 Q274 124 274 140 L280 344 Q280 368 256 368 L144 368 Q120 368 120 344 Z"/></clipPath>
+    <linearGradient id="ghee" x1="0" x2="1">
+      <stop offset="0" stop-color="#e8a31c"/>
+      <stop offset="0.4" stop-color="#f7c948"/>
+      <stop offset="1" stop-color="#dc9415"/>
+    </linearGradient>
+    <linearGradient id="lid" x1="0" x2="1">
+      <stop offset="0" stop-color="#b8892f"/>
+      <stop offset="0.5" stop-color="#e6c06a"/>
+      <stop offset="1" stop-color="#b8892f"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bg)"/>
+  <ellipse cx="200" cy="378" rx="96" ry="10" fill="#3f4a2c" opacity="0.25"/>
+  <g clip-path="url(#jar)">
+    <rect x="110" y="120" width="180" height="260" fill="#eef1e8"/>
+    <rect x="110" y="150" width="180" height="230" fill="url(#ghee)"/>
+    <path d="M110 150 Q200 162 290 150 L290 158 Q200 170 110 158 Z" fill="#fbe08a"/>
+    <rect x="140" y="170" width="10" height="170" rx="5" fill="#ffffff" opacity="0.4"/>
+  </g>
+  <path d="M126 140 Q126 124 142 124 L258 124 Q274 124 274 140 L280 344 Q280 368 256 368 L144 368 Q120 368 120 344 Z" fill="none" stroke="#d8ddcf" stroke-width="2"/>
+  <!-- lid -->
+  <rect x="118" y="96" width="164" height="34" rx="8" fill="url(#lid)"/>
+  <path d="M130 100 V126 M146 100 V126 M162 100 V126 M178 100 V126 M194 100 V126 M210 100 V126 M226 100 V126 M242 100 V126 M258 100 V126 M270 100 V126" stroke="#a87b26" stroke-width="1.5" opacity="0.5"/>
+  <!-- label -->
+  <rect x="136" y="232" width="128" height="86" rx="10" fill="#1d5c3b"/>
+  <text x="200" y="272" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="30" fill="#ffffff">Ghee</text>
+  <text x="200" y="296" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="9" letter-spacing="1.5" fill="#f1d38a">PURE · DESI</text>
+  <!-- wooden spoon -->
+  <g transform="rotate(-28 316 330)">
+    <ellipse cx="316" cy="300" rx="16" ry="22" fill="#c8915a"/>
+    <ellipse cx="316" cy="298" rx="10" ry="15" fill="#f2b632"/>
+    <rect x="312" y="318" width="8" height="70" rx="4" fill="#c8915a"/>
+  </g>
+</svg>

@@ -13,6 +13,8 @@
 | C5 | Place an order |
 | C6 | View order confirmation |
 | C7 | View previous orders |
+| C9 | Save delivery addresses (Account → Addresses; one default) and choose one for every order and subscription *(added by #102, approved scope change)* |
+| C8 | Choose "order once" or a subscription (1 week / 15 days / 1 month; every day, every 2 or every 3 days) in a chosen delivery time slot, change the time, and cancel it *(added by #97, #99 and #100, approved scope change)* |
 
 ### Admin application
 
@@ -24,6 +26,11 @@
 | A4 | Update order status |
 | A5 | View available products |
 | A6 | Add, edit and delete products (delete only if never ordered) *(added by #86)* |
+| A7 | View subscriptions; their delivery orders are created automatically *(added by #97, #99)* |
+| A8 | Manage delivery time slots: add, edit, set capacity, switch off, delete *(added by #100)* |
+| A9 | Daily deliveries per user with status, and each user's full order list *(added by #101; the daily view is the Orders board since #104)* |
+| A11 | Income tab: income from delivered orders for a chosen period, with charts and comparisons to the previous period *(added by #105, approved scope change; no expenses or profit)* |
+| A10 | Keep a list of delivery boys and allocate areas (PIN codes) to them; deliveries are split per delivery boy *(added by #103; delivery boys do not log in, so the delivery partner app stays out of scope)* |
 
 ## Out of scope
 
@@ -31,17 +38,17 @@
 |---|---|---|
 | OTP authentication | Adds an SMS provider and session security | Customer identified by phone; an `auth` module and `users` table can be added later |
 | Payment gateway | External integration, compliance | `orders` can gain a `payment_status` column and a `payments` table |
-| Subscription management | Scheduling logic | New `subscriptions` module generating orders |
+| Pausing/skipping single days, choosing weekdays, editing a running subscription, prepaid plans *(basic subscriptions moved in scope by #97/#99)* | More rules and payments | The same `subscriptions` module and `generate_orders_for(day)` service can be extended |
 | Multi-vendor marketplace | Major domain change | Products can gain a `vendor_id` later |
 | Delivery partner app | Separate user type and app | New route tree and `deliveries` table |
-| Google Maps | External API, cost | Address fields can be added to `customers` |
+| Google Maps | External API, cost | Saved addresses exist since #102 (`addresses` table); a map / geocoding could be added on top |
 | WhatsApp notifications | External API | Status changes go through one service function, a natural hook point |
 | AI chatbot / Agentic AI | Not needed to prove the POC | API-first design makes it possible to add later |
-| Demand forecasting / advanced analytics | Needs historical data | Orders are stored in normalized tables, ready for analysis |
+| Demand forecasting / advanced analytics *(a basic income report is in scope since #105)* | Needs historical data | Orders are stored in normalized tables, ready for analysis |
 
 ## Simplifying assumptions
 
-1. **No login.** Customers enter name and phone at checkout. The phone number identifies the customer for order history. Admin pages are not protected in the POC. **This is acceptable only because the POC holds no real data and is not public.** Before any real use, authentication is mandatory (tracked as a future milestone).
+1. **Login only for accounts and the admin area (#89).** People can sign up (full name, email, username, password) and log in; the admin area needs an ADMIN account. **Ordering needs an account too (#90):** the cart works without login, but checkout, "My orders" and order details need a logged-in user. Name and phone at checkout are the delivery contact. **This is acceptable only because the POC holds no real data and is not public.** OTP login, password reset and email confirmation remain out of scope.
 2. **Single dairy, single city.** The catalogue starts with four seeded products; admins can add, edit and delete products from the admin Products page (A6, added by #86). A product that was already ordered cannot be deleted, only marked unavailable.
 3. **Cash on delivery** is assumed. No payments are recorded.
 4. **Quantity per line** is 1–20 units.

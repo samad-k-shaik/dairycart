@@ -6,6 +6,7 @@ import { Link } from "react-router"
 import { Info } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/hooks/useAuth"
 import { formatCurrency } from "@/lib/format"
 import type { Money } from "@/types/product"
 
@@ -16,6 +17,7 @@ type CartSummaryProps = {
 
 export function CartSummary({ itemCount, estimatedTotal }: CartSummaryProps) {
   const empty = itemCount === 0
+  const { user } = useAuth()
 
   return (
     <aside
@@ -47,9 +49,20 @@ export function CartSummary({ itemCount, estimatedTotal }: CartSummaryProps) {
           Checkout
         </Button>
       ) : (
-        <Button asChild size="lg" className="h-12 w-full">
-          <Link to="/checkout">Checkout</Link>
-        </Button>
+        <>
+          <Button asChild size="lg" className="h-12 w-full">
+            {/* Logged out: /checkout sends them to /login and back; the cart is kept (#90). */}
+            <Link to="/checkout">{user ? "Checkout" : "Log in to checkout"}</Link>
+          </Button>
+          {!user && (
+            <p className="text-center text-small text-muted-foreground">
+              You need an account to order.{" "}
+              <Link to="/signup" className="font-semibold text-primary hover:underline">
+                Sign up
+              </Link>
+            </p>
+          )}
+        </>
       )}
     </aside>
   )

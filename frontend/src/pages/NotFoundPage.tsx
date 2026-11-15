@@ -11,7 +11,7 @@ function NotFoundPage({ homePath = "/" }: { homePath?: string }) {
   const { pathname } = useLocation()
 
   return (
-    <section className="flex flex-col items-center gap-4 py-12 text-center">
+    <section className="photo-panel flex flex-col items-center gap-4 px-4 py-12 text-center">
       <SearchX className="size-12 text-muted-foreground" aria-hidden="true" />
       <h1 className="text-h1 font-bold">Page not found</h1>
       <p className="text-muted-foreground">

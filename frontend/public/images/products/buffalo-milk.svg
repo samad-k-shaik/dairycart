@@ -1,13 +1,44 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Buffalo milk bottle">
-  <!-- DairyCart original illustration (see ../README.md) -->
-  <ellipse cx="100" cy="182" rx="46" ry="7" fill="#0f172a" opacity="0.08"/>
-  <rect x="80" y="20" width="40" height="18" rx="5" fill="#0f766e"/>
-  <rect x="84" y="36" width="32" height="14" fill="#e2e8f0"/>
-  <path d="M84 50 C84 66 62 70 62 92 L62 168 Q62 180 74 180 L126 180 Q138 180 138 168 L138 92 C138 70 116 66 116 50 Z" fill="#fffdf7" stroke="#cbd5e1" stroke-width="3"/>
-  <rect x="62" y="104" width="76" height="46" fill="#ccfbf1"/>
-  <path d="M76 122 q8 -10 24 -4 q16 -6 24 4 q-6 0 -10 6 q-14 -6 -28 0 q-4 -6 -10 -6 Z" fill="#0f766e"/>
-  <circle cx="100" cy="134" r="7" fill="#0f766e"/>
-  <rect x="62" y="104" width="76" height="46" fill="none" stroke="#0f766e" stroke-width="2"/>
-  <path d="M72 64 Q70 80 70 96" stroke="#ffffff" stroke-width="5" stroke-linecap="round" opacity="0.9"/>
-  <path d="M74 66 Q72 80 72 160" stroke="#e2e8f0" stroke-width="3" stroke-linecap="round" fill="none"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="Buffalo milk bottle">
+  <!-- DairyCart original illustration (#94, see ../README.md). No brand artwork used. -->
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="70%">
+      <stop offset="0" stop-color="#b9c79e"/>
+      <stop offset="1" stop-color="#8e9d72"/>
+    </radialGradient>
+    <clipPath id="bottle"><path d="M168 60 L168 104 C168 128 128 140 128 176 L128 352 Q128 372 148 372 L252 372 Q272 372 272 352 L272 176 C272 140 232 128 232 104 L232 60 Z"/></clipPath>
+    <linearGradient id="milk" x1="0" x2="1">
+      <stop offset="0" stop-color="#ecebe4"/>
+      <stop offset="0.35" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e4e2d9"/>
+    </linearGradient>
+    <linearGradient id="label" x1="0" x2="1">
+      <stop offset="0" stop-color="#163f57"/>
+      <stop offset="0.5" stop-color="#1f5e7e"/>
+      <stop offset="1" stop-color="#163f57"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bg)"/>
+  <ellipse cx="200" cy="378" rx="78" ry="10" fill="#3f4a2c" opacity="0.25"/>
+  <g clip-path="url(#bottle)">
+    <rect x="120" y="50" width="160" height="330" fill="url(#milk)"/>
+    <!-- empty glass above the milk -->
+    <rect x="120" y="50" width="160" height="36" fill="#dfe6da"/>
+    <rect x="120" y="84" width="160" height="4" fill="#f4f3ee"/>
+    <!-- coloured label with a soft wave on top -->
+    <path d="M110 268 C160 246 230 290 290 262 L290 380 L110 380 Z" fill="url(#label)"/>
+    <!-- glass highlight -->
+    <rect x="142" y="150" width="9" height="200" rx="4.5" fill="#ffffff" opacity="0.55"/>
+  </g>
+  <path d="M168 60 L168 104 C168 128 128 140 128 176 L128 352 Q128 372 148 372 L252 372 Q272 372 272 352 L272 176 C272 140 232 128 232 104 L232 60 Z" fill="none" stroke="#d9ddd0" stroke-width="2"/>
+  <!-- crown cap -->
+  <rect x="162" y="40" width="76" height="26" rx="5" fill="#f3f4f1" stroke="#cfd3c8" stroke-width="2"/>
+  <path d="M170 44 V62 M180 44 V62 M190 44 V62 M200 44 V62 M210 44 V62 M220 44 V62 M230 44 V62" stroke="#dfe2da" stroke-width="2"/>
+  <!-- product name -->
+  <text x="200" y="190" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="28" fill="#1f2a1f">Buffalo</text>
+  <text x="200" y="228" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="34" fill="#1f2a1f">Milk</text>
+  <rect x="146" y="240" width="108" height="18" rx="9" fill="#ffffff" stroke="#c9a15d" stroke-width="2"/>
+  <text x="200" y="253" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="9" letter-spacing="1" fill="#9a7333">FARM FRESH</text>
+  <!-- animal on the label -->
+  <g transform="translate(200 330)"><g fill="#ffffff"><path d="M-36 -28 Q-38 -46 -18 -48 L16 -48 Q30 -48 36 -38 L46 -40 Q56 -40 56 -30 L54 -24 Q52 -18 44 -20 L36 -22 Q34 -14 26 -14 L-30 -14 Q-38 -18 -36 -28 Z"/><rect x="-31" y="-16" width="7" height="16" rx="2"/><rect x="-20" y="-16" width="7" height="16" rx="2"/><rect x="14" y="-16" width="7" height="16" rx="2"/><rect x="25" y="-16" width="7" height="16" rx="2"/><path d="M-36 -38 Q-46 -30 -42 -18" stroke="#ffffff" stroke-width="2.5" fill="none" stroke-linecap="round"/><path d="M42 -40 Q30 -56 44 -60 M50 -40 Q64 -52 54 -60" stroke="#ffffff" stroke-width="3.5" fill="none" stroke-linecap="round"/></g></g>
+  <text x="200" y="356" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="9" letter-spacing="2" fill="#ffffff" opacity="0.9">PURE · DAILY</text>
 </svg>

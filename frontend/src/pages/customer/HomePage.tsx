@@ -29,7 +29,7 @@ function HomePage() {
       <HeroBanner />
 
       <section className="space-y-4" aria-labelledby="products-heading">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="photo-panel flex flex-wrap items-center justify-between gap-3 px-4 py-3">
           <h2 id="products-heading" className="text-h2 font-bold">
             Our milk
           </h2>

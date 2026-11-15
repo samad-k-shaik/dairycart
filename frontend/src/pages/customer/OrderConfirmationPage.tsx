@@ -77,7 +77,7 @@ function OrderConfirmationPage() {
           stack flex-1 would shrink the buttons' HEIGHT (found in the M2-14 review). */}
       <div className="flex flex-col gap-3 sm:flex-row">
         <Button asChild size="lg" className="h-12 sm:flex-1">
-          <Link to={`/orders?phone=${order.customer.phone}`}>View my orders</Link>
+          <Link to="/orders">View my orders</Link>
         </Button>
         <Button asChild size="lg" variant="outline" className="h-12 sm:flex-1">
           <Link to="/">Continue shopping</Link>

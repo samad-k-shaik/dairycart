@@ -12,8 +12,8 @@ FastAPI application (Python 3.12). Scaffolded in M1-01 (#9): a runnable app with
 | 2 | `python3.12 -m venv .venv` | `py -3.12 -m venv .venv` |
 | 3 | `source .venv/bin/activate` | `.venv\Scripts\Activate.ps1` |
 | 4 | `pip install -r requirements.txt -r requirements-dev.txt` | same |
-| 5 | `cp .env.example .env`, start PostgreSQL (see *Local database*) | `copy .env.example .env`, same |
-| 6 | `alembic upgrade head` (tables), then `python -m app.scripts.seed` (products) | same |
+| 5 | `cp .env.example .env`, put your own random `JWT_SECRET_KEY` in it (see *Login and admin accounts*), start PostgreSQL (see *Local database*) | `copy .env.example .env`, same |
+| 6 | `alembic upgrade head` (tables), then `python -m app.scripts.seed` (products), then create an admin: `python -m app.scripts.create_admin --username admin --email admin@example.com --full-name "Dairy Admin"` | same |
 | 7 | `uvicorn app.main:app --reload --port 8000`, then open http://localhost:8000/docs | same |
 | 8 | Run the tests: `pytest` | same |
 
@@ -128,9 +128,9 @@ How the rules are split across the layers:
 
 | Endpoint | Does | Errors |
 |---|---|---|
-| `POST /api/v1/orders` | Place an order → `201` + `Location: /api/v1/orders/{id}` | `400 DUPLICATE_PRODUCT`, `404`, `409 PRODUCT_UNAVAILABLE`, `422` |
-| `GET /api/v1/orders/{order_id}` | One order with items | `404` |
-| `GET /api/v1/orders?phone=9876543210` | Customer history, newest first; unknown phone → `[]` | `422` (missing/invalid phone) |
+| `POST /api/v1/orders` | Place an order (login required, #90) → `201` + `Location: /api/v1/orders/{id}` | `401`, `400 DUPLICATE_PRODUCT`, `404`, `409 PRODUCT_UNAVAILABLE`, `422` |
+| `GET /api/v1/orders/mine` | The logged-in user's orders, newest first (#90) | `401` |
+| `GET /api/v1/orders/{order_id}` | One order with items (owner or ADMIN only, #90) | `401`, `404` (also for someone else's order) |
 | `GET /api/v1/admin/orders?status=&page=&page_size=` | One page (newest first, `page_size` ≤ 100) + `status_counts` for all orders | `422` |
 | `PATCH /api/v1/admin/orders/{order_id}/status` | Next status, only along the allowed transitions | `404`, `409 INVALID_STATUS_TRANSITION`, `422` |
 
@@ -140,11 +140,117 @@ What makes the order code safe:
 - **One transaction.** Customer (found or created by phone), order and items are saved with one `commit()`. Any error rolls everything back: a failed order leaves no rows behind.
 - **Status rules** live in one dict, `ALLOWED_TRANSITIONS` in `app/services/order_service.py` (5 arrows: PLACED → CONFIRMED/CANCELLED, CONFIRMED → OUT_FOR_DELIVERY/CANCELLED, OUT_FOR_DELIVERY → DELIVERED). The order row is locked (`SELECT … FOR UPDATE`) while it is checked and saved, so two admins cannot both change it.
 - **No N+1 queries.** An order is loaded with its customer, items and products in 2 queries (`joinedload` + `selectinload`); a test counts them.
-- **POC risk (ADR-003):** there is no login. Anyone who knows a phone number can see that customer's orders, and admin routes (marked `TODO(auth)`) are open.
+- **Who sees what (#89, #90):** ordering needs a logged-in user, and the order is saved with `orders.user_id`. An order is visible only to its owner and to admins; anyone else gets the same `404` as for a missing order. The old phone lookup was removed.
+
+## Subscriptions (#97)
+
+| Endpoint | Does | Errors |
+|---|---|---|
+| `POST /api/v1/subscriptions` | Subscribe for `WEEK` (7), `HALF_MONTH` (15) or `MONTH` (30) days from `start_date` (tomorrow … +30 days), `every_n_days` 1/2/3 (#99), `delivery_slot_id` (#100) | `401`, `400`, `404`, `409 SUBSCRIPTION_ALREADY_ACTIVE` / `DELIVERY_SLOT_FULL` / `PRODUCT_UNAVAILABLE` / `INSUFFICIENT_STOCK`, `422` |
+| `GET /api/v1/subscriptions/mine` | My subscriptions, newest first | `401` |
+| `GET /api/v1/subscriptions/{id}` | One subscription (owner or ADMIN) | `401`, `404` |
+| `POST /api/v1/subscriptions/{id}/cancel` | Cancel (owner or ADMIN) | `401`, `404`, `409 SUBSCRIPTION_NOT_ACTIVE` |
+| `GET /api/v1/admin/subscriptions?status=` | All subscriptions (ADMIN) | `401`, `403` |
+| `PATCH /api/v1/subscriptions/{id}/delivery-slot` | Change the delivery time (#100) | `401`, `404`, `409 SUBSCRIPTION_NOT_ACTIVE` / `DELIVERY_SLOT_FULL`, `422` |
+| `GET /api/v1/delivery-slots` | Active delivery slots with places left (public, #100) | |
+| `GET/POST /api/v1/admin/delivery-slots`, `PATCH/DELETE …/{id}` | Manage delivery slots (ADMIN, #100) | `401`, `403`, `404`, `409 DELIVERY_SLOT_ALREADY_EXISTS` / `DELIVERY_SLOT_IN_USE` / `LAST_ACTIVE_DELIVERY_SLOT`, `422` |
+
+- **Delivery orders are automatic (#99, ADR-015):** when the server starts, `app/core/background.py` starts an `asyncio` task that runs `generate_orders_for(today)` at once and then every `SUBSCRIPTION_ORDERS_INTERVAL_MINUTES` (default 15). Turn it off with `SUBSCRIPTION_AUTO_ORDERS=false` (tests do). Errors are logged and retried next time. Manual backup, e.g. for a day the server was off:
+  ```
+  python -m app.scripts.generate_subscription_orders              # today, India time
+  python -m app.scripts.generate_subscription_orders --date 2026-11-21
+  ```
+  `generate_orders_for(day)` in `app/services/subscription_service.py` creates one normal order per ACTIVE subscription that **delivers** that day (inside its dates and on its every-n-days rhythm) (locked prices, stock reduced). It is safe to run twice: `uq_orders_subscription_day` refuses a second order for the same subscription and day. Each subscription runs in its own SAVEPOINT, so one out-of-stock product only skips that subscription.
+- **"Today"** is the date in India (fixed UTC+05:30 offset, no daylight saving), not the server's time zone.
+- **One active subscription per user** is a partial unique index (`WHERE status = 'ACTIVE'`), so even two requests at the same moment cannot both create one.
+- Shared item checks (duplicates, unavailable, stock) live in `order_service.check_items`, used by both orders and subscriptions.
+- **Frequency (#99):** `every_n_days` 1, 2 or 3; deliveries = `(days − 1) // every_n_days + 1`; `plan_total = daily_total × deliveries`.
+- **Delivery slots (#100):** rules in `app/services/delivery_slot_service.py`. Booking (subscribe or change time) locks the slot row (`SELECT … FOR UPDATE`) and counts its ACTIVE subscriptions against `capacity`, so a slot is never overbooked. Switching off or deleting first locks all active slots in id order (no deadlock) and refuses to leave none. Orders get a text copy of the slot (`orders.delivery_slot`). The migration creates the standard Morning 08:00–09:00 and Evening 17:00–18:00 slots.
+- Tests: `tests/test_subscription_service.py` (fixed dates), `tests/api/test_subscriptions.py`, `tests/test_background.py` (the loop), `tests/test_delivery_slot_service.py` and `tests/api/test_delivery_slots.py` (#100).
+
+## Income (#105)
+
+`GET /api/v1/admin/income?from=YYYY-MM-DD&to=YYYY-MM-DD` (ADMIN): the Income tab's data. Income = DELIVERED orders, counted on the delivery day (`IncomeRepository.DELIVERY_DAY`: `delivery_date` for subscription orders, else `timezone('Asia/Kolkata', order_date)::date`), compared with the previous period of the same length. All figures come from a few grouped queries in `app/repositories/income_repository.py`; `app/services/income_service.py` adds them up (litres from product sizes, shares, growth, insights). Max 366 days. Tests: `tests/test_income_service.py`.
+
+## Delivery boys (#103)
+
+| Endpoint | Does | Errors |
+|---|---|---|
+| `GET/POST /api/v1/admin/delivery-boys` | List (with areas and `today_orders`) / add | `401`, `403`, `409 DELIVERY_BOY_ALREADY_EXISTS`, `422` |
+| `PATCH/DELETE /api/v1/admin/delivery-boys/{id}` | Edit / delete (frees his areas) | `401`, `403`, `404`, `409`, `422` |
+| `POST /api/v1/admin/delivery-boys/{id}/areas`, `DELETE …/areas/{pincode}` | Allocate / remove a PIN code | `401`, `403`, `404`, `409 AREA_ALREADY_ALLOCATED`, `422` |
+
+- One delivery boy per PIN code (`uq_delivery_areas_pincode`). Delivery boys are admin records, not users (no login).
+- Orders and subscriptions copy the address's PIN code (`delivery_pincode`, from `address_service.delivery_copy_for`). The Orders board (`GET /admin/orders`, #104) matches each order to the ACTIVE delivery boy for its PIN code (`DeliveryBoyRepository.active_allocation`, one query) and filters by `boy` (id or `"unassigned"`); `delivery_service.todays_orders_per_boy` feeds the cards' "Today" count.
+- Rules: `app/services/delivery_boy_service.py`. Tests: `tests/api/test_delivery_boys.py`.
+
+## Addresses (#102)
+
+| Endpoint | Does | Errors |
+|---|---|---|
+| `GET /api/v1/addresses` | My saved addresses, default first | `401` |
+| `POST /api/v1/addresses` | Add (the first becomes the default) | `401`, `409 ADDRESS_LIMIT_REACHED`, `422` |
+| `PATCH /api/v1/addresses/{id}`, `POST …/{id}/default`, `DELETE …/{id}` | Edit, make default, delete | `401`, `404`, `422` |
+| `PATCH /api/v1/subscriptions/{id}/address` | Deliver a subscription to another saved address (owner) | `401`, `404`, `409`, `422` |
+
+- `POST /orders` and `POST /subscriptions` take `address_id` (left out → the default). `address_service.delivery_text_for` returns the address text to copy, or raises 422 on `address_id` ("required" when the user has none, "not available" when it is not theirs). Orders, subscriptions and automatic subscription orders store the copy in `delivery_address`.
+- One default per user is a partial unique index; changing the default locks the user's addresses and clears the old default (flush) before setting the new one.
+- Test users from `tests/factories.make_user` get a default address (`with_address=False` for none). Tests: `tests/api/test_addresses.py`.
+
+## Admin Orders board and user details (#101, #104)
+
+| Endpoint | Does | Errors |
+|---|---|---|
+| `GET /api/v1/admin/orders?status=&date=&boy=&q=&page=&page_size=` | *(#104)* Orders board: cards with items, delivery boy and PIN; status counts (ignore `status`), per-boy counts | `401`, `403`, `422` |
+| `GET /api/v1/admin/users/{id}` | User + `order_count` + `total_spent` (not cancelled) | `401`, `403`, `404` |
+| `GET /api/v1/admin/users/{id}/orders` | All of the user's orders, newest first | `401`, `403`, `404` |
+
+- A day = subscription orders with `delivery_date = day` + one-time orders whose `order_date` falls in that India day (`app/core/india_time.india_day_range`: 00:00 IST = 18:30 UTC the day before). The filters are SQL conditions in `OrderRepository._admin_query` (`AdminOrderFilters`); a page loads customer, items and products eagerly plus the username; `count_by_status(filters)` and `boy_counts(filters)` are grouped queries. `GET /admin/deliveries` (#101) was removed in #104.
+- Rules in `app/services/order_service.list_admin_orders` and `app/services/user_service.py`. Tests: `tests/test_admin_order_board.py`, `tests/api/test_admin_deliveries_and_users.py`.
+
+## Stock (#92)
+
+- `products.stock_quantity` = bottles left. **Admins only** see the number (`GET /api/v1/admin/products`, admin create/edit responses, and the `stock_quantity` field there). Public product responses only carry `in_stock` (true/false).
+- `create_order` locks the ordered products (`ProductRepository.get_many_for_update`, `SELECT … FOR UPDATE`, always in `product_id` order to avoid deadlocks), refuses a quantity above the stock with `409 INSUFFICIENT_STOCK` (the message never says how many are left), and reduces the stock in the same transaction as the order.
+- `update_status(…, CANCELLED)` adds the quantities back. Delivering does not change stock.
+- The seed gives each catalogue product 100 (`SEED_STOCK`); the migration gave products that already existed 100; new products default to 0 until the admin sets it.
 
 ## CORS (M3-08)
 
 The browser only lets the frontend (`http://localhost:5173`, another origin) call this API because `CORSMiddleware` allows the origins listed in **`CORS_ORIGINS`** (`backend/.env`, comma-separated). `*` is refused when the settings load. A page opened from any other origin, even `http://127.0.0.1:5173`, cannot read the responses. Add an origin there if you open the frontend from another address.
+
+## Login and admin accounts (#89)
+
+| Endpoint | Does | Errors |
+|---|---|---|
+| `POST /api/v1/auth/register` | Sign up → `201`, always role `USER` | `409 USER_ALREADY_EXISTS`, `422` |
+| `POST /api/v1/auth/login` | Username or email + password → `access_token` (JWT) | `401` (one message for unknown user and wrong password) |
+| `GET /api/v1/auth/me` | The logged-in user | `401` |
+| `GET /api/v1/admin/users` | Every user (ADMIN only) | `401`, `403` |
+
+**Every `/api/v1/admin/*` endpoint needs an ADMIN token** (orders, products and users): `401` without one, `403` for a `USER`. In `/docs`, log in with `POST /auth/login`, copy `access_token`, click **Authorize** and paste it.
+
+**Create an admin** (the API never gives the ADMIN role):
+
+```bash
+python -m app.scripts.create_admin --username admin --email admin@example.com --full-name "Dairy Admin"
+#   asks for the password twice (not shown, not saved in your shell history)
+python -m app.scripts.create_admin --promote ravi_k     # make an existing user an admin
+```
+
+**`JWT_SECRET_KEY`** (required, at least 32 characters) signs the tokens. Anyone who knows it can create a token for any user, including an admin, so: random, secret, never committed, different per environment. Make one with:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+How it works (`app/core/security.py`, `app/core/auth.py`):
+
+- **Passwords** are stored as **bcrypt** hashes (salted, deliberately slow, cost 12). Login hashes the typed password and compares. An unknown username still runs one bcrypt check, so response times don't reveal which accounts exist.
+- **Tokens** are signed JWTs with the user id (`sub`) and an expiry (`exp`). Changing any character breaks the signature; only HS256 is accepted (so an unsigned `"alg": "none"` token is refused).
+- **`get_current_user`** reads `Authorization: Bearer …`, checks the token, and loads the user **from the database**. **`require_admin`** then checks the role. A demoted admin loses access at once.
+- **Logout** happens in the browser (the token is deleted). The server keeps no sessions, so a copied token stays valid until it expires (`JWT_EXPIRE_MINUTES`, default 60).
+- Tests use bcrypt cost 4 (faster) and a fixed test secret (`tests/conftest.py`); `admin_client` sends requests as a logged-in admin.
 
 ## Tests (M1-11)
 

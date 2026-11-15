@@ -8,14 +8,33 @@ It wires things together (settings, logging, error handlers, routers) and holds 
 database code or business logic. All endpoints live under /api/v1.
 """
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
+from app.core.background import run_in_background, subscription_orders_loop
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.core.logging import RequestIdMiddleware, configure_logging
-from app.routers import admin_orders, admin_products, health, orders, products
+from app.routers import (
+    addresses,
+    admin_delivery_boys,
+    admin_delivery_slots,
+    admin_income,
+    admin_orders,
+    admin_products,
+    admin_subscriptions,
+    admin_users,
+    auth,
+    delivery_slots,
+    health,
+    orders,
+    products,
+    subscriptions,
+)
 
 API_PREFIX = "/api/v1"
 
@@ -27,8 +46,23 @@ settings = get_settings()
 # JSON logs to stdout at LOG_LEVEL (M1-03).
 configure_logging(settings.log_level)
 
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    """Runs once when the server starts (before `yield`) and once when it stops.
+
+    #99: starts the job that creates subscription delivery orders automatically.
+    """
+    if not settings.subscription_auto_orders:
+        yield
+        return
+    loop = subscription_orders_loop(settings.subscription_orders_interval_minutes * 60)
+    async with run_in_background(loop):
+        yield
+
+
 # The FastAPI application. Title and version appear in the interactive docs at /docs.
-app = FastAPI(title="Milk Delivery POC API", version=__version__)
+app = FastAPI(title="Milk Delivery POC API", version=__version__, lifespan=lifespan)
 
 # Runs around every request: request ID + X-Request-ID header + one JSON log line.
 app.add_middleware(RequestIdMiddleware)
@@ -41,7 +75,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
-    allow_headers=["Content-Type", "X-Request-ID"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
     expose_headers=["X-Request-ID", "Location"],
 )
 
@@ -54,3 +88,12 @@ app.include_router(products.router, prefix=API_PREFIX)
 app.include_router(orders.router, prefix=API_PREFIX)
 app.include_router(admin_orders.router, prefix=API_PREFIX)
 app.include_router(admin_products.router, prefix=API_PREFIX)
+app.include_router(auth.router, prefix=API_PREFIX)
+app.include_router(admin_users.router, prefix=API_PREFIX)
+app.include_router(subscriptions.router, prefix=API_PREFIX)  # #97
+app.include_router(admin_subscriptions.router, prefix=API_PREFIX)  # #97
+app.include_router(delivery_slots.router, prefix=API_PREFIX)  # #100
+app.include_router(admin_delivery_slots.router, prefix=API_PREFIX)  # #100
+app.include_router(addresses.router, prefix=API_PREFIX)  # #102
+app.include_router(admin_delivery_boys.router, prefix=API_PREFIX)  # #103
+app.include_router(admin_income.router, prefix=API_PREFIX)  # #105

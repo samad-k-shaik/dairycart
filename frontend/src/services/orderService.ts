@@ -30,10 +30,10 @@ export function getOrder(orderId: number): Promise<Order> {
   return api.get(`/orders/${orderId}`)
 }
 
-/** GET /api/v1/orders?phone=: customer order history, newest first (ADR-005). */
-export function getOrdersByPhone(phone: string): Promise<OrderSummary[]> {
-  if (USE_MOCKS) return mock.getOrdersByPhone(phone)
-  return api.get(`/orders${queryString({ phone })}`)
+/** GET /api/v1/orders/mine: the logged-in user's orders, newest first (#90). */
+export function getMyOrders(): Promise<OrderSummary[]> {
+  if (USE_MOCKS) return mock.getMyOrders()
+  return api.get("/orders/mine")
 }
 
 /** GET /api/v1/admin/orders: filter by status, paginate, plus dashboard counts. */

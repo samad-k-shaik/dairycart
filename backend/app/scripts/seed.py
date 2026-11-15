@@ -23,6 +23,9 @@ from app.database.session import SessionLocal
 from app.models import Customer, Product
 
 # (name, size, price in INR). Same as database/seed.sql (checked by tests/test_seed.py).
+# Bottles in stock for each new catalogue product (#92); admins change it later.
+SEED_STOCK = 100
+
 CATALOGUE: list[tuple[str, str, Decimal]] = [
     ("Cow Milk", "500 ml", Decimal("30.00")),
     ("Cow Milk", "1 Litre", Decimal("60.00")),
@@ -46,7 +49,13 @@ def seed(db: Session) -> SeedResult:
         insert(Product)
         .values(
             [
-                {"name": name, "size": size, "price": price, "is_available": True}
+                {
+                    "name": name,
+                    "size": size,
+                    "price": price,
+                    "is_available": True,
+                    "stock_quantity": SEED_STOCK,  # #92
+                }
                 for name, size, price in CATALOGUE
             ]
         )

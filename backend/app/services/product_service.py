@@ -70,6 +70,7 @@ def create_product(db: Session, data: ProductCreate) -> Product:
                 size=data.size,
                 price=data.price,
                 is_available=data.is_available,
+                stock_quantity=data.stock_quantity,
             )
         )
         db.commit()

@@ -1,37 +1,96 @@
 /**
  * Route: `/checkout` (FR-C5).
  * Name + phone form, order summary from the cart, and "Place order".
+ * #97: the customer chooses "Order once" (a normal order) or "Subscribe" (the same items
+ * every day for 1 week, 15 days or 1 month, from a start date they pick).
+ * #100: subscribers also book a delivery time slot (places are limited per slot).
+ * #102: every order and subscription needs a delivery address: one of the user's saved
+ * addresses (default chosen first) or a new one added here.
  * Sends ONLY product ids and quantities; the backend calculates prices and the total.
- * Payment is cash on delivery: no address, shipping or payment fields (out of scope).
+ * Payment is cash on delivery: no shipping or payment fields (out of scope).
  */
 import { useRef, useState, type FormEvent } from "react"
 import { Link, useNavigate } from "react-router"
-import { AlertCircle, Banknote, Loader2, ShoppingCart } from "lucide-react"
+import { AlertCircle, Banknote, CalendarDays, Clock, Loader2, Repeat, ShoppingBag, ShoppingCart } from "lucide-react"
+import { toast } from "sonner"
 
+import { AddressPicker } from "@/components/address/AddressPicker"
 import { EmptyState } from "@/components/common/EmptyState"
 import { userFacingMessage } from "@/components/common/ErrorState"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { lineSubtotal } from "@/hooks/cart/cartReducer"
+import { useAddresses } from "@/hooks/useAddresses"
+import { useAuth } from "@/hooks/useAuth"
 import { useCart } from "@/hooks/useCart"
 import { useCreateOrder } from "@/hooks/useCreateOrder"
+import { useDeliverySlots } from "@/hooks/useDeliverySlots"
+import { useCreateSubscription } from "@/hooks/useSubscriptions"
+import { preferredAddress } from "@/lib/address"
+import { firstOpenSlot, slotTimeRange, spacesLeftText } from "@/lib/deliverySlot"
 import { formatCurrency } from "@/lib/format"
 import { splitCheckoutErrors } from "@/lib/checkoutErrors"
 import { buildCreateOrderRequest } from "@/lib/orderRequest"
+import {
+  buildCreateSubscriptionRequest,
+  deliveryCount,
+  deliveryDates,
+  endDateFor,
+  estimatePlanTotal,
+  formatDay,
+  FREQUENCY_OPTIONS,
+  PLAN_OPTIONS,
+  startDateRange,
+  validateStartDate,
+} from "@/lib/subscription"
+import { cn } from "@/lib/utils"
 import { validateName, validatePhone } from "@/lib/validation"
 import { ServiceError } from "@/services/serviceError"
+import type { EveryNDays, SubscriptionPlan } from "@/types/subscription"
 
 /** Passed to the confirmation page so it can mention a price change (FR-C8). */
 export type ConfirmationState = { estimatedTotal: string }
 
+/** #97: a normal one-time order, or a daily subscription. */
+type OrderMode = "once" | "subscribe"
+
 function CheckoutPage() {
   const { lines, itemCount, estimatedTotal, clear } = useCart()
   const createOrder = useCreateOrder()
+  const createSubscription = useCreateSubscription()
   const navigate = useNavigate()
 
+  // #97: order once, or subscribe. The start date defaults to tomorrow (India time).
+  const [mode, setMode] = useState<OrderMode>("once")
+  const [plan, setPlan] = useState<SubscriptionPlan>("WEEK")
+  const [everyNDays, setEveryNDays] = useState<EveryNDays>(1) // #99
+  const deliveries = deliveryCount(plan, everyNDays)
+  const [startDate, setStartDate] = useState(() => startDateRange().min)
+  const startRef = useRef<HTMLInputElement>(null)
+  const subscribing = mode === "subscribe"
+  // #100: delivery time. Loaded only when "Subscribe" is chosen. Until the user picks one
+  // (or if the picked one became full), the first slot with places left is chosen.
+  const slotsQuery = useDeliverySlots({ enabled: subscribing })
+  const slots = slotsQuery.data ?? []
+  const [slotId, setSlotId] = useState<number | null>(null)
+  const chosenSlot = slots.find((s) => s.delivery_slot_id === slotId && !s.is_full) ?? firstOpenSlot(slots)
+  const slotRef = useRef<HTMLDivElement>(null)
+  // #102: delivery address. Until the user picks one, the default (or first) is chosen.
+  const addressesQuery = useAddresses()
+  const addresses = addressesQuery.data ?? []
+  const [addressId, setAddressId] = useState<number | null>(null)
+  const chosenAddress =
+    addresses.find((a) => a.address_id === addressId) ?? preferredAddress(addresses)
+  const addressRef = useRef<HTMLDivElement>(null)
+  // The request that is in use: errors and "pending" come from it.
+  const active = subscribing ? createSubscription : createOrder
+
+  const { user } = useAuth()
+
   // Controlled inputs: React state holds what the user typed.
-  const [name, setName] = useState("")
+  // Name starts as the account's name (#90); it is the delivery contact and can be changed.
+  const [name, setName] = useState(user?.full_name ?? "")
   const [phone, setPhone] = useState("")
   // Show a field's error only after the user leaves it, or after they try to submit.
   const [touched, setTouched] = useState({ name: false, phone: false })
@@ -41,16 +100,36 @@ function CheckoutPage() {
 
   const nameError = validateName(name)
   const phoneError = validatePhone(phone)
-  // Backend 422 errors for name/phone go next to the field; others stay in the error box.
+  const startError = subscribing ? validateStartDate(startDate) : ""
+  // Backend 422 errors for name/phone (and #97 start date) go next to the field;
+  // others stay in the error box.
+  const allServerDetails = active.error instanceof ServiceError ? active.error.body.error.details : undefined
+  const serverStartError = allServerDetails?.some((d) => d.field === "start_date") ?? false
+  // #100: "slot not available" (422) and "slot full" (409) are shown at the slot picker.
+  const serverSlotError =
+    (allServerDetails?.some((d) => d.field === "delivery_slot_id") ?? false) ||
+    (active.error instanceof ServiceError && active.error.code === "DELIVERY_SLOT_FULL")
+  // #102: address problems (none saved, not yours) are shown at the address picker.
+  const serverAddressError = allServerDetails?.some((d) => d.field === "address_id") ?? false
   const serverErrors = splitCheckoutErrors(
-    createOrder.error instanceof ServiceError ? createOrder.error.body.error.details : undefined,
+    allServerDetails?.filter(
+      (d) => d.field !== "start_date" && d.field !== "delivery_slot_id" && d.field !== "address_id",
+    ),
   )
+  const addressError = addressesQuery.isSuccess && !chosenAddress ? "Please add a delivery address." : ""
+  const showAddressError =
+    (submitted && addressError) || (serverAddressError ? (active.error?.message ?? "") : "")
+  const slotError = subscribing && slotsQuery.isSuccess && !chosenSlot ? "No delivery time has places left right now." : ""
+  // Shown at once: there is nothing the user can do in the form to fix it.
+  const showSlotError = slotError || (serverSlotError ? (active.error?.message ?? "") : "")
+  const showStartError = (submitted && startError) || (serverStartError ? (active.error?.message ?? "") : "")
   const showNameError = ((touched.name || submitted) && nameError) || serverErrors.name
   const showPhoneError = ((touched.phone || submitted) && phoneError) || serverErrors.phone
 
   /** Typing again clears the old server error, so it does not stick to the new value. */
   function clearServerError() {
     if (createOrder.isError) createOrder.reset()
+    if (createSubscription.isError) createSubscription.reset()
   }
 
   if (lines.length === 0) {
@@ -62,8 +141,35 @@ function CheckoutPage() {
     setSubmitted(true)
     if (nameError) return nameRef.current?.focus()
     if (phoneError) return phoneRef.current?.focus()
+    if (startError) return startRef.current?.focus()
+    if (!chosenAddress) return addressRef.current?.focus() // #102
 
-    const request = buildCreateOrderRequest({ name, phone }, lines)
+    if (subscribing) {
+      if (!chosenSlot) return slotRef.current?.focus()
+      const request = buildCreateSubscriptionRequest(
+        plan,
+        startDate,
+        everyNDays,
+        chosenSlot.delivery_slot_id,
+        chosenAddress.address_id,
+        { name, phone },
+        lines,
+      )
+      createSubscription.mutate(request, {
+        onSuccess: (subscription) => {
+          toast.success("Subscription started", {
+            description: `${formatDay(subscription.start_date)} – ${formatDay(subscription.end_date)}`,
+          })
+          navigate("/subscriptions", { replace: true })
+          clear() // the cart has become the subscription
+        },
+        // The slot may have filled up meanwhile: reload the places left (#100).
+        onError: () => void slotsQuery.refetch(),
+      })
+      return
+    }
+
+    const request = buildCreateOrderRequest({ name, phone }, lines, chosenAddress.address_id)
     if (import.meta.env.DEV) {
       // Testing requirement: show the payload in dev tools. Only ids and quantities.
       console.info("[checkout] POST /api/v1/orders payload", request)
@@ -80,7 +186,7 @@ function CheckoutPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
+      <div className="photo-panel space-y-1 px-4 py-3">
         <h1 className="text-h1 font-bold">Checkout</h1>
         <p className="text-muted-foreground">Enter your details to place the order.</p>
       </div>
@@ -107,13 +213,25 @@ function CheckoutPage() {
           </ul>
           <div className="flex items-baseline justify-between border-t pt-3">
             <span className="font-semibold">
-              Estimated total ({itemCount} {itemCount === 1 ? "item" : "items"})
+              {subscribing ? "Each delivery" : "Estimated total"} ({itemCount} {itemCount === 1 ? "item" : "items"})
             </span>
             <span className="text-price font-extrabold">{formatCurrency(estimatedTotal)}</span>
           </div>
+          {subscribing && (
+            <div className="flex items-baseline justify-between" data-testid="plan-total">
+              <span className="font-semibold">
+                Plan total ({deliveries} {deliveries === 1 ? "delivery" : "deliveries"})
+              </span>
+              <span className="text-price font-extrabold">
+                {formatCurrency(estimatePlanTotal(estimatedTotal, plan, everyNDays))}
+              </span>
+            </div>
+          )}
           <p className="flex gap-2 rounded-xl bg-primary-soft p-3 text-small text-primary">
             <Banknote className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-            Pay cash on delivery. The final total is calculated when your order is placed.
+            {subscribing
+              ? "Pay cash on each delivery. Today's prices are locked for the whole plan."
+              : "Pay cash on delivery. The final total is calculated when your order is placed."}
           </p>
           <Link to="/cart" className="inline-block font-semibold text-primary hover:underline">
             Edit cart
@@ -126,6 +244,220 @@ function CheckoutPage() {
           className="space-y-5 rounded-2xl bg-surface p-4 shadow-card md:p-5 lg:order-1"
           aria-labelledby="checkout-form-heading"
         >
+          <fieldset>
+            <legend className="mb-3 text-h2 font-bold">How do you want to order?</legend>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <ModeOption
+                checked={!subscribing}
+                onSelect={() => {
+                  setMode("once")
+                  clearServerError()
+                }}
+                Icon={ShoppingBag}
+                title="Order once"
+                description="Just this order, delivered once."
+              />
+              <ModeOption
+                checked={subscribing}
+                onSelect={() => {
+                  setMode("subscribe")
+                  clearServerError()
+                }}
+                Icon={Repeat}
+                title="Subscribe"
+                description="The same items on a schedule. Cancel any time."
+              />
+            </div>
+          </fieldset>
+
+          {subscribing && (
+            <div className="space-y-4 rounded-xl border p-3 md:p-4">
+              <div>
+                <p id="checkout-plan-label" className="mb-2 font-semibold">
+                  Plan
+                </p>
+                <div className="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="checkout-plan-label">
+                  {PLAN_OPTIONS.map((option) => (
+                    <button
+                      key={option.plan}
+                      type="button"
+                      role="radio"
+                      aria-checked={plan === option.plan}
+                      onClick={() => {
+                        setPlan(option.plan)
+                        clearServerError()
+                      }}
+                      className={cn(
+                        "h-11 rounded-full border px-4 font-semibold transition-colors",
+                        plan === option.plan
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "bg-surface hover:bg-muted",
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* #99: how often within the plan */}
+              <div>
+                <p id="checkout-frequency-label" className="mb-2 font-semibold">
+                  How often
+                </p>
+                <div className="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="checkout-frequency-label">
+                  {FREQUENCY_OPTIONS.map((option) => (
+                    <button
+                      key={option.everyNDays}
+                      type="button"
+                      role="radio"
+                      aria-checked={everyNDays === option.everyNDays}
+                      onClick={() => {
+                        setEveryNDays(option.everyNDays)
+                        clearServerError()
+                      }}
+                      className={cn(
+                        "h-11 rounded-full border px-4 font-semibold transition-colors",
+                        everyNDays === option.everyNDays
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "bg-surface hover:bg-muted",
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="checkout-start">First delivery</Label>
+                <Input
+                  ref={startRef}
+                  id="checkout-start"
+                  type="date"
+                  min={startDateRange().min}
+                  max={startDateRange().max}
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value)
+                    clearServerError()
+                  }}
+                  aria-invalid={showStartError ? true : undefined}
+                  aria-describedby={showStartError ? "checkout-start-error" : "checkout-start-hint"}
+                  className="h-11"
+                />
+                {showStartError ? (
+                  <p id="checkout-start-error" className="text-small text-danger">
+                    {showStartError}
+                  </p>
+                ) : (
+                  <p id="checkout-start-hint" className="flex gap-1.5 text-small text-muted-foreground">
+                    <CalendarDays className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                    {startError
+                      ? "Choose a day from tomorrow up to 30 days ahead."
+                      : deliveryHint(startDate, plan, everyNDays)}
+                  </p>
+                )}
+              </div>
+
+              {/* #100: delivery time slot */}
+              <div>
+                <p id="checkout-slot-label" className="mb-2 font-semibold">
+                  Delivery time
+                </p>
+                {slotsQuery.isPending ? (
+                  <p className="flex items-center gap-2 text-small text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                    Loading delivery times…
+                  </p>
+                ) : slotsQuery.isError ? (
+                  <p className="text-small text-danger">
+                    We could not load the delivery times.{" "}
+                    <button type="button" className="font-semibold underline" onClick={() => slotsQuery.refetch()}>
+                      Try again
+                    </button>
+                  </p>
+                ) : (
+                  <div
+                    ref={slotRef}
+                    tabIndex={-1}
+                    className="grid gap-2 sm:grid-cols-2"
+                    role="radiogroup"
+                    aria-labelledby="checkout-slot-label"
+                    aria-describedby={showSlotError ? "checkout-slot-error" : undefined}
+                  >
+                    {slots.map((slot) => {
+                      const checked = chosenSlot?.delivery_slot_id === slot.delivery_slot_id
+                      return (
+                        <button
+                          key={slot.delivery_slot_id}
+                          type="button"
+                          role="radio"
+                          aria-checked={checked}
+                          disabled={slot.is_full}
+                          onClick={() => {
+                            setSlotId(slot.delivery_slot_id)
+                            clearServerError()
+                          }}
+                          className={cn(
+                            "flex min-h-11 items-start gap-2 rounded-xl border p-3 text-left transition-colors",
+                            checked ? "border-primary bg-primary-soft" : "bg-surface hover:bg-muted",
+                            slot.is_full && "cursor-not-allowed opacity-60 hover:bg-surface",
+                          )}
+                        >
+                          <Clock className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+                          <span>
+                            <span className="block font-semibold">{slot.name}</span>
+                            <span className="block text-small">{slotTimeRange(slot)}</span>
+                            <span
+                              className={cn(
+                                "block text-small",
+                                slot.is_full ? "font-semibold text-danger" : "text-muted-foreground",
+                              )}
+                            >
+                              {spacesLeftText(slot)}
+                            </span>
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+                {showSlotError && (
+                  <p id="checkout-slot-error" className="mt-2 text-small text-danger">
+                    {showSlotError}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* #102: delivery address (Order once and Subscribe) */}
+          <div className="space-y-2">
+            <h2 id="checkout-address-label" className="text-h2 font-bold">
+              Delivery address
+            </h2>
+            <AddressPicker
+              addresses={addressesQuery.data}
+              loading={addressesQuery.isPending}
+              loadError={addressesQuery.isError}
+              onRetry={() => addressesQuery.refetch()}
+              chosenId={chosenAddress?.address_id ?? null}
+              onChoose={(id) => {
+                setAddressId(id)
+                clearServerError()
+              }}
+              labelId="checkout-address-label"
+              errorId={showAddressError ? "checkout-address-error" : undefined}
+              groupRef={addressRef}
+            />
+            {showAddressError && (
+              <p id="checkout-address-error" className="text-small text-danger">
+                {showAddressError}
+              </p>
+            )}
+          </div>
+
           <h2 id="checkout-form-heading" className="text-h2 font-bold">
             Your details
           </h2>
@@ -187,14 +519,18 @@ function CheckoutPage() {
             )}
           </div>
 
-          {createOrder.isError && <SubmitError error={createOrder.error} otherDetails={serverErrors.other} />}
+          {active.isError && !serverStartError && !serverSlotError && !serverAddressError && (
+            <SubmitError error={active.error} otherDetails={serverErrors.other} subscribing={subscribing} />
+          )}
 
-          <Button type="submit" size="lg" className="h-12 w-full" disabled={createOrder.isPending}>
-            {createOrder.isPending ? (
+          <Button type="submit" size="lg" className="h-12 w-full" disabled={active.isPending}>
+            {active.isPending ? (
               <>
                 <Loader2 className="animate-spin" aria-hidden="true" />
-                Placing order…
+                {subscribing ? "Subscribing…" : "Placing order…"}
               </>
+            ) : subscribing ? (
+              `Subscribe: ${deliveries} ${deliveries === 1 ? "delivery" : "deliveries"}`
             ) : (
               "Place order"
             )}
@@ -207,14 +543,24 @@ function CheckoutPage() {
 
 /** Error from the order service, in plain words. Field errors are shown at their field;
  *  `otherDetails` are the problems that belong to no field (e.g. an item). */
-function SubmitError({ error, otherDetails }: { error: Error; otherDetails: { field: string; issue: string }[] }) {
+function SubmitError({
+  error,
+  otherDetails,
+  subscribing = false,
+}: {
+  error: Error
+  otherDetails: { field: string; issue: string }[]
+  subscribing?: boolean
+}) {
   const details = otherDetails
   const onlyFieldErrors = error instanceof ServiceError && error.code === "VALIDATION_ERROR" && details.length === 0
   return (
     <div role="alert" className="flex gap-2 rounded-xl bg-red-50 p-3 text-small text-danger">
       <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
       <div>
-        <p className="font-semibold">We could not place your order.</p>
+        <p className="font-semibold">
+          {subscribing ? "We could not start your subscription." : "We could not place your order."}
+        </p>
         <p>{onlyFieldErrors ? "Please check the highlighted fields." : userFacingMessage(error)}</p>
         {details.length > 0 && (
           <ul className="mt-1 list-disc pl-4">
@@ -227,6 +573,55 @@ function SubmitError({ error, otherDetails }: { error: Error; otherDetails: { fi
         )}
       </div>
     </div>
+  )
+}
+
+/** #99: "Every day from 21 Nov to 27 Nov 2026", or the list of days for every 2 / 3 days
+ *  (short plans) / first and last day (long plans). */
+function deliveryHint(start: string, plan: SubscriptionPlan, everyNDays: EveryNDays): string {
+  const end = formatDay(endDateFor(start, plan))
+  if (everyNDays === 1) return `Every day from ${formatDay(start)} to ${end}.`
+  const days = deliveryDates(start, plan, everyNDays)
+  if (days.length <= 5) return `Deliveries on ${days.map(formatDay).join(", ")}.`
+  return `${days.length} deliveries, every ${everyNDays} days from ${formatDay(start)} to ${formatDay(days[days.length - 1])}.`
+}
+
+/** One of the two big "Order once" / "Subscribe" choices (a styled radio button). */
+function ModeOption({
+  checked,
+  onSelect,
+  Icon,
+  title,
+  description,
+}: {
+  checked: boolean
+  onSelect: () => void
+  Icon: typeof ShoppingBag
+  title: string
+  description: string
+}) {
+  return (
+    <label
+      className={cn(
+        "flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors",
+        checked ? "border-primary bg-primary-soft" : "hover:bg-muted",
+      )}
+    >
+      <input
+        type="radio"
+        name="order-mode"
+        className="mt-1 size-4 accent-primary"
+        checked={checked}
+        onChange={onSelect}
+      />
+      <span className="space-y-0.5">
+        <span className="flex items-center gap-1.5 font-semibold">
+          <Icon className="size-4 text-primary" aria-hidden="true" />
+          {title}
+        </span>
+        <span className="block text-small text-muted-foreground">{description}</span>
+      </span>
+    </label>
   )
 }
 

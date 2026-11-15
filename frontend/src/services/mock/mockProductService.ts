@@ -4,7 +4,7 @@
  * same rules and errors as the backend.
  */
 import type { ApiErrorDetail } from "@/types/api"
-import type { Product, ProductCreate, ProductUpdate } from "@/types/product"
+import type { AdminProduct, Product, ProductCreate, ProductUpdate } from "@/types/product"
 import {
   findDuplicate,
   normalizePrice,
@@ -65,8 +65,13 @@ function notFound(productId: number) {
   return fail(404, "NOT_FOUND", `Product ${productId} was not found.`)
 }
 
+/** GET /api/v1/admin/products (#92). Mock products keep their stock in the JSON. */
+export function getAdminProducts(): Promise<AdminProduct[]> {
+  return respond(readDb().products as AdminProduct[])
+}
+
 /** POST /api/v1/admin/products → 201 with the new product. */
-export function createProduct(input: ProductCreate): Promise<Product> {
+export function createProduct(input: ProductCreate): Promise<AdminProduct> {
   const details = validationDetails(input)
   if (details.length > 0) return fail(422, "VALIDATION_ERROR", "Request validation failed.", details)
 
@@ -74,12 +79,15 @@ export function createProduct(input: ProductCreate): Promise<Product> {
   const size = input.size.trim()
   if (findDuplicate(db.products, name, size)) return alreadyExists(name, size)
 
-  const product: Product = {
+  const stock = input.stock_quantity ?? 0
+  const product: AdminProduct = {
     product_id: Math.max(0, ...db.products.map((p) => p.product_id)) + 1,
     name,
     size,
     price: normalizePrice(input.price),
     is_available: input.is_available ?? true,
+    stock_quantity: stock,
+    in_stock: stock > 0,
   }
   db.products.push(product)
   saveDb()
@@ -87,8 +95,8 @@ export function createProduct(input: ProductCreate): Promise<Product> {
 }
 
 /** PATCH /api/v1/admin/products/{id}: change only the fields sent. Old orders keep their prices. */
-export function updateProduct(productId: number, changes: ProductUpdate): Promise<Product> {
-  const product = db.products.find((p) => p.product_id === productId)
+export function updateProduct(productId: number, changes: ProductUpdate): Promise<AdminProduct> {
+  const product = db.products.find((p) => p.product_id === productId) as AdminProduct | undefined
   if (!product) return notFound(productId)
   if (Object.keys(changes).length === 0) {
     return fail(422, "VALIDATION_ERROR", "Request validation failed.", [
@@ -106,6 +114,10 @@ export function updateProduct(productId: number, changes: ProductUpdate): Promis
   product.size = size
   if (changes.price !== undefined) product.price = normalizePrice(changes.price)
   if (changes.is_available !== undefined) product.is_available = changes.is_available
+  if (changes.stock_quantity !== undefined) {
+    product.stock_quantity = changes.stock_quantity
+    product.in_stock = changes.stock_quantity > 0
+  }
   saveDb()
   return respond(product)
 }

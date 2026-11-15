@@ -27,7 +27,7 @@ function CartPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-h1 font-bold">
+      <h1 className="photo-panel w-fit px-4 py-2 text-h1 font-bold">
         Your cart{" "}
         {itemCount > 0 && (
           <span className="text-muted-foreground">

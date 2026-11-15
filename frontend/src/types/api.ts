@@ -15,6 +15,19 @@ export type ApiErrorCode =
   | "INTERNAL_ERROR" // 500: unexpected server error
   | "METHOD_NOT_ALLOWED" // 405: wrong HTTP method
   | "NETWORK_ERROR" // frontend only: no answer at all (server down, offline, CORS)
+  | "UNAUTHORIZED" // 401: not logged in, session expired, or wrong login details (#89)
+  | "FORBIDDEN" // 403: logged in, but not allowed (e.g. a USER on an admin API) (#89)
+  | "USER_ALREADY_EXISTS" // 409: sign-up with an email or username that is taken (#89)
+  | "INSUFFICIENT_STOCK" // 409: more than the stock (#92)
+  | "SUBSCRIPTION_ALREADY_ACTIVE" // 409: the user already has an active subscription (#97)
+  | "SUBSCRIPTION_NOT_ACTIVE" // 409: cancel of a cancelled/completed subscription (#97)
+  | "DELIVERY_SLOT_FULL" // 409: the chosen delivery time has no places left (#100)
+  | "DELIVERY_SLOT_ALREADY_EXISTS" // 409: admin, a slot with the same times exists (#100)
+  | "DELIVERY_SLOT_IN_USE" // 409: admin delete of a booked slot (#100)
+  | "LAST_ACTIVE_DELIVERY_SLOT" // 409: admin, switching off/deleting the last active slot (#100)
+  | "ADDRESS_LIMIT_REACHED" // 409: already 10 saved addresses (#102)
+  | "DELIVERY_BOY_ALREADY_EXISTS" // 409: admin, same phone as another delivery boy (#103)
+  | "AREA_ALREADY_ALLOCATED" // 409: admin, the PIN code belongs to another delivery boy (#103)
 
 export type ApiErrorDetail = {
   field: string

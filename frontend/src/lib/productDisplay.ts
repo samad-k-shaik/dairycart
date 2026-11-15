@@ -17,20 +17,38 @@ export const CATEGORIES: { id: CategoryId; label: string }[] = [
   { id: "buffalo", label: "Buffalo" },
 ]
 
-type DisplayInfo = { category: Exclude<CategoryId, "all">; image: string; description: string }
+/** "dairy" (paneer, ghee) has no chip of its own: those products show under "All" only (#94). */
+type DisplayCategory = Exclude<CategoryId, "all"> | "dairy"
 
+type DisplayInfo = { category: DisplayCategory; image: string; description: string }
+
+const PANEER: DisplayInfo = {
+  category: "dairy",
+  image: "/images/products/paneer.svg",
+  description: "Soft, fresh paneer made from whole milk. Ready for curries, tikka and snacks.",
+}
+
+/** Keys are lower case: the lookup ignores upper/lower case and extra spaces. */
 const DISPLAY_BY_NAME: Record<string, DisplayInfo> = {
-  "Cow Milk": {
+  "cow milk": {
     category: "cow",
     image: "/images/products/cow-milk.svg",
     description:
       "Fresh cow milk with a light, mild taste. Good for tea, coffee and everyday drinking.",
   },
-  "Buffalo Milk": {
+  "buffalo milk": {
     category: "buffalo",
     image: "/images/products/buffalo-milk.svg",
     description:
       "Rich, creamy buffalo milk with a higher fat content. Ideal for curd, paneer and sweets.",
+  },
+  paneer: PANEER,
+  // The shop's product was added as "Panner", so that spelling gets the same picture.
+  panner: PANEER,
+  ghee: {
+    category: "dairy",
+    image: "/images/products/ghee.svg",
+    description: "Golden, aromatic ghee slowly cooked from butter. For cooking, rotis and sweets.",
   },
 }
 
@@ -41,7 +59,7 @@ const FALLBACK: DisplayInfo = {
 }
 
 function displayInfo(product: Pick<Product, "name">): DisplayInfo {
-  return DISPLAY_BY_NAME[product.name] ?? FALLBACK
+  return DISPLAY_BY_NAME[product.name.trim().toLowerCase()] ?? FALLBACK
 }
 
 export function getProductImage(product: Pick<Product, "name">): string {

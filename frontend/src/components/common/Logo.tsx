@@ -8,7 +8,8 @@ export function Logo({ to = "/", label }: { to?: string; label?: string }) {
       <span className="flex size-9 items-center justify-center rounded-xl bg-primary-soft text-primary">
         <Milk className="size-5" aria-hidden="true" />
       </span>
-      <span className="text-h3 font-extrabold">DairyCart</span>
+      {/* brand-name: Fraunces on customer pages (#95, see index.css) */}
+      <span className="brand-name text-h3 font-extrabold">DairyCart</span>
       {label && (
         <span className="rounded-full bg-primary-soft px-2 py-0.5 text-small font-semibold text-primary">
           {label}
