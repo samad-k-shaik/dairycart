@@ -47,6 +47,7 @@ import { readDate } from "@/lib/deliveries"
 import { formatCurrency } from "@/lib/format"
 import {
   changeLabel,
+  chartMoney,
   compactRupees,
   formatLitres,
   matchPreset,
@@ -333,7 +334,8 @@ function Panel({ title, className, children }: { title: string; className?: stri
   )
 }
 
-const rupeeTooltip = (value: unknown) => formatCurrency(String(value))
+// Recharts passes numbers (e.g. 850); formatCurrency needs "850.00".
+const rupeeTooltip = (value: unknown) => formatCurrency(chartMoney(value))
 
 function DailyChart({ data }: { data: IncomeReport["daily"] }) {
   const points = data.map((d) => ({ day: shortDay(d.date), income: Number(d.income), orders: d.orders }))

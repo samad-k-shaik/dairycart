@@ -60,6 +60,13 @@ export function shortDay(day: string): string {
   )
 }
 
+/** A chart value back to an API money string: Recharts gives numbers (850, 202.3333),
+ *  but formatCurrency only accepts "850.00" (bug fix: the tooltip crashed the page). */
+export function chartMoney(value: unknown): string {
+  const amount = Number(value)
+  return (Number.isFinite(amount) ? amount : 0).toFixed(2)
+}
+
 /** Compact money for chart axes: 15820 → "₹16K", 1400 → "₹1.4K", 250000 → "₹2.5L"
  *  (lakh), 900 → "₹900". One decimal below 10K, so nearby ticks do not look the same. */
 export function compactRupees(amount: number): string {

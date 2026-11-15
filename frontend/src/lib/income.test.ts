@@ -3,6 +3,7 @@ import { describe, it } from "node:test"
 
 import {
   changeLabel,
+  chartMoney,
   compactRupees,
   formatLitres,
   matchPreset,
@@ -35,6 +36,13 @@ describe("income labels (#105)", () => {
     assert.equal(changeLabel(-3), "−3.0%")
     assert.equal(changeLabel(0), "0.0%")
     assert.equal(changeLabel(null), null)
+  })
+
+  it("turns chart numbers into money strings for the tooltip", () => {
+    assert.equal(chartMoney(850), "850.00")
+    assert.equal(chartMoney(202.3333), "202.33")
+    assert.equal(chartMoney("120"), "120.00")
+    assert.equal(chartMoney(undefined), "0.00")
   })
 
   it("formats litres, months, days and axis money", () => {
