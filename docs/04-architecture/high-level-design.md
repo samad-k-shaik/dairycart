@@ -87,6 +87,7 @@ sequenceDiagram
 | Docker Hub | Base images |
 | Google Fonts | Manrope typeface (or self-hosted via `@fontsource/manrope`); Fraunces for customer headings, self-hosted via `@fontsource-variable/fraunces` (ADR-014) |
 | GitHub | Code, CI/CD |
+| OpenStreetMap tile server | Map images for the Leaflet maps (planned M12, ADR-018). Loaded by the browser, never through our backend; replaceable through `VITE_MAP_TILE_URL` |
 | GCP | Hosting (M6) |
 
 ## 7. Local development architecture
@@ -131,7 +132,28 @@ Authentication from GitHub Actions to GCP will use **Workload Identity Federatio
 
 ## 9. Extensibility
 
-Future features plug in as new backend modules and frontend route trees without changing the core design: `auth` (OTP), `payments`, `deliveries`, `notifications`. (`subscriptions` was added this way in #97, ADR-015.) Status changes go through one service method, which becomes the hook for notifications.
+Future features plug in as new backend modules and frontend route trees without changing the core design: `auth` (OTP), `payments`, `deliveries`, `notifications`. (`subscriptions` was added this way in #97, ADR-015.) Status changes go through one service method, which becomes the hook for notifications. Maps and live delivery tracking (M12, ADR-018) are planned the same way: a `tracking` module in the backend and a `/delivery` route tree in the frontend (section 10).
+
+## 10. Planned: maps and live delivery tracking (M12, ADR-018)
+
+**Not built yet.** Approved by #106; built by #107–#113. Live tracking has two separate paths:
+
+```mermaid
+flowchart LR
+    Phone[Delivery boy phone<br/>/delivery page, round started] -->|PUT location<br/>every 10–15 s or 20 m moved| API[FastAPI<br/>tracking service]
+    API -->|upsert: one row<br/>per delivery boy| DB[(PostgreSQL<br/>delivery_locations)]
+    AdminMap[Admin live map] -->|GET every 10 s<br/>later SSE| API
+    CustMap[Customer order page<br/>OUT_FOR_DELIVERY only] -->|GET every 10 s<br/>later SSE| API
+    Tiles[OpenStreetMap<br/>tile server] -.->|map images| AdminMap
+    Tiles -.->|map images| CustMap
+```
+
+- **Write path:** the phone reads GPS with the browser Geolocation API and sends it; the server keeps only the **latest** position per delivery boy (one row, overwritten).
+- **Read path:** the admin and customer maps ask for that row every 10 seconds (polling). Server-Sent Events with PostgreSQL `LISTEN/NOTIFY` replace polling later (#113).
+- **Map images** come straight from the tile server to the browser; they never touch our backend.
+- **Customers are never tracked.** Their location is a pin saved once with an address (#108).
+- **Load:** 20 delivery boys × 1 update per 10 s = 2 writes per second, which PostgreSQL handles easily. Large apps (Uber, Blinkit) handle around 100,000 writes per second, which is why they add Kafka and Redis; we do not need them.
+- **Privacy rules:** NFR-17 in `docs/03-requirements/non-functional-requirements.md`.
 
 ## Architecture decisions
 
@@ -156,3 +178,4 @@ Any addition to the approved stack needs an entry here (a lightweight Architectu
 | ADR-016 | **Recharts 3.10.1** (MIT, pinned exactly) for the admin Income charts | Accepted – #105 | The Income tab (#105) needs line/area, bar and donut charts with tooltips. Recharts is React-first (components, no imperative canvas code), SVG so it stays sharp and themable with our CSS variables, widely used, and supports React 19. Hand-written SVG was the alternative; the participant chose a library for tooltips and animations. Only the admin Income page imports it, and that route is lazy-loaded, so Recharts (~120 kB gzip) is downloaded only when an admin opens Income; customers never load it. |
 | ADR-015 | Subscriptions (1 week / 15 days / 1 month) as a `subscriptions` module that creates normal orders; delivery orders made by an **in-process background task** (#99; was an admin button in #97) | Accepted – #97, amended #99 | Approved scope change (#97). Reusing orders keeps one order flow (stock, status, My orders, admin list). #99: an admin button was easy to forget, so the backend runs `generate_orders_for(today)` itself, at startup and every 15 minutes (`app/core/background.py`, standard-library `asyncio`, no scheduler package). It is safe in several workers and when repeated, because of the row locks and `uq_orders_subscription_day`. It only runs while the server runs; `app.scripts.generate_subscription_orders --date` catches up a missed day. Frequency: `every_n_days` 1/2/3. Prices are locked at subscription time; one active subscription per user is a partial unique index. A managed scheduler (e.g. Cloud Scheduler calling the script) can replace the task later. #100: delivery time slots (`delivery_slots` table, admin-managed, capacity = ACTIVE subscriptions) live in the same module; no new library. |
 | ADR-017 | pgAdmin (`dpage/pgadmin4:9.19`) as a local-only database viewer in Docker Compose | Accepted (M5) | Lets participants see how data is stored, in the browser (http://localhost:5050), with the database pre-connected. Development tool only: never deployed, not used by the app |
+| ADR-018 | Maps and live delivery tracking with **Leaflet 1.9.4** (BSD-2-Clause, pinned exactly, wrapped in our own React hook) plus **@types/leaflet** (MIT, dev only), **OpenStreetMap** map tiles and the browser **Geolocation API**; live updates by **polling** first, then SSE with PostgreSQL `LISTEN/NOTIFY` | Accepted – #106 (built in M12, #107–#113) | Approved scope change (#106): customers drop a pin on an address; delivery boys log in on a phone web page and share their position only during a round; the admin and the customer see it on a map (section 10). Everything is free and open source; Google Maps and Mapbox stay out (cost, API keys, billing account). Leaflet is small, mature and beginner-friendly. **react-leaflet was rejected:** it uses the Hippocratic License 2.1, which is not an OSI-approved open-source licence, and it would add a second runtime dependency; a small hook of our own also teaches how a non-React library lives inside React. OpenStreetMap's standard tile server is free but meant for light use and requires the "© OpenStreetMap contributors" attribution; the tile URL is configuration (`VITE_MAP_TILE_URL`), so production can switch to OpenFreeMap (with MapLibre), MapTiler's free tier or self-hosted tiles without code changes. GPS comes from `navigator.geolocation.watchPosition`, so no native app is needed; the accepted limitation is that tracking pauses when the screen locks (the Screen Wake Lock API keeps it on during a round). Only the latest position per delivery boy is stored, and our load (about 2 writes/s) fits PostgreSQL, so no Redis or Kafka. Polling (TanStack Query `refetchInterval`) works with several Cloud Run instances; SSE (#113) needs `LISTEN/NOTIFY` so every instance hears an update, and `fetch` streaming because `EventSource` cannot send our Bearer token. Distance and ETA are calculated in a service with the Haversine formula (straight line, average speed); road routing (OpenRouteService, GraphHopper, OSRM) is a later option. Privacy rules: NFR-17. |

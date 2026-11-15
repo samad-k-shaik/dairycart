@@ -32,6 +32,18 @@
 | A11 | Income tab: income from delivered orders for a chosen period, with charts and comparisons to the previous period *(added by #105, approved scope change; no expenses or profit)* |
 | A10 | Keep a list of delivery boys and allocate areas (PIN codes) to them; deliveries are split per delivery boy *(added by #103; delivery boys do not log in, so the delivery partner app stays out of scope)* |
 
+### Planned: maps and live delivery tracking (M12, approved by #106)
+
+Not built yet. Built only with free, open-source tools (ADR-018). Privacy rules: NFR-17.
+
+| # | Capability | Issue |
+|---|---|---|
+| C10 | Drop a map pin on a saved address; orders and subscriptions keep a copy of it | #108 |
+| C11 | Track an order that is out for delivery on a map, with distance and estimated arrival time | #112 |
+| D1 | Delivery boys log in on a phone web page and see today's deliveries for their areas | #109 |
+| D2 | Delivery boys share their location only while a delivery round is started | #110 |
+| A12 | Admin live map of delivery boys on a round | #111 |
+
 ## Out of scope
 
 | Excluded | Why it's excluded now | How the architecture leaves room |
@@ -40,8 +52,8 @@
 | Payment gateway | External integration, compliance | `orders` can gain a `payment_status` column and a `payments` table |
 | Pausing/skipping single days, choosing weekdays, editing a running subscription, prepaid plans *(basic subscriptions moved in scope by #97/#99)* | More rules and payments | The same `subscriptions` module and `generate_orders_for(day)` service can be extended |
 | Multi-vendor marketplace | Major domain change | Products can gain a `vendor_id` later |
-| Delivery partner app | Separate user type and app | New route tree and `deliveries` table |
-| Google Maps | External API, cost | Saved addresses exist since #102 (`addresses` table); a map / geocoding could be added on top |
+| Native delivery partner app (Android / iOS) | A separate app to build, publish and maintain | A delivery boy **web page** with login is planned in M12 (#106, #109); it uses the same backend |
+| Google Maps (and other paid map APIs) | External API, cost, billing account | Free, open-source maps (Leaflet + OpenStreetMap) and live tracking are planned instead in M12 (#106, ADR-018) |
 | WhatsApp notifications | External API | Status changes go through one service function, a natural hook point |
 | AI chatbot / Agentic AI | Not needed to prove the POC | API-first design makes it possible to add later |
 | Demand forecasting / advanced analytics *(a basic income report is in scope since #105)* | Needs historical data | Orders are stored in normalized tables, ready for analysis |

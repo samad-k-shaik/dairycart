@@ -282,6 +282,39 @@ Admin records only: delivery boys do not log in.
 
 The migration fills `orders.delivery_pincode` and `subscriptions.delivery_pincode` of existing rows from the end of `delivery_address`.
 
+## Planned changes (M12, #106 – not migrated yet)
+
+Approved by #106 (ADR-018). Each change arrives in its own Alembic migration in the issue named. Until then, the tables above are the real schema.
+
+**New columns on ADDRESSES, ORDERS and SUBSCRIPTIONS (#108)**
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| latitude | NUMERIC(9,6) | NULL, CHECK −90…90 | Optional map pin; final type confirmed in #108 |
+| longitude | NUMERIC(9,6) | NULL, CHECK −180…180 | |
+| | | CHECK both NULL or both set | |
+
+Orders and subscriptions copy the pin from the address, like `delivery_address`, so editing or deleting an address never moves a past order.
+
+**New column on DELIVERY_BOYS (#109)**
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| user_id | INTEGER | FK → users, NULL, UNIQUE | The delivery boy's login (role `DELIVERY_BOY`); NULL = no login yet |
+
+**New table DELIVERY_LOCATIONS (#110)**: the latest position only, one row per delivery boy, overwritten on every update (upsert).
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| delivery_boy_id | INTEGER | PK, FK → delivery_boys, ON DELETE CASCADE | |
+| latitude | NUMERIC(9,6) | NOT NULL, CHECK −90…90 | |
+| longitude | NUMERIC(9,6) | NOT NULL, CHECK −180…180 | |
+| accuracy_m | INTEGER | NULL, CHECK ≥ 0 | GPS accuracy reported by the phone, in metres |
+| recorded_at | TIMESTAMPTZ | NOT NULL | Time on the phone when the position was read |
+| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | Time the server saved it; older than 2 minutes = stale |
+
+Whether a round is active is decided in #110 (for example an `is_sharing` flag); stopping a round removes the position (NFR-17).
+
 ## Normalization notes
 
 - **1NF:** every column holds a single value; order lines are rows in `order_items`, not a list inside `orders`.

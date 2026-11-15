@@ -127,3 +127,16 @@ Milestone summaries: [milestones.md](milestones.md).
 | [706](706-write-individual-learning-reflections.md) | [M7-06] Write individual learning reflections | documentation, good-first-issue |
 | [707](707-create-the-future-feature-backlog.md) | [M7-07] Create the future feature backlog | epic, documentation |
 | [708](708-decide-and-execute-the-gcp-clean-up-or-continuation-plan.md) | [M7-08] Decide and execute the GCP clean-up or continuation plan | devops |
+
+## M12 – Future: Maps and Live Delivery Tracking (8)
+
+| Spec | Title | Labels |
+|---|---|---|
+| [1201](1201-approve-maps-and-live-tracking-scope-change-and-adr.md) | [M12-01] Approve the maps and live tracking scope change and write the ADR | epic, architecture, documentation |
+| [1202](1202-add-a-reusable-map-component-with-leaflet-and-openstreetmap.md) | [M12-02] Add a reusable map component with Leaflet and OpenStreetMap | feature, frontend |
+| [1203](1203-save-a-map-pin-with-each-address-and-copy-it-onto-orders.md) | [M12-03] Save a map pin with each address and copy it onto orders | feature, backend, frontend, database |
+| [1204](1204-give-delivery-boys-a-login-and-a-todays-deliveries-page.md) | [M12-04] Give delivery boys a login and a "Today's deliveries" page | feature, backend, frontend, database, security |
+| [1205](1205-share-the-delivery-boys-live-location-during-a-round.md) | [M12-05] Share the delivery boy's live location during a round | feature, backend, frontend, database, security |
+| [1206](1206-show-delivery-boys-on-a-live-admin-map.md) | [M12-06] Show delivery boys on a live admin map | feature, backend, frontend |
+| [1207](1207-let-customers-track-their-order-on-a-map-with-an-eta.md) | [M12-07] Let customers track their order on a map with an ETA | feature, backend, frontend, security |
+| [1208](1208-push-location-updates-with-sse-and-postgresql-listen-notify.md) | [M12-08] Push location updates with SSE and PostgreSQL LISTEN/NOTIFY | feature, backend, frontend, architecture |
