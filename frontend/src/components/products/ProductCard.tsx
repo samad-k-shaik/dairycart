@@ -43,8 +43,9 @@ export function ProductCard({ product, onAdd }: ProductCardProps) {
           >
             {product.name}
             {/* Size is shown visually below; include it in the link name so screen readers
-                can tell "Cow Milk 500 ml" from "Cow Milk 1 Litre". */}
-            <span className="sr-only"> {product.size}</span>
+                can tell "Cow Milk 500 ml" from "Cow Milk 1 Litre". The space sits OUTSIDE the span, so
+                every screen reader keeps it ("Cow Milk 1 Litre", not "Cow Milk1 Litre"). */}{" "}
+            <span className="sr-only">{product.size}</span>
           </Link>
         </h3>
         <p className="text-small text-muted-foreground">{product.size}</p>
