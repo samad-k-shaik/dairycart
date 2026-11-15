@@ -67,7 +67,7 @@ function UserDetails({ userId }: { userId: number }) {
                 {user.data.full_name}
               </h1>
               <p className="text-small break-all text-muted-foreground">
-                @{user.data.username} · {user.data.email} · joined {formatDate(user.data.created_at)}
+                {user.data.phone} · joined {formatDate(user.data.created_at)}
               </p>
             </div>
             {user.data.role === "ADMIN" ? (

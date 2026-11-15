@@ -1,10 +1,11 @@
 """Tests for the Alembic migrations (M1-06)."""
 
+import pytest
 from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
-from sqlalchemy import Engine, inspect
+from sqlalchemy import Engine, inspect, text
 
 from app.database.base import Base
 from tests.conftest import alembic_config
@@ -56,3 +57,54 @@ def test_there_is_exactly_one_head() -> None:
     heads = ScriptDirectory.from_config(alembic_config()).get_heads()
 
     assert len(heads) == 1
+
+
+# ---- #121: login by mobile number ----
+
+BEFORE_MOBILE_LOGIN = "99af8de2905d"  # the revision before b2526ba63844
+
+
+def test_mobile_login_migration_stops_when_old_accounts_exist(migrated_db: Engine) -> None:
+    """Old accounts have no mobile number: the upgrade refuses and says how to reset the
+    local database, instead of inventing numbers."""
+    config = alembic_config()
+    command.downgrade(config, BEFORE_MOBILE_LOGIN)
+    try:
+        with migrated_db.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO users (full_name, email, username, password_hash) "
+                    "VALUES ('Old User', 'old@example.com', 'old', 'x')"
+                )
+            )
+
+        with pytest.raises(RuntimeError, match="docker compose down -v"):
+            command.upgrade(config, "head")
+
+        columns = {c["name"] for c in inspect(migrated_db).get_columns("users")}
+        assert {"email", "username"} <= columns and "phone" not in columns  # unchanged
+    finally:
+        with migrated_db.begin() as connection:
+            connection.execute(text("DELETE FROM users"))
+        command.upgrade(config, "head")
+
+
+def test_mobile_login_downgrade_gives_accounts_placeholder_logins(migrated_db: Engine) -> None:
+    config = alembic_config()
+    with migrated_db.begin() as connection:
+        user_id = connection.scalar(
+            text(
+                "INSERT INTO users (full_name, phone, password_hash) "
+                "VALUES ('New User', '9876543210', 'x') RETURNING user_id"
+            )
+        )
+    try:
+        command.downgrade(config, BEFORE_MOBILE_LOGIN)
+
+        with migrated_db.connect() as connection:
+            row = connection.execute(text("SELECT email, username FROM users")).one()
+        assert tuple(row) == (f"user{user_id}@example.invalid", f"user{user_id}")
+    finally:
+        with migrated_db.begin() as connection:
+            connection.execute(text("DELETE FROM users"))
+        command.upgrade(config, "head")

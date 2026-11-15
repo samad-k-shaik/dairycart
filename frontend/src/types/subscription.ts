@@ -75,7 +75,8 @@ export type CreateSubscriptionRequest = {
 /** One row of GET /admin/subscriptions. */
 export type AdminSubscriptionSummary = {
   subscription_id: number
-  username: string
+  /** #121: the account holder's full name (was `username`). */
+  account_name: string
   customer_name: string
   customer_phone: string
   plan: SubscriptionPlan

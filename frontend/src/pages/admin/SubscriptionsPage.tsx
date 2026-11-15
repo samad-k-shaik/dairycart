@@ -104,7 +104,7 @@ function SubscriptionsPage() {
                   <TableCell>
                     <p className="font-semibold">{row.customer_name}</p>
                     <p className="text-small text-muted-foreground">
-                      {row.customer_phone} · @{row.username}
+                      {row.customer_phone} · account: {row.account_name}
                     </p>
                   </TableCell>
                   <TableCell>

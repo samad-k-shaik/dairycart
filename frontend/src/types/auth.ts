@@ -1,5 +1,6 @@
 /**
  * Account types (#89): mirror the backend's /api/v1/auth and /api/v1/admin/users responses.
+ * #121: an account is identified by its mobile number (no email or username).
  */
 import type { IsoDateTime } from "./order.ts"
 
@@ -9,8 +10,8 @@ export type UserRole = "USER" | "ADMIN"
 export type User = {
   user_id: number
   full_name: string
-  email: string
-  username: string
+  /** The login: 10-digit mobile number, e.g. "9876543210". */
+  phone: string
   role: UserRole
   created_at: IsoDateTime
 }
@@ -25,14 +26,13 @@ export type AdminUserDetail = User & {
 /** POST /auth/register body. No role: every new account is a USER. */
 export type RegisterRequest = {
   full_name: string
-  email: string
-  username: string
+  phone: string
   password: string
 }
 
-/** POST /auth/login body. `login` is the username OR the email. */
+/** POST /auth/login body (#121): the mobile number used at sign-up. */
 export type LoginRequest = {
-  login: string
+  phone: string
   password: string
 }
 

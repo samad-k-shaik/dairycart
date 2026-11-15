@@ -1,7 +1,7 @@
 """Account endpoints (#89):
 
     POST /api/v1/auth/register   → create a USER account (201)
-    POST /api/v1/auth/login      → username/email + password → token (200)
+    POST /api/v1/auth/login      → mobile number + password → token (200, #121)
     GET  /api/v1/auth/me         → the logged-in user (needs the token)
 
 Logout has no endpoint: the token is not stored on the server, so the frontend logs
@@ -34,7 +34,7 @@ def _error(description: str) -> dict:
     status_code=status.HTTP_201_CREATED,
     summary="Sign up",
     responses={
-        409: _error("USER_ALREADY_EXISTS: email or username already used"),
+        409: _error("USER_ALREADY_EXISTS: mobile number already registered"),
         422: _error("Invalid fields"),
     },
 )
@@ -47,10 +47,13 @@ def register(data: RegisterRequest, db: DbSession) -> UserRead:
     "/login",
     response_model=TokenResponse,
     summary="Log in",
-    responses={401: _error("Invalid username/email or password")},
+    responses={
+        401: _error("Invalid mobile number or password"),
+        422: _error("Missing fields or not a valid mobile number"),
+    },
 )
 def login(data: LoginRequest, db: DbSession) -> TokenResponse:
-    token, expires_in, user = auth_service.login(db, data.login, data.password)
+    token, expires_in, user = auth_service.login(db, data.phone, data.password)
     return TokenResponse(
         access_token=token, expires_in=expires_in, user=UserRead.model_validate(user)
     )

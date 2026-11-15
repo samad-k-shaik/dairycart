@@ -50,8 +50,7 @@ erDiagram
     USERS {
         int user_id PK
         varchar full_name
-        varchar email UK
-        varchar username UK
+        varchar phone UK
         varchar password_hash
         varchar role
         timestamptz created_at
@@ -184,14 +183,13 @@ erDiagram
 
 `ORDERS` ↔ `PRODUCTS` is a **many-to-many** relationship resolved by the junction table `ORDER_ITEMS`.
 
-### USERS (#89)
+### USERS (#89; mobile number login since #121)
 
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
 | user_id | SERIAL | PK | |
 | full_name | VARCHAR(100) | NOT NULL | 2–100 characters |
-| email | VARCHAR(254) | NOT NULL, UNIQUE | Stored in lower case |
-| username | VARCHAR(30) | NOT NULL, UNIQUE | Stored in lower case; letters, digits, `.`, `_`, `-` |
+| phone | VARCHAR(10) | NOT NULL, UNIQUE, CHECK `^[6-9][0-9]{9}$` | The login (#121): 10-digit mobile number, saved without `+91` or spaces. Separate from `customers.phone`, which is the delivery contact typed at checkout. (`email` and `username` were removed in #121.) |
 | password_hash | VARCHAR(100) | NOT NULL | bcrypt hash (60 chars). **Never** the password |
 | role | VARCHAR(10) | NOT NULL, DEFAULT `'USER'`, CHECK in (`USER`, `ADMIN`) | `ADMIN` only via `python -m app.scripts.create_admin` |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
@@ -380,8 +378,7 @@ Every constraint has an explicit, readable name (set by the naming convention in
 | delivery_areas | `delivery_areas_delivery_boy_id_fkey` | → delivery_boys, ON DELETE CASCADE (#103) |
 | subscription_items | `ck_subscription_items_quantity_range`, `…_unit_price_positive`, `…_subtotal_non_negative` | as for order_items (#97) |
 | subscription_items | `uq_subscription_items_product` | (subscription_id, product_id) is unique (#97) |
-| users | `uq_users_email` | email is unique |
-| users | `uq_users_username` | username is unique |
+| users | `uq_users_phone`, `ck_users_phone_format` | phone unique and a 10-digit mobile number (#121) |
 | users | `ck_users_role_allowed` | role is `USER` or `ADMIN` |
 
 Primary keys use PostgreSQL's default names (`customers_pkey`, …).

@@ -34,7 +34,7 @@ export function RequireAuth({ role, children }: { role?: "ADMIN"; children: Reac
         </span>
         <h1 className="text-h1 font-bold">Admins only</h1>
         <p className="text-muted-foreground">
-          You are logged in as <span className="font-semibold text-foreground">{user.username}</span>, which is not an
+          You are logged in as <span className="font-semibold text-foreground">{user.full_name}</span>, which is not an
           administrator account.
         </p>
         <div className="flex flex-wrap justify-center gap-2">

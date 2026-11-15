@@ -47,7 +47,7 @@ function UsersPage() {
               <TableRow>
                 <TableHead className="hidden sm:table-cell">ID</TableHead>
                 <TableHead>User</TableHead>
-                <TableHead className="hidden md:table-cell">Email</TableHead>
+                <TableHead className="hidden md:table-cell">Mobile</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead className="hidden sm:table-cell">Joined</TableHead>
               </TableRow>
@@ -64,11 +64,10 @@ function UsersPage() {
                     >
                       {user.full_name}
                     </Link>
-                    <p className="text-small text-muted-foreground">@{user.username}</p>
-                    {/* Phones: the email moves under the name. */}
-                    <p className="text-small break-all text-muted-foreground md:hidden">{user.email}</p>
+                    {/* Phones: the mobile number moves under the name. */}
+                    <p className="text-small text-muted-foreground md:hidden">{user.phone}</p>
                   </TableCell>
-                  <TableCell className="hidden break-all md:table-cell">{user.email}</TableCell>
+                  <TableCell className="hidden md:table-cell">{user.phone}</TableCell>
                   <TableCell>
                     {user.role === "ADMIN" ? (
                       <Badge className="bg-primary-soft font-semibold text-primary">Admin</Badge>

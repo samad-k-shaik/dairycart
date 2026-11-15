@@ -58,7 +58,7 @@ def test_board_card_shape(
         "subscription_id": None,
         "delivery_slot": None,
         "user_id": normal_user.user_id,
-        "username": normal_user.username,
+        "account_name": normal_user.full_name,  # #121
         "delivery_date": None,
         "delivery_pincode": None,  # #103: factory orders have no address
         "delivery_boy": None,
@@ -126,7 +126,8 @@ def test_user_details_with_totals(
 
     assert response.status_code == 200
     body = response.json()
-    assert body["username"] == normal_user.username
+    assert (body["full_name"], body["phone"]) == (normal_user.full_name, normal_user.phone)
+    assert "email" not in body and "username" not in body  # #121
     assert (body["order_count"], body["total_spent"]) == (3, "180.00")
     assert "password_hash" not in body
 

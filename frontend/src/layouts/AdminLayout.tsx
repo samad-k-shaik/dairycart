@@ -95,7 +95,7 @@ function AdminLayout() {
         </nav>
         <div className="mt-auto space-y-1">
           <p className="truncate px-3 text-small text-muted-foreground">
-            Logged in as <span className="font-semibold text-foreground">{user?.username}</span>
+            Logged in as <span className="font-semibold text-foreground">{user?.full_name}</span>
           </p>
           <button type="button" onClick={handleLogout} className={linkClass({ isActive: false }) + " w-full"}>
             <LogOut className="size-5" aria-hidden="true" />

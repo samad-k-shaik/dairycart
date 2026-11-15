@@ -99,7 +99,8 @@ export type AdminOrderSummary = {
   delivery_slot?: string | null
   /** #104: card details (optional: the offline M2 mocks do not send them). */
   user_id?: number | null
-  username?: string | null
+  /** #121: the account holder's full name (was `username`). */
+  account_name?: string | null
   delivery_date?: string | null
   delivery_pincode?: string | null
   delivery_boy?: { delivery_boy_id: number; name: string; phone: string } | null

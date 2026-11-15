@@ -190,7 +190,7 @@ Every data screen uses the same three building blocks:
 | Route | Page | Who |
 |---|---|---|
 | `/signup` | `pages/auth/SignUpPage.tsx` | Anyone |
-| `/login` | `pages/auth/LoginPage.tsx` (username or email + password) | Anyone |
+| `/login` | `pages/auth/LoginPage.tsx` (mobile number + password, #121) | Anyone |
 | `/account` | `pages/customer/UserDashboardPage.tsx` (the User Dashboard) | Logged-in users |
 | `/admin/*` | Dashboard, Orders, Products, `pages/admin/UsersPage.tsx` | **ADMIN only** |
 

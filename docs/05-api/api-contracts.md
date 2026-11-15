@@ -222,7 +222,7 @@ Newest first. Bad `date`, `boy` (not an id / `unassigned`) or `q` → 422.
     { "order_id": 101, "customer_name": "Ravi Kumar", "customer_phone": "9876543210",
       "order_date": "2026-11-07T04:30:00Z", "status": "PLACED", "total_amount": "155.00", "item_count": 2,
       "subscription_id": 3, "delivery_slot": "Morning, 8:00 AM – 9:00 AM",
-      "user_id": 7, "username": "ravi", "delivery_date": "2026-11-07", "delivery_pincode": "500016",
+      "user_id": 7, "account_name": "Ravi Kumar", "delivery_date": "2026-11-07", "delivery_pincode": "500016",
       "delivery_boy": { "delivery_boy_id": 1, "name": "Kiran", "phone": "9876500001" },
       "items": [ { "product_id": 2, "product_name": "Cow Milk", "size": "1 Litre", "quantity": 2, "unit_price": "60.00", "subtotal": "120.00" } ] }
   ],
@@ -237,7 +237,7 @@ Newest first. Bad `date`, `boy` (not an id / `unassigned`) or `q` → 422.
 
 - `status_counts` follow `date`, `boy` and `q` but **ignore `status`** (so the status chips keep their numbers); without those filters they count **all** orders and feed the admin dashboard.
 - *(#104)* `boy_counts` (per active delivery boy) and `unassigned_count` follow `date` and `q`, ignoring `boy` and `status`.
-- `delivery_boy` is the ACTIVE delivery boy covering `delivery_pincode` (looked up when read), or `null`. `user_id` / `username` are `null` only for old guest orders (before #90).
+- `delivery_boy` is the ACTIVE delivery boy covering `delivery_pincode` (looked up when read), or `null`. `user_id` / `account_name` (the account holder's full name; `username` before #121) are `null` only for old guest orders (before #90).
 
 ---
 
@@ -404,7 +404,7 @@ Owner or ADMIN only; anyone else gets **404** (same answer as a missing id). Can
 
 Optional `?status=ACTIVE|CANCELLED|COMPLETED` and *(#101)* `?user_id=` (only that user's subscriptions). Newest first:
 ```json
-[ { "subscription_id": 3, "username": "ravi", "customer_name": "Ravi Kumar", "customer_phone": "9876543210",
+[ { "subscription_id": 3, "account_name": "Ravi Kumar", "customer_name": "Ravi Kumar", "customer_phone": "9876543210",
     "plan": "WEEK", "every_n_days": 2, "delivery_slot": "Morning, 8:00 AM – 9:00 AM", "start_date": "2026-11-21", "end_date": "2026-11-27", "status": "ACTIVE",
     "daily_total": "60.00", "orders_created": 2 } ]
 ```
@@ -574,7 +574,7 @@ All of that user's orders, newest first, in the same shape as `GET /orders/mine`
 
 ---
 
-## Accounts and login (#89)
+## Accounts and login (#89; mobile number login since #121)
 
 Tokens are JWTs (HS256) that expire after `JWT_EXPIRE_MINUTES` (default 60). Send them as `Authorization: Bearer <access_token>`. Logout has no endpoint: the client deletes its token.
 
@@ -582,42 +582,41 @@ Tokens are JWTs (HS256) that expire after `JWT_EXPIRE_MINUTES` (default 60). Sen
 
 **Request** (no `role`: every new account is `USER`; unknown fields → 422)
 ```json
-{ "full_name": "Ravi Kumar", "email": "ravi@example.com", "username": "ravi_k", "password": "milk1234" }
+{ "full_name": "Ravi Kumar", "phone": "9876543210", "password": "milk1234" }
 ```
 
 | Field | Rule |
 |---|---|
 | `full_name` | 2–100 characters after trimming |
-| `email` | `something@something.something`, max 254; stored in lower case |
-| `username` | 3–30 of letters, digits, `.`, `_`, `-`; stored in lower case |
+| `phone` | The login (#121). 10-digit Indian mobile number starting with 6–9. Spaces, dashes and a `+91` or leading `0` are removed first, so `"+91 98765 43210"` is saved as `"9876543210"` |
 | `password` | 8+ characters and at most 72 bytes (bcrypt's limit), at least one letter and one number |
 
 **201 Created**
 ```json
-{ "user_id": 7, "full_name": "Ravi Kumar", "email": "ravi@example.com", "username": "ravi_k", "role": "USER", "created_at": "2026-11-10T10:00:00Z" }
+{ "user_id": 7, "full_name": "Ravi Kumar", "phone": "9876543210", "role": "USER", "created_at": "2026-11-10T10:00:00Z" }
 ```
 
 | Status | Code | When |
 |---|---|---|
-| 409 | `USER_ALREADY_EXISTS` | Email and/or username already used (any letter case). `details` names the field(s): `email`, `username` |
-| 422 | `VALIDATION_ERROR` | A field breaks the rules above, or `role` was sent |
+| 409 | `USER_ALREADY_EXISTS` | The mobile number already has an account. `details`: `[{ "field": "phone", "issue": "already registered" }]` |
+| 422 | `VALIDATION_ERROR` | A field breaks the rules above, or an unknown field (`role`, and since #121 `email` / `username`) was sent |
 
 ### POST /api/v1/auth/login
 
-**Request** (`login` is the username **or** the email)
+**Request** (#121: the mobile number used at sign-up, normalised like at sign-up)
 ```json
-{ "login": "ravi_k", "password": "milk1234" }
+{ "phone": "9876543210", "password": "milk1234" }
 ```
 
 **200 OK**
 ```json
-{ "access_token": "eyJhbGciOiJIUzI1NiIs...", "token_type": "bearer", "expires_in": 3600, "user": { "user_id": 7, "full_name": "Ravi Kumar", "email": "ravi@example.com", "username": "ravi_k", "role": "USER", "created_at": "2026-11-10T10:00:00Z" } }
+{ "access_token": "eyJhbGciOiJIUzI1NiIs...", "token_type": "bearer", "expires_in": 3600, "user": { "user_id": 7, "full_name": "Ravi Kumar", "phone": "9876543210", "role": "USER", "created_at": "2026-11-10T10:00:00Z" } }
 ```
 
 | Status | Code | When |
 |---|---|---|
-| 401 | `UNAUTHORIZED` | "Invalid username/email or password." The same message for an unknown user and a wrong password |
-| 422 | `VALIDATION_ERROR` | `login` or `password` missing |
+| 401 | `UNAUTHORIZED` | "Invalid mobile number or password." The same message for a number without an account and a wrong password |
+| 422 | `VALIDATION_ERROR` | `phone` or `password` missing, or `phone` is not a valid mobile number |
 
 ### GET /api/v1/auth/me
 
@@ -684,7 +683,7 @@ Errors that do not come from a specific endpoint use the same shape: an unknown 
 | 401 | Not logged in, invalid/expired token, or wrong login details |
 | 403 | Logged in, but not allowed (a `USER` on an admin endpoint) |
 | 404 | Resource not found |
-| 409 | Conflicts with current state (unavailable product, illegal transition, duplicate product name + size, deleting an ordered product, email/username already registered, a second active subscription or cancelling one that is not active (#97), a full delivery slot, deleting a booked slot or switching off the last active one (#100), more than 10 saved addresses (#102), a delivery boy phone or PIN code already taken (#103)) |
+| 409 | Conflicts with current state (unavailable product, illegal transition, duplicate product name + size, deleting an ordered product, mobile number already registered (#121), a second active subscription or cancelling one that is not active (#97), a full delivery slot, deleting a booked slot or switching off the last active one (#100), more than 10 saved addresses (#102), a delivery boy phone or PIN code already taken (#103)) |
 | 422 | Schema validation failed |
 | 500 | Unexpected server error (details only in logs) |
 | 503 | Dependency (database) unavailable |
