@@ -21,6 +21,7 @@ from app.core.india_time import india_day_range
 from app.models import DeliveryBoy, OrderStatus, User
 from app.repositories.delivery_boy_repository import DeliveryBoyRepository
 from app.repositories.delivery_location_repository import DeliveryLocationRepository
+from app.repositories.live_update_repository import notify_change
 from app.repositories.order_repository import OrderRepository
 from app.schemas.delivery import (
     LiveBoyRead,
@@ -46,6 +47,7 @@ def start_round(db: Session, boy: DeliveryBoy) -> DeliveryBoy:
     try:
         if boy.round_started_at is None:
             boy.round_started_at = _now()
+        notify_change(db)  # #113: live pages update at once
         db.commit()
     except Exception:
         db.rollback()
@@ -58,6 +60,7 @@ def stop_round(db: Session, boy: DeliveryBoy) -> DeliveryBoy:
     try:
         boy.round_started_at = None
         DeliveryLocationRepository(db).delete(boy.delivery_boy_id)
+        notify_change(db)  # #113
         db.commit()
     except Exception:
         db.rollback()
@@ -81,6 +84,8 @@ def save_location(
         saved = DeliveryLocationRepository(db).upsert_if_newer(
             boy.delivery_boy_id, data.latitude, data.longitude, data.accuracy_m, recorded_at
         )
+        if saved:
+            notify_change(db)  # #113: only when the pin really moved
         db.commit()
     except Exception:
         db.rollback()

@@ -3,6 +3,7 @@
  * while the order is out for delivery. Asks GET /orders/{id}/tracking every 10 s and shows
  * the delivery boy and the home on a map, with the distance and an estimated arrival time.
  * When the order is delivered, the whole page is refreshed (the panel then disappears).
+ * #113: updates are pushed (Server-Sent Events) when possible; polling is the fallback.
  */
 import { useEffect, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
@@ -10,11 +11,14 @@ import { Navigation } from "lucide-react"
 
 import LazyMapView from "@/components/map/LazyMapView"
 import { orderKeys } from "@/hooks/orderKeys"
-import { useOrderTracking } from "@/hooks/useOrderTracking"
+import { useLiveStream } from "@/hooks/useLiveStream"
+import { trackingKey, useOrderTracking } from "@/hooks/useOrderTracking"
 import { trackingHeadline, trackingMarkers } from "@/lib/orderTracking"
 
 export function OrderTrackingPanel({ orderId }: { orderId: number }) {
-  const tracking = useOrderTracking(orderId)
+  // #113: pushed updates when the stream works; polling every 10 s otherwise.
+  const streaming = useLiveStream(`/orders/${orderId}/tracking/stream`, trackingKey(orderId))
+  const tracking = useOrderTracking(orderId, streaming)
   const now = useNow()
   const queryClient = useQueryClient()
   const status = tracking.data?.status

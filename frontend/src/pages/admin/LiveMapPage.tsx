@@ -5,6 +5,7 @@
  * (TanStack Query `refetchInterval`, paused while the browser tab is hidden). Bikes glide to
  * their new position; a grey bike has not sent an update for 2 minutes. Houses are today's
  * undelivered orders that have a map pin. The view is framed once and then left to the admin.
+ * #113: a Server-Sent Events stream pushes changes at once; polling is only the fallback.
  */
 import { useEffect, useState } from "react"
 import { Link } from "react-router"
@@ -14,7 +15,8 @@ import { EmptyState } from "@/components/common/EmptyState"
 import { ErrorState } from "@/components/common/ErrorState"
 import LazyMapView from "@/components/map/LazyMapView"
 import { Badge } from "@/components/ui/badge"
-import { useLiveMap } from "@/hooks/useDeliveryBoys"
+import { liveMapKey, useLiveMap } from "@/hooks/useDeliveryBoys"
+import { useLiveStream } from "@/hooks/useLiveStream"
 import { boyStatus, liveMarkers, type BoyStatus } from "@/lib/liveMap"
 import { cn } from "@/lib/utils"
 import type { LiveBoy } from "@/types/liveMap"
@@ -27,7 +29,8 @@ const TONE: Record<BoyStatus["tone"], string> = {
 }
 
 function LiveMapPage() {
-  const query = useLiveMap()
+  const streaming = useLiveStream("/admin/delivery-boys/locations/stream", liveMapKey)
+  const query = useLiveMap(streaming)
   const now = useNow()
 
   return (
@@ -35,8 +38,11 @@ function LiveMapPage() {
       <div className="space-y-1">
         <h1 className="text-h1 font-bold">Live map</h1>
         <p className="text-muted-foreground">
-          Delivery boys on a round, updated every 10 seconds. Houses are today's orders still to deliver (only those
-          with a map pin).
+          Delivery boys on a round. Houses are today's orders still to deliver (only those with a map pin).
+        </p>
+        <p className="flex items-center gap-2 text-small font-semibold" aria-live="polite">
+          <span className={cn("size-2 rounded-full", streaming ? "animate-pulse bg-success" : "bg-warning")} aria-hidden="true" />
+          {streaming ? "Live: updates appear at once" : "Updating every 10 seconds"}
         </p>
       </div>
 

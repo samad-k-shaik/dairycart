@@ -28,6 +28,7 @@ from app.models import (
 )
 from app.repositories.customer_repository import CustomerRepository
 from app.repositories.delivery_boy_repository import DeliveryBoyRepository
+from app.repositories.live_update_repository import notify_change
 from app.repositories.order_repository import (
     AdminOrderFilters,
     OrderRepository,
@@ -247,6 +248,7 @@ def update_status(db: Session, order_id: int, new_status: OrderStatus) -> Order:
             for product_id, quantity in quantities.items():
                 products[product_id].stock_quantity += quantity
         order.status = new_status
+        notify_change(db)  # #113: e.g. the customer's tracking sees DELIVERED at once
         db.commit()  # also releases the row locks
     except Exception:
         db.rollback()

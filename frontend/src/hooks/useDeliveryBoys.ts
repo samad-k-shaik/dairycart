@@ -23,8 +23,11 @@ export const deliveryBoyKeys = { all: ["delivery-boys"] as const }
  * #111: the live map, asked again every 10 s. TanStack Query pauses the interval while
  * the tab is hidden (refetchIntervalInBackground is false), so a forgotten tab costs nothing.
  */
-export function useLiveMap() {
-  return useQuery({ queryKey: [...deliveryBoyKeys.all, "live"], queryFn: getLiveMap, refetchInterval: 10_000 })
+export const liveMapKey = [...deliveryBoyKeys.all, "live"] as const
+
+/** #113: `streaming` = the SSE stream is delivering updates, so polling is switched off. */
+export function useLiveMap(streaming = false) {
+  return useQuery({ queryKey: liveMapKey, queryFn: getLiveMap, refetchInterval: streaming ? false : 10_000 })
 }
 
 export function useDeliveryBoys() {

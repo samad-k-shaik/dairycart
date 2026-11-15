@@ -19,6 +19,7 @@
 | POST | `/orders` | Place an order | 201 |
 | GET | `/orders/{id}` | Order details | 200 |
 | GET | `/orders/{id}/tracking` | Where is my order? Delivery boy, distance, ETA *(#112)* | 200 |
+| GET | `/orders/{id}/tracking/stream` | The same, pushed as Server-Sent Events *(#113)* | 200 |
 | GET | `/orders/mine` | The logged-in user's orders *(#90)* | 200 |
 | GET | `/admin/orders` | Orders board: filter (status, day, delivery boy, search), paginate *(#104)* | 200 |
 | PATCH | `/admin/orders/{id}/status` | Update order status | 200 |
@@ -56,6 +57,7 @@
 | DELETE | `/admin/delivery-boys/{id}/areas/{pincode}` | Remove a PIN code *(#103)* | 200 |
 | PUT | `/admin/delivery-boys/{id}/login` | Give a delivery boy a login, or a new password *(#109)* | 200 |
 | GET | `/admin/delivery-boys/locations` | Live map: positions, stale flags, today's order pins *(#111)* | 200 |
+| GET | `/admin/delivery-boys/locations/stream` | The same, pushed as Server-Sent Events *(#113)* | 200 |
 | GET | `/delivery/me` | Logged-in delivery boy: his record and areas *(#109)* | 200 |
 | GET | `/delivery/me/orders` | His day's orders (his PIN codes, not cancelled) *(#109)* | 200 |
 | PATCH | `/delivery/me/orders/{id}/status` | Mark his order out for delivery / delivered *(#109)* | 200 |
@@ -729,6 +731,23 @@ ADMIN only. **200 OK**: every user, oldest first (same shape as above, never pas
 The role is read from the database on every request, so an admin who is demoted loses access at once. Admins are created only with `python -m app.scripts.create_admin` (see `backend/README.md`).
 
 ---
+
+## Live streams (Server-Sent Events, #113)
+
+`GET /admin/delivery-boys/locations/stream` (ADMIN) and `GET /orders/{id}/tracking/stream` (order owner or ADMIN) send the **same JSON** as their non-stream endpoints, as Server-Sent Events (`Content-Type: text/event-stream`, `Cache-Control: no-cache`):
+```text
+retry: 3000
+
+event: snapshot
+data: {"order_id": 41, "status": "OUT_FOR_DELIVERY", ...}
+
+: ping
+
+```
+- A `snapshot` at once, then again **whenever the data changes** (a location saved, a round started or stopped, an order status changed: PostgreSQL `NOTIFY`, ADR-020), otherwise a `: ping` comment every 15 s.
+- Access is checked **before** streaming (401 / 403 / 404 as for the normal endpoints) and again for every snapshot; losing access ends the stream.
+- A stream ends after **25 minutes**; clients reconnect (the frontend waits 1, 2, 5, then 10 s after failures and **falls back to polling** the normal endpoint every 10 s while the stream is down).
+- Send the token as `Authorization: Bearer …` (the browser's `EventSource` cannot, so the frontend reads the stream with `fetch`).
 
 ## Error format
 

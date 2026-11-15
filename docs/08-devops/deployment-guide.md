@@ -52,6 +52,7 @@ Every setting the app reads (#59). Copy `backend/.env.example` → `backend/.env
 | `JWT_EXPIRE_MINUTES` | | `60` | How long a login stays valid (5–1440) |
 | `SUBSCRIPTION_AUTO_ORDERS` | | `true` | Create subscription delivery orders automatically |
 | `SUBSCRIPTION_ORDERS_INTERVAL_MINUTES` | | `15` | How often (1–1440) |
+| `LIVE_UPDATES` | | `true` | #113: one PostgreSQL `LISTEN` connection per backend process, so live maps (SSE) update at once; `false` = streams re-check every 15 s |
 | `LOG_LEVEL` | | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
 | `APP_ENV` | | `local` | `local`, `test` or `production` |
 | `TEST_DATABASE_URL` | | `…/milk_delivery_test` | Test database for `pytest`; the name must end in `_test` |

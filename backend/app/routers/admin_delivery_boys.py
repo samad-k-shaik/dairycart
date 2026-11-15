@@ -10,6 +10,7 @@ Delivery boys are records kept by the admin. Since #109 the admin can give one a
     DELETE /api/v1/admin/delivery-boys/{id}/areas/{pincode}  → remove a PIN code
     PUT    /api/v1/admin/delivery-boys/{id}/login            → his login / new password (#109)
     GET    /api/v1/admin/delivery-boys/locations             → live map data (#111)
+    GET    /api/v1/admin/delivery-boys/locations/stream      → the same, pushed (SSE, #113)
 
 Rules: services/delivery_boy_service.py.
 """
@@ -17,11 +18,14 @@ Rules: services/delivery_boy_service.py.
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Response, status
+from fastapi.responses import StreamingResponse
+from pydantic import TypeAdapter
 from sqlalchemy.orm import Session
 
 from app.core.auth import require_admin
+from app.core.live_updates import SSE_HEADERS, sse_stream
 from app.database.session import get_db
-from app.models import DeliveryBoy
+from app.models import DeliveryBoy, User, UserRole
 from app.schemas.common import ErrorResponse
 from app.schemas.delivery import LiveBoyRead
 from app.schemas.delivery_boy import (
@@ -45,6 +49,7 @@ router = APIRouter(
 )
 
 DbSession = Annotated[Session, Depends(get_db)]
+_LIVE_LIST = TypeAdapter(list[LiveBoyRead])  # list → JSON for the stream (#113)
 BoyId = Annotated[int, Path(gt=0, description="A positive delivery boy id")]
 Pincode = Annotated[str, Path(pattern=r"^[1-9][0-9]{5}$", description="6-digit PIN")]
 
@@ -79,6 +84,34 @@ def live_locations(db: DbSession) -> list[LiveBoyRead]:
     round (`is_stale` after 2 minutes without an update), else null. `orders`: his
     undelivered orders today that have a map pin. The admin page asks every 10 s."""
     return tracking_service.live_map(db, today_ist())
+
+
+@router.get(
+    "/locations/stream",
+    summary="Live map, pushed as Server-Sent Events (#113)",
+    response_class=StreamingResponse,
+    responses={200: {"content": {"text/event-stream": {}}, "description": "SSE stream"}},
+)
+def live_locations_stream(
+    admin: Annotated[User, Depends(require_admin)], db: DbSession
+) -> StreamingResponse:
+    """`event: snapshot` with the same JSON as GET /locations, sent at once and again
+    whenever something changes (PostgreSQL NOTIFY), plus `: ping` every 15 s. The stream
+    ends after 25 minutes (or if the user is no longer an admin); the page reconnects."""
+    admin_id = admin.user_id
+
+    def snapshot() -> str | None:
+        try:
+            current = db.get(User, admin_id)
+            if current is None or current.role != UserRole.ADMIN:
+                return None
+            return _LIVE_LIST.dump_json(tracking_service.live_map(db, today_ist())).decode()
+        finally:
+            db.commit()  # end the read transaction, so the next snapshot sees new data
+
+    return StreamingResponse(
+        sse_stream(snapshot), media_type="text/event-stream", headers=SSE_HEADERS
+    )
 
 
 @router.post(

@@ -41,6 +41,8 @@ os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["APP_ENV"] = "test"
 # #99: tests call the order service themselves; no background job against the test DB.
 os.environ["SUBSCRIPTION_AUTO_ORDERS"] = "false"
+# #113: no LISTEN thread in tests (tests/test_live_updates.py starts one on purpose).
+os.environ["LIVE_UPDATES"] = "false"
 # A fixed secret for tests only (#89), so tokens can be created and checked.
 os.environ.setdefault("JWT_SECRET_KEY", "test-only-secret-key-that-is-long-enough-123")
 

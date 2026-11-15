@@ -7,10 +7,13 @@ import { useQuery } from "@tanstack/react-query"
 import { orderKeys } from "@/hooks/orderKeys"
 import { getOrderTracking } from "@/services/orderService"
 
-export function useOrderTracking(orderId: number) {
+export const trackingKey = (orderId: number) => [...orderKeys.detail(orderId), "tracking"] as const
+
+/** #113: `streaming` = the SSE stream is delivering updates, so polling is switched off. */
+export function useOrderTracking(orderId: number, streaming = false) {
   return useQuery({
-    queryKey: [...orderKeys.detail(orderId), "tracking"],
+    queryKey: trackingKey(orderId),
     queryFn: () => getOrderTracking(orderId),
-    refetchInterval: 10_000,
+    refetchInterval: streaming ? false : 10_000,
   })
 }
