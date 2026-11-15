@@ -47,8 +47,8 @@ function DeliveryBoysPage() {
         <div className="space-y-1">
           <h1 className="text-h1 font-bold">Delivery boys</h1>
           <p className="text-muted-foreground">
-            Allocate areas by PIN code. Each PIN code has one delivery boy; orders are matched by the PIN code of
-            their address.
+            Allocate areas by PIN code. Each PIN code has one delivery boy; orders are matched by the PIN code of their
+            address.
           </p>
           <Link
             to="/admin/orders"
@@ -110,7 +110,11 @@ function DeliveryBoysPage() {
         </ul>
       )}
 
-      <DeliveryBoyFormSheet open={form.open} boy={form.open ? form.boy : null} onClose={() => setForm({ open: false })} />
+      <DeliveryBoyFormSheet
+        open={form.open}
+        boy={form.open ? form.boy : null}
+        onClose={() => setForm({ open: false })}
+      />
       <DeleteBoyDialog boy={toDelete} onClose={() => setToDelete(null)} />
       <DeliveryLoginSheet boy={loginFor} onClose={() => setLoginFor(null)} />
     </div>

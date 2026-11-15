@@ -32,8 +32,14 @@ describe("customer tracking (#112)", () => {
   })
 
   it("leaves out what is not known", () => {
-    assert.deepEqual(trackingMarkers({ ...TRACKING, destination: null }).map((m) => m.id), ["boy"])
-    assert.deepEqual(trackingMarkers({ ...TRACKING, delivery_boy: null }).map((m) => m.id), ["home"])
+    assert.deepEqual(
+      trackingMarkers({ ...TRACKING, destination: null }).map((m) => m.id),
+      ["boy"],
+    )
+    assert.deepEqual(
+      trackingMarkers({ ...TRACKING, delivery_boy: null }).map((m) => m.id),
+      ["home"],
+    )
   })
 
   it("says how far away he is", () => {
@@ -41,7 +47,10 @@ describe("customer tracking (#112)", () => {
   })
 
   it("is honest when the location is old or missing", () => {
-    const stale = { ...TRACKING, delivery_boy: { ...TRACKING.delivery_boy!, updated_at: "2026-11-16T07:55:00Z", is_stale: true } }
+    const stale = {
+      ...TRACKING,
+      delivery_boy: { ...TRACKING.delivery_boy!, updated_at: "2026-11-16T07:55:00Z", is_stale: true },
+    }
     assert.equal(trackingHeadline(stale, NOW), "Ravi was last seen 5 min ago.")
     assert.match(trackingHeadline({ ...TRACKING, delivery_boy: null }, NOW), /not available right now/)
     assert.equal(trackingHeadline({ ...TRACKING, distance_km: null, eta_minutes: null }, NOW), "Ravi is on the way.")

@@ -41,7 +41,10 @@ function LiveMapPage() {
           Delivery boys on a round. Houses are today's orders still to deliver (only those with a map pin).
         </p>
         <p className="flex items-center gap-2 text-small font-semibold" aria-live="polite">
-          <span className={cn("size-2 rounded-full", streaming ? "animate-pulse bg-success" : "bg-warning")} aria-hidden="true" />
+          <span
+            className={cn("size-2 rounded-full", streaming ? "animate-pulse bg-success" : "bg-warning")}
+            aria-hidden="true"
+          />
           {streaming ? "Live: updates appear at once" : "Updating every 10 seconds"}
         </p>
       </div>
@@ -49,7 +52,12 @@ function LiveMapPage() {
       {query.isPending ? (
         <div className="h-[60vh] animate-pulse rounded-2xl bg-muted" aria-hidden="true" />
       ) : query.isError ? (
-        <ErrorState title="Could not load the live map" error={query.error} onRetry={() => query.refetch()} retrying={query.isFetching} />
+        <ErrorState
+          title="Could not load the live map"
+          error={query.error}
+          onRetry={() => query.refetch()}
+          retrying={query.isFetching}
+        />
       ) : query.data.length === 0 ? (
         <EmptyState
           icon={Bike}
@@ -95,8 +103,13 @@ function BoyRow({ boy, now }: { boy: LiveBoy; now: number }) {
           <Badge className="bg-primary-soft font-semibold text-primary">{boy.orders.length} to deliver</Badge>
         )}
       </div>
-      <p className={cn("text-small", status.tone === "stale" ? "text-danger" : "text-muted-foreground")}>{status.text}</p>
-      <a href={`tel:+91${boy.phone}`} className="inline-flex min-h-11 items-center gap-1.5 text-small font-semibold text-primary">
+      <p className={cn("text-small", status.tone === "stale" ? "text-danger" : "text-muted-foreground")}>
+        {status.text}
+      </p>
+      <a
+        href={`tel:+91${boy.phone}`}
+        className="inline-flex min-h-11 items-center gap-1.5 text-small font-semibold text-primary"
+      >
         <Phone className="size-3.5" aria-hidden="true" />
         Call {boy.phone}
       </a>

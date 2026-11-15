@@ -18,7 +18,14 @@ import { getUsers } from "@/services/authService"
 const adminUserKeys = { all: ["admin", "users"] as const }
 
 function UsersPage() {
-  const { data: users, isPending, isError, error, refetch, isFetching } = useQuery({
+  const {
+    data: users,
+    isPending,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: adminUserKeys.all,
     queryFn: getUsers,
   })
@@ -71,7 +78,9 @@ function UsersPage() {
                   <TableCell>
                     <RoleBadge role={user.role} />
                   </TableCell>
-                  <TableCell className="hidden text-muted-foreground sm:table-cell">{formatDate(user.created_at)}</TableCell>
+                  <TableCell className="hidden text-muted-foreground sm:table-cell">
+                    {formatDate(user.created_at)}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

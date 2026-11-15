@@ -34,7 +34,9 @@ function ProductsPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
           <h1 className="text-h1 font-bold">Products</h1>
-          <p className="text-muted-foreground">Add, edit or remove products. Unavailable ones are hidden from customers.</p>
+          <p className="text-muted-foreground">
+            Add, edit or remove products. Unavailable ones are hidden from customers.
+          </p>
         </div>
         <Button className="h-11" onClick={openAdd}>
           <Plus aria-hidden="true" />
@@ -53,7 +55,12 @@ function ProductsPage() {
           ))}
         </div>
       ) : isError ? (
-        <ErrorState title="We could not load the products" error={error} onRetry={() => refetch()} retrying={isFetching} />
+        <ErrorState
+          title="We could not load the products"
+          error={error}
+          onRetry={() => refetch()}
+          retrying={isFetching}
+        />
       ) : products.length === 0 ? (
         <EmptyState
           icon={Package}
@@ -103,7 +110,11 @@ function ProductsPage() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className={product.is_available ? "text-right font-semibold" : "text-right font-semibold opacity-70"}>
+                  <TableCell
+                    className={
+                      product.is_available ? "text-right font-semibold" : "text-right font-semibold opacity-70"
+                    }
+                  >
                     {formatCurrency(product.price)}
                   </TableCell>
                   {/* Stock number: admins only (#92). 0 is shown in red. */}

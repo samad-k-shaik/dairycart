@@ -136,7 +136,5 @@ export function findDuplicate(
   size: string,
   excludeId?: number,
 ): Product | undefined {
-  return products.find(
-    (p) => p.product_id !== excludeId && sameText(p.name, name) && sameText(p.size, size),
-  )
+  return products.find((p) => p.product_id !== excludeId && sameText(p.name, name) && sameText(p.size, size))
 }

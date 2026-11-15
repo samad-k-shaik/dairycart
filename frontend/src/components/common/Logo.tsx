@@ -11,9 +11,7 @@ export function Logo({ to = "/", label }: { to?: string; label?: string }) {
       {/* brand-name: Fraunces on customer pages (#95, see index.css) */}
       <span className="brand-name text-h3 font-extrabold">DairyCart</span>
       {label && (
-        <span className="rounded-full bg-primary-soft px-2 py-0.5 text-small font-semibold text-primary">
-          {label}
-        </span>
+        <span className="rounded-full bg-primary-soft px-2 py-0.5 text-small font-semibold text-primary">{label}</span>
       )}
     </Link>
   )

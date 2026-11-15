@@ -4,7 +4,19 @@
  * Each admin page renders inside <Outlet />.
  */
 import { NavLink, Outlet, useNavigate } from "react-router"
-import { Bike, ClipboardList, Clock, IndianRupee, LayoutDashboard, LogOut, MapPinned, Package, Repeat, Store, Users } from "lucide-react"
+import {
+  Bike,
+  ClipboardList,
+  Clock,
+  IndianRupee,
+  LayoutDashboard,
+  LogOut,
+  MapPinned,
+  Package,
+  Repeat,
+  Store,
+  Users,
+} from "lucide-react"
 
 import { DevCrashProbe } from "@/components/common/DevMockSwitch"
 import { Logo } from "@/components/common/Logo"
@@ -50,17 +62,17 @@ function AdminLinks({ compact = false }: { compact?: boolean }) {
       {adminLinks
         .filter((link) => !compact || link.phone !== false)
         .map(({ to, label, short, Icon, end }) => (
-        <NavLink
-          key={to}
-          to={to}
-          end={end}
-          className={compact ? compactLinkClass : linkClass}
-          aria-label={compact && short ? label : undefined}
-        >
-          <Icon className={compact ? "size-4" : "size-5"} aria-hidden="true" />
-          {compact && short ? short : label}
-        </NavLink>
-      ))}
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            className={compact ? compactLinkClass : linkClass}
+            aria-label={compact && short ? label : undefined}
+          >
+            <Icon className={compact ? "size-4" : "size-5"} aria-hidden="true" />
+            {compact && short ? short : label}
+          </NavLink>
+        ))}
     </>
   )
 }

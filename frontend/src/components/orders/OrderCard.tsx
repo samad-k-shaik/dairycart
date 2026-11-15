@@ -24,8 +24,7 @@ export function OrderCard({ order }: { order: OrderSummary }) {
           )}
         </div>
         <p className="text-small text-muted-foreground">
-          {formatDateTime(order.order_date)} · {order.item_count}{" "}
-          {order.item_count === 1 ? "item" : "items"}
+          {formatDateTime(order.order_date)} · {order.item_count} {order.item_count === 1 ? "item" : "items"}
         </p>
         {order.delivery_slot && <p className="text-small text-muted-foreground">{order.delivery_slot}</p>}
       </div>

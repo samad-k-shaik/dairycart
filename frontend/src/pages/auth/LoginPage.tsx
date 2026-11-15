@@ -64,15 +64,43 @@ function LoginPage() {
       </div>
 
       {justRegistered && (
-        <p role="status" className="flex items-center gap-2 rounded-xl bg-green-50 p-3 text-small font-semibold text-green-700">
+        <p
+          role="status"
+          className="flex items-center gap-2 rounded-xl bg-green-50 p-3 text-small font-semibold text-green-700"
+        >
           <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
           Account created. Please log in.
         </p>
       )}
 
       <form onSubmit={handleSubmit} noValidate className="space-y-4 rounded-2xl bg-surface p-5 shadow-card">
-        <FormField id="login-phone" label="Mobile number" type="tel" inputMode="tel" autoComplete="tel-national" leadingText="+91" value={phone} error={errors.phone} placeholder="98765 43210" onChange={(v) => { setPhone(v); setErrors((e) => ({ ...e, phone: undefined })) }} />
-        <FormField id="login-password" label="Password" type="password" autoComplete="current-password" value={password} error={errors.password} onChange={(v) => { setPassword(v); setErrors((e) => ({ ...e, password: undefined })) }} />
+        <FormField
+          id="login-phone"
+          label="Mobile number"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel-national"
+          leadingText="+91"
+          value={phone}
+          error={errors.phone}
+          placeholder="98765 43210"
+          onChange={(v) => {
+            setPhone(v)
+            setErrors((e) => ({ ...e, phone: undefined }))
+          }}
+        />
+        <FormField
+          id="login-password"
+          label="Password"
+          type="password"
+          autoComplete="current-password"
+          value={password}
+          error={errors.password}
+          onChange={(v) => {
+            setPassword(v)
+            setErrors((e) => ({ ...e, password: undefined }))
+          }}
+        />
 
         {submitError && (
           <p role="alert" className="flex gap-2 rounded-xl bg-red-50 p-3 text-small text-danger">

@@ -33,12 +33,16 @@ export function RoundPanel({ onRound }: { onRound: boolean }) {
           Ready to go?
         </h2>
         <p className="text-small text-muted-foreground">
-          When you start your round, this phone shares its location with the dairy, and with each customer whose
-          order is out for delivery. Sharing stops when you press <span className="font-semibold">Stop round</span>.
-          Keep this page open: the screen stays on.
+          When you start your round, this phone shares its location with the dairy, and with each customer whose order
+          is out for delivery. Sharing stops when you press <span className="font-semibold">Stop round</span>. Keep this
+          page open: the screen stays on.
         </p>
         <Button className="h-12 w-full" onClick={() => start.mutate(undefined, { onError: showError })} disabled={busy}>
-          {start.isPending ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Navigation aria-hidden="true" />}
+          {start.isPending ? (
+            <Loader2 className="animate-spin" aria-hidden="true" />
+          ) : (
+            <Navigation aria-hidden="true" />
+          )}
           Start round
         </Button>
       </section>
@@ -58,7 +62,11 @@ export function RoundPanel({ onRound }: { onRound: boolean }) {
         <span
           className={cn(
             "size-2.5 rounded-full",
-            sharing.phase === "sharing" ? "animate-pulse bg-success" : sharing.phase === "error" ? "bg-danger" : "bg-warning",
+            sharing.phase === "sharing"
+              ? "animate-pulse bg-success"
+              : sharing.phase === "error"
+                ? "bg-danger"
+                : "bg-warning",
           )}
           aria-hidden="true"
         />

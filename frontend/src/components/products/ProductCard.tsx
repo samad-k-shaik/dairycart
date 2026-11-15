@@ -58,14 +58,14 @@ export function ProductCard({ product, onAdd }: ProductCardProps) {
             Out of stock
           </span>
         ) : (
-        <button
-          type="button"
-          onClick={() => onAdd(product)}
-          aria-label={`Add ${label} to cart`}
-          className="relative z-10 flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
-        >
-          <Plus className="size-5" aria-hidden="true" />
-        </button>
+          <button
+            type="button"
+            onClick={() => onAdd(product)}
+            aria-label={`Add ${label} to cart`}
+            className="relative z-10 flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+          >
+            <Plus className="size-5" aria-hidden="true" />
+          </button>
         )}
       </div>
     </article>

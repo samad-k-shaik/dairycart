@@ -27,7 +27,10 @@ export function ErrorState({ title, error, onRetry, retrying = false, className 
   return (
     <section
       role="alert"
-      className={cn("flex flex-col items-center gap-3 rounded-2xl bg-surface px-4 py-10 text-center shadow-card", className)}
+      className={cn(
+        "flex flex-col items-center gap-3 rounded-2xl bg-surface px-4 py-10 text-center shadow-card",
+        className,
+      )}
     >
       <span className="flex size-16 items-center justify-center rounded-full bg-red-50 text-danger">
         <AlertTriangle className="size-8" aria-hidden="true" />

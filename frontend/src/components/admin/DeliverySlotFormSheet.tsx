@@ -220,7 +220,17 @@ function SlotForm({ slot, onDone }: { slot: AdminDeliverySlot | null; onDone: ()
 }
 
 /** Label + control + error message (the error id is `<id>-error`). */
-function Field({ id, label, error, children }: { id: string; label: string; error?: string; children: React.ReactNode }) {
+function Field({
+  id,
+  label,
+  error,
+  children,
+}: {
+  id: string
+  label: string
+  error?: string
+  children: React.ReactNode
+}) {
   return (
     <div className="space-y-1.5">
       <Label htmlFor={id}>{label}</Label>

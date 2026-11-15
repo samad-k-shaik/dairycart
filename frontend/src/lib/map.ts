@@ -9,8 +9,7 @@ import type { LatLng, MapMarker } from "../types/map.ts"
 
 /** OpenStreetMap's standard tile server: free, light use only, attribution required (ADR-018). */
 export const OSM_TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-export const OSM_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+export const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 
 /** Where a map opens when it has nothing to show: Hyderabad, the dairy's city. */
 export const DEFAULT_CENTER: LatLng = { lat: 17.385, lng: 78.4867 }
@@ -32,10 +31,7 @@ export interface TileConfig {
  * OpenStreetMap. A URL without the {z}, {x} and {y} placeholders cannot work (every tile would be
  * the same address), so it falls back too instead of showing a blank grey map.
  */
-export function readTileConfig(env: {
-  VITE_MAP_TILE_URL?: string
-  VITE_MAP_ATTRIBUTION?: string
-}): TileConfig {
+export function readTileConfig(env: { VITE_MAP_TILE_URL?: string; VITE_MAP_ATTRIBUTION?: string }): TileConfig {
   const url = env.VITE_MAP_TILE_URL?.trim() ?? ""
   const usable = ["{z}", "{x}", "{y}"].every((part) => url.includes(part))
   return {
@@ -74,9 +70,7 @@ export function boundsOf(points: LatLng[]): Bounds | null {
 }
 
 /** How the map should frame its content: a centre + zoom, or "fit this box". */
-export type MapFraming =
-  | { kind: "center"; center: LatLng; zoom: number }
-  | { kind: "fit"; bounds: Bounds }
+export type MapFraming = { kind: "center"; center: LatLng; zoom: number } | { kind: "fit"; bounds: Bounds }
 
 /**
  * Decide what the map shows first:

@@ -5,12 +5,7 @@
 import { api } from "@/services/apiClient"
 import { USE_MOCKS } from "@/services/mockMode"
 import { ServiceError } from "@/services/serviceError"
-import type {
-  AdminDeliverySlot,
-  DeliverySlot,
-  DeliverySlotCreate,
-  DeliverySlotUpdate,
-} from "@/types/deliverySlot"
+import type { AdminDeliverySlot, DeliverySlot, DeliverySlotCreate, DeliverySlotUpdate } from "@/types/deliverySlot"
 
 function needsBackend(): Promise<never> {
   return Promise.reject(

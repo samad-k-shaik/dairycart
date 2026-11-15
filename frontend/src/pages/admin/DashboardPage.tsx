@@ -10,7 +10,18 @@
  *   backend field would be needed once there are more than 100 orders.
  */
 import { Link } from "react-router"
-import { CalendarDays, CheckCircle2, ChevronRight, ClipboardList, IndianRupee, PackageCheck, ShoppingBag, Truck, XCircle, type LucideIcon } from "lucide-react"
+import {
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  ClipboardList,
+  IndianRupee,
+  PackageCheck,
+  ShoppingBag,
+  Truck,
+  XCircle,
+  type LucideIcon,
+} from "lucide-react"
 
 import { EmptyState } from "@/components/common/EmptyState"
 import { ErrorState } from "@/components/common/ErrorState"

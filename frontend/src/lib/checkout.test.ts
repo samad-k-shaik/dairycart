@@ -22,7 +22,16 @@ describe("validatePhone (^[6-9]\\d{9}$)", () => {
     }
   })
   it("rejects everything else", () => {
-    for (const phone of ["", "12345", "5876543210", "98765432100", "987654321", "+919876543210", "98765 43210", "98765abcde"]) {
+    for (const phone of [
+      "",
+      "12345",
+      "5876543210",
+      "98765432100",
+      "987654321",
+      "+919876543210",
+      "98765 43210",
+      "98765abcde",
+    ]) {
       assert.ok(validatePhone(phone), phone)
     }
   })

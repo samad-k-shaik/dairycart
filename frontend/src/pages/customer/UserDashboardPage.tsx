@@ -88,7 +88,13 @@ function UserDashboardPage() {
               <h2 id="account-details" className="text-h2 font-bold">
                 Account details
               </h2>
-              <Badge className={isAdmin ? "ml-auto bg-primary-soft font-semibold text-primary" : "ml-auto bg-muted font-semibold text-muted-foreground"}>
+              <Badge
+                className={
+                  isAdmin
+                    ? "ml-auto bg-primary-soft font-semibold text-primary"
+                    : "ml-auto bg-muted font-semibold text-muted-foreground"
+                }
+              >
                 {isAdmin ? "Admin" : "User"}
               </Badge>
             </div>

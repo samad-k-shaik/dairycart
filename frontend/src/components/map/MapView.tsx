@@ -218,7 +218,8 @@ function MapView({ label, markers, center, zoom, className, onPick, autoFrame = 
   // #108: in pick mode, a tap on the map places the pin there.
   useEffect(() => {
     if (!map || !pickable) return
-    const handleClick = (event: L.LeafletMouseEvent) => onPickRef.current?.({ lat: event.latlng.lat, lng: event.latlng.lng })
+    const handleClick = (event: L.LeafletMouseEvent) =>
+      onPickRef.current?.({ lat: event.latlng.lat, lng: event.latlng.lng })
     map.on("click", handleClick)
     return () => {
       map.off("click", handleClick)
@@ -254,8 +255,19 @@ function MapView({ label, markers, center, zoom, className, onPick, autoFrame = 
   return (
     // "isolate" keeps Leaflet's high z-index values (up to 1000) INSIDE this box, so the map
     // never covers the app's header, sheets or dialogs.
-    <div className={cn("relative isolate overflow-hidden rounded-2xl bg-muted shadow-card", DEFAULT_MAP_HEIGHT_CLASS, className)}>
-      <div ref={containerRef} role="region" aria-label={label} className={cn("size-full", pickable && "map-pickable")} />
+    <div
+      className={cn(
+        "relative isolate overflow-hidden rounded-2xl bg-muted shadow-card",
+        DEFAULT_MAP_HEIGHT_CLASS,
+        className,
+      )}
+    >
+      <div
+        ref={containerRef}
+        role="region"
+        aria-label={label}
+        className={cn("size-full", pickable && "map-pickable")}
+      />
       {pins.map(({ marker, element }) => createPortal(<PinIcon marker={marker} />, element, marker.id))}
     </div>
   )

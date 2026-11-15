@@ -18,10 +18,10 @@ npm run dev       # start the dev server at http://localhost:5173
 
 Settings (optional; copy `.env.example` to `.env.local` and restart `npm run dev`):
 
-| Variable | Default | Meaning |
-|---|---|---|
-| `VITE_API_BASE_URL` | `http://localhost:8000/api/v1` | Backend address. The backend must list this frontend's origin in `CORS_ORIGINS`. |
-| `VITE_USE_MOCKS` | `false` | `true` = use the M2 mock data in the browser instead of the backend (offline UI work only) |
+| Variable            | Default                        | Meaning                                                                                    |
+| ------------------- | ------------------------------ | ------------------------------------------------------------------------------------------ |
+| `VITE_API_BASE_URL` | `http://localhost:8000/api/v1` | Backend address. The backend must list this frontend's origin in `CORS_ORIGINS`.           |
+| `VITE_USE_MOCKS`    | `false`                        | `true` = use the M2 mock data in the browser instead of the backend (offline UI work only) |
 
 Open the app at **`http://localhost:5173`**, not `http://127.0.0.1:5173`: the browser treats those as different origins, and the backend's CORS setting only allows `localhost:5173`.
 
@@ -29,18 +29,18 @@ Use `npm ci` (not `npm install`) for normal setup so everyone gets identical dep
 
 ## Scripts
 
-| Command | What it does |
-|---|---|
-| `npm run dev` | Dev server on port 5173 with hot reload (fails instead of switching port if 5173 is busy) |
-| `npm run build` | Type-checks, then builds optimised production files into `dist/` |
-| `npm run preview` | Serves the built `dist/` locally to check the production build |
-| `npm run typecheck` | Type-checks all code without building (`tsc -b`) |
-| `npm run lint` | **Oxlint** (#52): TypeScript, React, React Hooks, accessibility and test rules; fails on warnings too |
-| `npm run format` | **Prettier** (#52): formats every file (no semicolons, double quotes, 120 columns) |
-| `npm run format:check` | Checks the formatting without changing files (what CI runs) |
-| `npm test` | Runs all tests once with **Vitest** (`src/**/*.test.ts(x)`) |
-| `npm run test:watch` | Re-runs the tests on every save |
-| `npm run test:coverage` | Tests + a coverage summary (HTML report in `coverage/`) |
+| Command                 | What it does                                                                                          |
+| ----------------------- | ----------------------------------------------------------------------------------------------------- |
+| `npm run dev`           | Dev server on port 5173 with hot reload (fails instead of switching port if 5173 is busy)             |
+| `npm run build`         | Type-checks, then builds optimised production files into `dist/`                                      |
+| `npm run preview`       | Serves the built `dist/` locally to check the production build                                        |
+| `npm run typecheck`     | Type-checks all code without building (`tsc -b`)                                                      |
+| `npm run lint`          | **Oxlint** (#52): TypeScript, React, React Hooks, accessibility and test rules; fails on warnings too |
+| `npm run format`        | **Prettier** (#52): formats every file (no semicolons, double quotes, 120 columns)                    |
+| `npm run format:check`  | Checks the formatting without changing files (what CI runs)                                           |
+| `npm test`              | Runs all tests once with **Vitest** (`src/**/*.test.ts(x)`)                                           |
+| `npm run test:watch`    | Re-runs the tests on every save                                                                       |
+| `npm run test:coverage` | Tests + a coverage summary (HTML report in `coverage/`)                                               |
 
 **Tests (#49, ADR-009):** Vitest uses the same settings as Vite (`vite.config.ts` → `test`), so `@/` imports and the React plugin work in tests. Tests run in **jsdom** (a browser simulated in Node). Pure logic is tested in `*.test.ts`; components with **React Testing Library** in `*.test.tsx`: render the component and find things the way a user does (`getByRole`, `getByLabelText`, `getByText`), then interact with `@testing-library/user-event`. `src/test/setup.ts` adds the jest-dom matchers (`toBeInTheDocument()`, `toBeDisabled()`…) and cleans up after each test. Tests are type-checked by `tsconfig.test.json`. (Before #49 the tests ran with Node's built-in runner; the older logic tests still use relative `.ts` imports from that time, which also work in Vitest.)
 
@@ -57,19 +57,19 @@ Use `npm ci` (not `npm install`) for normal setup so everyone gets identical dep
 
 React Router (`react-router`, ADR-011) maps URLs to pages in `src/routes/router.tsx`. Each layout is a parent route; its pages are child routes rendered inside the layout's `<Outlet />`.
 
-| URL | Page | Layout |
-|---|---|---|
-| `/` | `pages/customer/HomePage` | CustomerLayout |
-| `/products/:id` | `pages/customer/ProductDetailsPage` | CustomerLayout |
-| `/cart` | `pages/customer/CartPage` | CustomerLayout |
-| `/checkout` | `pages/customer/CheckoutPage` | CustomerLayout |
-| `/orders` | `pages/customer/OrderHistoryPage` | CustomerLayout |
-| `/orders/:id/confirmation` | `pages/customer/OrderConfirmationPage` | CustomerLayout |
-| `/admin` | `pages/admin/DashboardPage` | AdminLayout |
-| `/admin/orders` | `pages/admin/OrdersPage` | AdminLayout |
-| `/admin/products` | `pages/admin/ProductsPage` | AdminLayout |
-| any other URL | `pages/NotFoundPage` (404) | the layout of its tree |
-| `/design` | `pages/DesignPage` (temporary) | none |
+| URL                        | Page                                   | Layout                 |
+| -------------------------- | -------------------------------------- | ---------------------- |
+| `/`                        | `pages/customer/HomePage`              | CustomerLayout         |
+| `/products/:id`            | `pages/customer/ProductDetailsPage`    | CustomerLayout         |
+| `/cart`                    | `pages/customer/CartPage`              | CustomerLayout         |
+| `/checkout`                | `pages/customer/CheckoutPage`          | CustomerLayout         |
+| `/orders`                  | `pages/customer/OrderHistoryPage`      | CustomerLayout         |
+| `/orders/:id/confirmation` | `pages/customer/OrderConfirmationPage` | CustomerLayout         |
+| `/admin`                   | `pages/admin/DashboardPage`            | AdminLayout            |
+| `/admin/orders`            | `pages/admin/OrdersPage`               | AdminLayout            |
+| `/admin/products`          | `pages/admin/ProductsPage`             | AdminLayout            |
+| any other URL              | `pages/NotFoundPage` (404)             | the layout of its tree |
+| `/design`                  | `pages/DesignPage` (temporary)         | none                   |
 
 - **CustomerLayout:** sticky header with logo, Home, My orders and a cart icon (count is a placeholder `0` until M2-07). Below 640px the link text is visually hidden (still read by screen readers) and only icons show.
 - **AdminLayout:** sidebar from 768px; below that a top bar with the three links sharing one row and a "Back to shop" icon.
@@ -81,15 +81,15 @@ React Router (`react-router`, ADR-011) maps URLs to pages in `src/routes/router.
 - **Types** in `src/types/` (`product.ts`, `order.ts`, `api.ts`) mirror `docs/05-api/api-contracts.md` field-for-field, in `snake_case`. Money is a string (`"60.00"`), dates are ISO 8601 UTC strings.
 - **Services** in `src/services/` are the only way pages get data:
 
-  | Function | Endpoint |
-  |---|---|
-  | `getProducts({ includeUnavailable? })` | `GET /products` |
-  | `getProduct(id)` | `GET /products/{id}` |
-  | `createOrder(request)` | `POST /orders` |
-  | `getOrder(id)` | `GET /orders/{id}` |
-  | `getMyOrders()` | `GET /orders/mine` (#90) |
-  | `getAdminOrders({ status?, page?, page_size? })` | `GET /admin/orders` |
-  | `updateOrderStatus(id, status)` | `PATCH /admin/orders/{id}/status` |
+  | Function                                            | Endpoint                                          |
+  | --------------------------------------------------- | ------------------------------------------------- |
+  | `getProducts({ includeUnavailable? })`              | `GET /products`                                   |
+  | `getProduct(id)`                                    | `GET /products/{id}`                              |
+  | `createOrder(request)`                              | `POST /orders`                                    |
+  | `getOrder(id)`                                      | `GET /orders/{id}`                                |
+  | `getMyOrders()`                                     | `GET /orders/mine` (#90)                          |
+  | `getAdminOrders({ status?, page?, page_size? })`    | `GET /admin/orders`                               |
+  | `updateOrderStatus(id, status)`                     | `PATCH /admin/orders/{id}/status`                 |
   | `createProduct` / `updateProduct` / `deleteProduct` | `POST` / `PATCH` / `DELETE /admin/products` (#86) |
 
 - **API client (M3):** `src/services/apiClient.ts` is the only code that calls `fetch`. It adds the base URL, sends JSON, returns `undefined` for `204`, and turns every failure into a `ServiceError` with the backend's `code`, `message`, `details` and `request_id` (`src/services/apiError.ts`, tested in `apiError.test.ts`). No answer at all (server down, offline, CORS refused) becomes `NETWORK_ERROR` with status `0`.
@@ -157,21 +157,21 @@ The cart lives in the browser (ADR-004): React context + `useReducer`, saved to 
 
 Every data screen uses the same three building blocks:
 
-| State | Component | Meaning |
-|---|---|---|
-| Loading | `components/ui/skeleton` (shadcn `Skeleton`) | Data is on its way; grey shapes in the real layout |
-| Empty | `components/common/EmptyState` | Loaded fine, nothing to show; explain why and offer a next step |
-| Error | `components/common/ErrorState` | Loading failed; plain-language message and **Retry** (calls `refetch()`) |
+| State   | Component                                    | Meaning                                                                  |
+| ------- | -------------------------------------------- | ------------------------------------------------------------------------ |
+| Loading | `components/ui/skeleton` (shadcn `Skeleton`) | Data is on its way; grey shapes in the real layout                       |
+| Empty   | `components/common/EmptyState`               | Loaded fine, nothing to show; explain why and offer a next step          |
+| Error   | `components/common/ErrorState`               | Loading failed; plain-language message and **Retry** (calls `refetch()`) |
 
 - Error text comes from the API error's `message` (`userFacingMessage()`); anything else shows a generic message. Raw technical errors are never shown to customers.
 - A 404 for a single order/product is shown as an empty state ("not found"), not an error.
 - **Crashes (bugs):** React Router's `errorElement` (`RouteErrorFallback`) and a top-level `ErrorBoundary` (in `main.tsx`) show `AppErrorFallback` ("Something went wrong", Reload / Go to the shop) instead of a blank page. Technical details are shown only in development.
-- **Dev-only mock switch (only with `VITE_USE_MOCKS=true`):** a "Mock: …" button at the bottom-left (development only) sets the mock services to *Normal*, *Slow (3 s)*, *Fail every call (500)* or *Empty lists*, and can crash the current page to test the fallback. The mode is stored in `localStorage` (`dairycart-mock-mode-v1`). It is not included in production builds.
+- **Dev-only mock switch (only with `VITE_USE_MOCKS=true`):** a "Mock: …" button at the bottom-left (development only) sets the mock services to _Normal_, _Slow (3 s)_, _Fail every call (500)_ or _Empty lists_, and can crash the current page to test the fallback. The mode is stored in `localStorage` (`dairycart-mock-mode-v1`). It is not included in production builds.
 - With "Fail every call", the error state appears after about 4–7 s because queries retry 5xx errors twice (see `lib/queryClient.ts`).
 
 ## Subscriptions (#97)
 
-- **Checkout** has a choice: *Order once* (as before) or *Subscribe*. Subscribing shows plan buttons (1 week / 15 days / 1 month), **How often** (every day / every 2 days / every 3 days, #99), a *First delivery* date (default tomorrow, allowed up to 30 days ahead), the delivery days and the per-delivery and plan totals (estimates). It sends only plan, frequency, start date, contact, product ids and quantities (`buildCreateSubscriptionRequest`).
+- **Checkout** has a choice: _Order once_ (as before) or _Subscribe_. Subscribing shows plan buttons (1 week / 15 days / 1 month), **How often** (every day / every 2 days / every 3 days, #99), a _First delivery_ date (default tomorrow, allowed up to 30 days ahead), the delivery days and the per-delivery and plan totals (estimates). It sends only plan, frequency, start date, contact, product ids and quantities (`buildCreateSubscriptionRequest`).
 - **`/subscriptions`** ("My subscriptions", login required): each plan with dates, items, totals, deliveries so far and **Cancel subscription** (confirmation dialog). Header link with a repeat icon; also on the Account page.
 - **Admin `/admin/subscriptions`**: list with a status filter and each plan's frequency. Delivery orders are created automatically by the backend (#99), so there is no button. The phone tab bar calls it "Plans".
 - Orders made from a subscription show a **Subscription** badge in My orders and "Subscription delivery for <date>" on the order page.
@@ -179,7 +179,7 @@ Every data screen uses the same three building blocks:
 - **Admin `/admin/delivery-slots`** ("Times" in the phone tab bar; the Dashboard tab is "Home" there so 6 tabs fit at 360px): table with booked / capacity and On/Off, an add/edit side panel (`components/admin/DeliverySlotFormSheet.tsx`) and a delete dialog. Server rules (last active slot, booked slot) are shown as messages.
 - **Admin `/admin/income` (#105):** the Income tab (`pages/admin/IncomePage.tsx`): period presets / custom range in the URL (`?from=&to=`; This month = no parameters), five cards with "vs. last period", and **Recharts** (ADR-016, pinned 3.10.1) area, bar and donut charts, the area table, recent delivered orders and key insights. Data: `services/incomeService.ts`, `hooks/useIncome.ts` (key under `["orders", …]`, so marking an order Delivered refreshes it), `types/income.ts`; helpers `lib/income.ts` (periods, change labels, litres, axis money; tested in `lib/income.test.ts`). In the sidebar; on phones it is linked from the Dashboard.
 - **Admin `/admin/delivery-boys` (#103):** cards per delivery boy (phone, Active/Inactive, today's orders, areas as removable PIN chips, an "Add area" form), add/edit side panel (`components/admin/DeliveryBoyFormSheet.tsx`) and delete dialog. The Orders board filters by delivery boy (`?boy=<id>|unassigned`). In the phone tab bar as "Boys" since #104. Code: `services/deliveryBoyService.ts`, `hooks/useDeliveryBoys.ts`, `types/deliveryBoy.ts`, `lib/deliveryBoy.ts` (tested in `lib/deliveryBoy.test.ts`). `api.del` is now generic so a DELETE can return a body.
-- **Delivery addresses (#102):** Account page tabs *Details* / *Addresses* (`?tab=addresses`); the Addresses tab (`components/address/AddressesPanel.tsx`) adds, edits, deletes and makes default. Checkout has a required **Delivery address** (`components/address/AddressPicker.tsx`, default chosen first, "+ Add new address" opens `AddressFormSheet`) and sends `address_id`. My subscriptions shows the address and **Change address**; the order page and the admin order panel show `delivery_address`. Code: `services/addressService.ts`, `hooks/useAddresses.ts`, `types/address.ts`, `lib/address.ts` (form rules, tested in `lib/address.test.ts`).
+- **Delivery addresses (#102):** Account page tabs _Details_ / _Addresses_ (`?tab=addresses`); the Addresses tab (`components/address/AddressesPanel.tsx`) adds, edits, deletes and makes default. Checkout has a required **Delivery address** (`components/address/AddressPicker.tsx`, default chosen first, "+ Add new address" opens `AddressFormSheet`) and sends `address_id`. My subscriptions shows the address and **Change address**; the order page and the admin order panel show `delivery_address`. Code: `services/addressService.ts`, `hooks/useAddresses.ts`, `types/address.ts`, `lib/address.ts` (form rules, tested in `lib/address.test.ts`).
 - **Admin `/admin/orders`: the Orders board (#104)** (Orders and the #101 Deliveries page combined; `/admin/deliveries` redirects here). Status chips with counts, a search box (name, phone, #order; waits 300 ms after typing), a day (Today by default, ‹ ›, date picker) or **All dates**, a delivery boy filter, and a grid of cards (`components/admin/OrderBoardCard.tsx`: 4 / 3 / 2 / 1 per row) with "Load more" (`hooks/useOrderBoard.ts`, `useInfiniteQuery`, 24 per page). A card opens the order panel. All state is in the URL (`?status=&date=YYYY-MM-DD|all&boy=&q=&order=`). Helpers: `lib/orderBoard.ts` (tested). The phone tab bar has Home, Orders, Boys, Products, Users, Plans; Delivery slots is linked from the Subscriptions page on phones.
 - **Admin `/admin/users/:userId` (#101)**: names on the Users page open the user's page: details, order count, amount spent, subscriptions and all orders; "View" opens the order details panel. Code: `services/adminService.ts`, `hooks/useAdminViews.ts` (keys under `["orders", …]`, so a status change refreshes them), `lib/deliveries.ts` (day helpers, tested in `lib/deliveries.test.ts`).
 - Code (#100): `services/deliverySlotService.ts`, `hooks/useDeliverySlots.ts`, `types/deliverySlot.ts`, and `lib/deliverySlot.ts` (time formatting, form rules; tested in `lib/deliverySlot.test.ts`). Subscribing, cancelling or changing a time refreshes the slots' places left.
@@ -194,12 +194,12 @@ Every data screen uses the same three building blocks:
 
 ## Sign-up, login and roles (#89)
 
-| Route | Page | Who |
-|---|---|---|
-| `/signup` | `pages/auth/SignUpPage.tsx` | Anyone |
-| `/login` | `pages/auth/LoginPage.tsx` (mobile number + password, #121) | Anyone |
+| Route      | Page                                                        | Who             |
+| ---------- | ----------------------------------------------------------- | --------------- |
+| `/signup`  | `pages/auth/SignUpPage.tsx`                                 | Anyone          |
+| `/login`   | `pages/auth/LoginPage.tsx` (mobile number + password, #121) | Anyone          |
 | `/account` | `pages/customer/UserDashboardPage.tsx` (the User Dashboard) | Logged-in users |
-| `/admin/*` | Dashboard, Orders, Products, `pages/admin/UsersPage.tsx` | **ADMIN only** |
+| `/admin/*` | Dashboard, Orders, Products, `pages/admin/UsersPage.tsx`    | **ADMIN only**  |
 
 - **Session:** `lib/authSession.ts` (pure rules, tested in `auth.test.ts`) and `lib/sessionStore.ts` keep the token, its expiry and the user in **`sessionStorage`** (`dairycart-session-v1`), so **each tab has its own login** (#91): a user in one tab and an admin in another. A reload keeps the tab's login; a new tab opened by typing the address starts logged out; logout affects only that tab. `apiClient.ts` sends `Authorization: Bearer <token>` on every call; a `401` clears the session.
 - **`AuthProvider` / `useAuth()`** (`hooks/auth/`): `user`, `isAdmin`, `login()`, `logout()`. It checks the saved session with `GET /auth/me` on start, follows logins/logouts in other tabs, and logs out when the token expires. Logout also clears every cached query, so the next person doesn't see the previous user's data.
@@ -228,11 +228,11 @@ npx shadcn@latest add dialog
 
 Local changes from the shadcn defaults, to match the design system:
 
-| File | Change |
-|---|---|
-| `button.tsx` | `rounded-xl`; primary hover uses `bg-primary-hover` |
-| `input.tsx` | `rounded-xl` |
-| `card.tsx` | `rounded-2xl` and `shadow-card` |
+| File         | Change                                                      |
+| ------------ | ----------------------------------------------------------- |
+| `button.tsx` | `rounded-xl`; primary hover uses `bg-primary-hover`         |
+| `input.tsx`  | `rounded-xl`                                                |
+| `card.tsx`   | `rounded-2xl` and `shadow-card`                             |
 | `sonner.tsx` | Fixed `theme="light"`; removed the `next-themes` dependency |
 
 `src/lib/utils.ts` re-exports `cn()` (merge Tailwind classes) from the `cn` package published by shadcn.
@@ -241,17 +241,17 @@ Local changes from the shadcn defaults, to match the design system:
 
 ## Folder structure
 
-| Folder | Holds |
-|---|---|
-| `public/images/{products,banners,categories}` | Static images |
-| `src/components/{common,products,cart}` | Reusable UI components |
-| `src/pages/{customer,admin}` | Route-level screens |
-| `src/layouts` | Page shells (CustomerLayout, AdminLayout) |
-| `src/routes` | Route definitions |
-| `src/services` | API client and services (real HTTP; M2 mocks in `services/mock/` behind `VITE_USE_MOCKS`) |
-| `src/hooks` | Custom hooks, TanStack Query hooks |
-| `src/types` | Shared TypeScript types |
-| `src/lib` | Utilities (formatting, `cn()` helper) |
-| `src/assets` | Fonts, icons, imported assets |
+| Folder                                        | Holds                                                                                     |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `public/images/{products,banners,categories}` | Static images                                                                             |
+| `src/components/{common,products,cart}`       | Reusable UI components                                                                    |
+| `src/pages/{customer,admin}`                  | Route-level screens                                                                       |
+| `src/layouts`                                 | Page shells (CustomerLayout, AdminLayout)                                                 |
+| `src/routes`                                  | Route definitions                                                                         |
+| `src/services`                                | API client and services (real HTTP; M2 mocks in `services/mock/` behind `VITE_USE_MOCKS`) |
+| `src/hooks`                                   | Custom hooks, TanStack Query hooks                                                        |
+| `src/types`                                   | Shared TypeScript types                                                                   |
+| `src/lib`                                     | Utilities (formatting, `cn()` helper)                                                     |
+| `src/assets`                                  | Fonts, icons, imported assets                                                             |
 
 See `docs/04-architecture/low-level-design.md` and `docs/06-ui-ux/design-system.md`.

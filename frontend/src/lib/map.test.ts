@@ -49,7 +49,10 @@ describe("tile settings (#107)", () => {
   })
 
   it("keeps the OpenStreetMap credit when only the URL is changed", () => {
-    const config = readTileConfig({ VITE_MAP_TILE_URL: "https://t.example.com/{z}/{x}/{y}.png", VITE_MAP_ATTRIBUTION: "" })
+    const config = readTileConfig({
+      VITE_MAP_TILE_URL: "https://t.example.com/{z}/{x}/{y}.png",
+      VITE_MAP_ATTRIBUTION: "",
+    })
     assert.equal(config.attribution, OSM_ATTRIBUTION)
   })
 })

@@ -53,7 +53,14 @@ describe("sign-up validation (#89, #121: same rules as the backend)", () => {
     for (const bad of ["", "987654321", "98765432101", "5876543210", "98765abcde", "+44 7911 123456"]) {
       assert.ok(validateMobile(bad), bad)
     }
-    for (const good of ["9876543210", "98765 43210", "+91 98765 43210", "+919876543210", "09876543210", "98765-43210"]) {
+    for (const good of [
+      "9876543210",
+      "98765 43210",
+      "+91 98765 43210",
+      "+919876543210",
+      "09876543210",
+      "98765-43210",
+    ]) {
       assert.equal(validateMobile(good), null, good)
     }
   })
@@ -74,7 +81,10 @@ describe("sign-up validation (#89, #121: same rules as the backend)", () => {
   })
 
   it("passwords must match", () => {
-    assert.equal(validateSignUp({ ...VALID, confirm_password: "milk12345" }).confirm_password, "The passwords do not match.")
+    assert.equal(
+      validateSignUp({ ...VALID, confirm_password: "milk12345" }).confirm_password,
+      "The passwords do not match.",
+    )
   })
 
   it("sends trimmed values and never the confirm field", () => {
@@ -122,7 +132,14 @@ describe("stored session", () => {
   })
 
   it("logout (no stored value) and damaged data count as logged out", () => {
-    for (const raw of [null, "", "not json", "{}", JSON.stringify({ token: 1 }), JSON.stringify({ token: "t", expiresAt: now + 1e7, user: { phone: "9876543210", role: "ROOT" } })]) {
+    for (const raw of [
+      null,
+      "",
+      "not json",
+      "{}",
+      JSON.stringify({ token: 1 }),
+      JSON.stringify({ token: "t", expiresAt: now + 1e7, user: { phone: "9876543210", role: "ROOT" } }),
+    ]) {
       assert.equal(parseSession(raw, now), null, String(raw))
     }
   })

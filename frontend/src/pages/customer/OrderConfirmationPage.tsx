@@ -56,7 +56,10 @@ function OrderConfirmationPage() {
         </div>
       </section>
 
-      <section aria-labelledby="confirmation-items-heading" className="space-y-3 rounded-2xl bg-surface p-4 shadow-card md:p-5">
+      <section
+        aria-labelledby="confirmation-items-heading"
+        className="space-y-3 rounded-2xl bg-surface p-4 shadow-card md:p-5"
+      >
         <h2 id="confirmation-items-heading" className="text-h2 font-bold">
           Your items
         </h2>
@@ -64,8 +67,8 @@ function OrderConfirmationPage() {
         {priceChanged && (
           <p className="flex gap-2 rounded-xl bg-amber-50 p-3 text-small text-amber-700" role="status">
             <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-            Prices changed since you added these items. Your cart estimate was{" "}
-            {formatCurrency(estimatedTotal)}; the total above is the confirmed amount.
+            Prices changed since you added these items. Your cart estimate was {formatCurrency(estimatedTotal)}; the
+            total above is the confirmed amount.
           </p>
         )}
         <p className="rounded-xl bg-primary-soft p-3 text-small text-primary">

@@ -151,7 +151,10 @@ function IncomePage() {
           retrying={query.isFetching}
         />
       ) : (
-        <div className={cn("space-y-4", query.isPlaceholderData && "opacity-60 transition-opacity")} aria-busy={query.isFetching}>
+        <div
+          className={cn("space-y-4", query.isPlaceholderData && "opacity-60 transition-opacity")}
+          aria-busy={query.isFetching}
+        >
           <p className="text-small text-muted-foreground" data-testid="period-note">
             {formatDay(query.data.start)} – {formatDay(query.data.end)} ({query.data.days}{" "}
             {query.data.days === 1 ? "day" : "days"}), compared with {formatDay(query.data.previous_start)} –{" "}
@@ -170,7 +173,13 @@ function Report({ data }: { data: IncomeReport }) {
     <>
       <section aria-label="Summary" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard icon={Milk} tone="blue" label="Milk sold" value={formatLitres(s.litres)} change={s.litres_change} />
-        <StatCard icon={IndianRupee} tone="green" label="Income" value={formatCurrency(s.income)} change={s.income_change} />
+        <StatCard
+          icon={IndianRupee}
+          tone="green"
+          label="Income"
+          value={formatCurrency(s.income)}
+          change={s.income_change}
+        />
         <StatCard
           icon={TrendingUp}
           tone="blue"
@@ -353,7 +362,14 @@ function DailyChart({ data }: { data: IncomeReport["daily"] }) {
           <XAxis dataKey="day" tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={16} />
           <YAxis tick={{ fontSize: 11 }} tickFormatter={compactRupees} width={52} />
           <Tooltip formatter={rupeeTooltip} />
-          <Area type="monotone" dataKey="income" name="Income" stroke={GREEN} strokeWidth={2} fill="url(#income-fill)" />
+          <Area
+            type="monotone"
+            dataKey="income"
+            name="Income"
+            stroke={GREEN}
+            strokeWidth={2}
+            fill="url(#income-fill)"
+          />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -445,7 +461,8 @@ function TypeDonut({ data }: { data: IncomeReport }) {
 }
 
 function ProductDonut({ data }: { data: IncomeReport }) {
-  if (data.by_product.length === 0) return <p className="text-small text-muted-foreground">No delivered products yet.</p>
+  if (data.by_product.length === 0)
+    return <p className="text-small text-muted-foreground">No delivered products yet.</p>
   const slices = data.by_product.map((p, i) => ({
     name: `${p.name} ${p.size}`,
     value: Number(p.income),
@@ -460,7 +477,11 @@ function ProductDonut({ data }: { data: IncomeReport }) {
       <ul className="space-y-1.5 text-small">
         {data.by_product.map((p, i) => (
           <li key={p.product_id} className="flex items-center gap-2">
-            <span className="size-3 shrink-0 rounded-full" style={{ background: slices[i].colour }} aria-hidden="true" />
+            <span
+              className="size-3 shrink-0 rounded-full"
+              style={{ background: slices[i].colour }}
+              aria-hidden="true"
+            />
             <span className="min-w-0 flex-1">
               {p.name} <span className="text-muted-foreground">{p.size}</span>
             </span>
@@ -546,10 +567,14 @@ function RecentTable({ data }: { data: IncomeReport }) {
               {r.customer_name}
               <span className="block text-xs text-muted-foreground">#{r.order_id}</span>
             </TableCell>
-            <TableCell className="hidden sm:table-cell">{r.type === "SUBSCRIPTION" ? "Subscription" : "One-time"}</TableCell>
+            <TableCell className="hidden sm:table-cell">
+              {r.type === "SUBSCRIPTION" ? "Subscription" : "One-time"}
+            </TableCell>
             <TableCell className="text-right font-semibold">{formatCurrency(r.amount)}</TableCell>
             <TableCell className="hidden sm:table-cell">
-              <span className="rounded-lg bg-green-50 px-2 py-0.5 text-small font-semibold text-green-700">Delivered</span>
+              <span className="rounded-lg bg-green-50 px-2 py-0.5 text-small font-semibold text-green-700">
+                Delivered
+              </span>
             </TableCell>
           </TableRow>
         ))}

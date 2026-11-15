@@ -49,12 +49,47 @@ export const router = createBrowserRouter([
       { path: "cart", element: <CartPage /> },
       // Ordering needs an account (#90): these pages send logged-out visitors to /login
       // and bring them back afterwards. Browsing and the cart stay open to everyone.
-      { path: "checkout", element: <RequireAuth><CheckoutPage /></RequireAuth> },
-      { path: "orders", element: <RequireAuth><OrderHistoryPage /></RequireAuth> }, // My orders
-      { path: "orders/:id", element: <RequireAuth><OrderDetailsPage /></RequireAuth> },
-      { path: "orders/:id/confirmation", element: <RequireAuth><OrderConfirmationPage /></RequireAuth> },
+      {
+        path: "checkout",
+        element: (
+          <RequireAuth>
+            <CheckoutPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "orders",
+        element: (
+          <RequireAuth>
+            <OrderHistoryPage />
+          </RequireAuth>
+        ),
+      }, // My orders
+      {
+        path: "orders/:id",
+        element: (
+          <RequireAuth>
+            <OrderDetailsPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "orders/:id/confirmation",
+        element: (
+          <RequireAuth>
+            <OrderConfirmationPage />
+          </RequireAuth>
+        ),
+      },
       // Subscriptions (#97): "My subscriptions" with Cancel.
-      { path: "subscriptions", element: <RequireAuth><SubscriptionsPage /></RequireAuth> },
+      {
+        path: "subscriptions",
+        element: (
+          <RequireAuth>
+            <SubscriptionsPage />
+          </RequireAuth>
+        ),
+      },
       // Accounts (#89).
       { path: "signup", element: <SignUpPage /> },
       { path: "login", element: <LoginPage /> },

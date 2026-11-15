@@ -9,13 +9,7 @@ import type { Money } from "./product.ts"
  * All order statuses, in lifecycle order.
  * `as const` makes this a fixed, read-only list of these exact strings.
  */
-export const ORDER_STATUSES = [
-  "PLACED",
-  "CONFIRMED",
-  "OUT_FOR_DELIVERY",
-  "DELIVERED",
-  "CANCELLED",
-] as const
+export const ORDER_STATUSES = ["PLACED", "CONFIRMED", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED"] as const
 
 /**
  * A "union type": OrderStatus can only be one of the five strings above.

@@ -55,9 +55,7 @@ const FORM_FIELDS = ["name", "size", "price", "stock"] as const
 
 function ProductForm({ product, onDone }: { product: AdminProduct | null; onDone: () => void }) {
   const isEdit = product !== null
-  const [values, setValues] = useState<ProductFormValues>(() =>
-    product ? toFormValues(product) : EMPTY_PRODUCT_FORM,
-  )
+  const [values, setValues] = useState<ProductFormValues>(() => (product ? toFormValues(product) : EMPTY_PRODUCT_FORM))
   const [errors, setErrors] = useState<ProductFormErrors>({})
   const create = useCreateProduct()
   const update = useUpdateProduct()

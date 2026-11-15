@@ -25,10 +25,12 @@ export function presetPeriod(preset: PeriodPreset, today: string): Period {
 
 /** Which preset matches a period (to highlight its button), or null for a custom range. */
 export function matchPreset(period: Period, today: string): PeriodPreset | null {
-  return PRESETS.find((p) => {
-    const dates = presetPeriod(p.id, today)
-    return dates.from === period.from && dates.to === period.to
-  })?.id ?? null
+  return (
+    PRESETS.find((p) => {
+      const dates = presetPeriod(p.id, today)
+      return dates.from === period.from && dates.to === period.to
+    })?.id ?? null
+  )
 }
 
 /** 8.5 → "+8.5%", -3 → "−3.0%", null → null (nothing to compare with). */

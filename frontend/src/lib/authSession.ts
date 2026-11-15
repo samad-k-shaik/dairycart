@@ -38,6 +38,11 @@ export function parseSession(raw: string | null, now: number = Date.now()): Sess
   }
 }
 
-export function sessionFromLogin(token: string, expiresInSeconds: number, user: User, now: number = Date.now()): Session {
+export function sessionFromLogin(
+  token: string,
+  expiresInSeconds: number,
+  user: User,
+  now: number = Date.now(),
+): Session {
   return { token, expiresAt: now + expiresInSeconds * 1000, user }
 }

@@ -80,8 +80,7 @@ function CheckoutPage() {
   const addressesQuery = useAddresses()
   const addresses = addressesQuery.data ?? []
   const [addressId, setAddressId] = useState<number | null>(null)
-  const chosenAddress =
-    addresses.find((a) => a.address_id === addressId) ?? preferredAddress(addresses)
+  const chosenAddress = addresses.find((a) => a.address_id === addressId) ?? preferredAddress(addresses)
   const addressRef = useRef<HTMLDivElement>(null)
   // The request that is in use: errors and "pending" come from it.
   const active = subscribing ? createSubscription : createOrder
@@ -118,9 +117,9 @@ function CheckoutPage() {
     ),
   )
   const addressError = addressesQuery.isSuccess && !chosenAddress ? "Please add a delivery address." : ""
-  const showAddressError =
-    (submitted && addressError) || (serverAddressError ? (active.error?.message ?? "") : "")
-  const slotError = subscribing && slotsQuery.isSuccess && !chosenSlot ? "No delivery time has places left right now." : ""
+  const showAddressError = (submitted && addressError) || (serverAddressError ? (active.error?.message ?? "") : "")
+  const slotError =
+    subscribing && slotsQuery.isSuccess && !chosenSlot ? "No delivery time has places left right now." : ""
   // Shown at once: there is nothing the user can do in the form to fix it.
   const showSlotError = slotError || (serverSlotError ? (active.error?.message ?? "") : "")
   const showStartError = (submitted && startError) || (serverStartError ? (active.error?.message ?? "") : "")
@@ -205,8 +204,7 @@ function CheckoutPage() {
             {lines.map((line) => (
               <li key={line.product_id} className="flex justify-between gap-3 py-2.5">
                 <span>
-                  {line.quantity} × {line.name}{" "}
-                  <span className="text-muted-foreground">{line.size}</span>
+                  {line.quantity} × {line.name} <span className="text-muted-foreground">{line.size}</span>
                 </span>
                 <span className="font-semibold">{formatCurrency(lineSubtotal(line))}</span>
               </li>

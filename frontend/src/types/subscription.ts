@@ -92,4 +92,3 @@ export type AdminSubscriptionSummary = {
   daily_total: Money
   orders_created: number
 }
-

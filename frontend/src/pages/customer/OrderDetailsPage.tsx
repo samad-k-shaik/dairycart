@@ -70,14 +70,20 @@ function OrderDetailsPage() {
           {order.status === "OUT_FOR_DELIVERY" && <OrderTrackingPanel orderId={order.order_id} />}
 
           <div className="grid gap-4 md:grid-cols-[240px_1fr]">
-            <section aria-labelledby="timeline-heading" className="space-y-4 rounded-2xl bg-surface p-4 shadow-card md:p-5">
+            <section
+              aria-labelledby="timeline-heading"
+              className="space-y-4 rounded-2xl bg-surface p-4 shadow-card md:p-5"
+            >
               <h2 id="timeline-heading" className="text-h3 font-bold">
                 Status
               </h2>
               <OrderStatusTimeline status={order.status} />
             </section>
 
-            <section aria-labelledby="items-heading" className="space-y-2 rounded-2xl bg-surface p-4 shadow-card md:p-5">
+            <section
+              aria-labelledby="items-heading"
+              className="space-y-2 rounded-2xl bg-surface p-4 shadow-card md:p-5"
+            >
               <h2 id="items-heading" className="text-h3 font-bold">
                 Items
               </h2>

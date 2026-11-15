@@ -90,7 +90,11 @@ function DeliveryCard({ order }: { order: DeliveryOrder }) {
       { orderId: order.order_id, status: action.status },
       {
         onSuccess: (updated) =>
-          toast.success(updated.status === "DELIVERED" ? `Order #${order.order_id} delivered` : `Order #${order.order_id} is on its way`),
+          toast.success(
+            updated.status === "DELIVERED"
+              ? `Order #${order.order_id} delivered`
+              : `Order #${order.order_id} is on its way`,
+          ),
         onError: (error) =>
           toast.error(error instanceof ServiceError ? error.message : "The order was not updated. Please try again."),
       },

@@ -24,9 +24,7 @@ function OrderHistoryPage() {
     <div className="space-y-6">
       <div className="photo-panel space-y-1 px-4 py-3">
         <h1 className="text-h1 font-bold">My orders</h1>
-        <p className="text-muted-foreground">
-          Orders placed with your account{user ? ` (${user.full_name})` : ""}.
-        </p>
+        <p className="text-muted-foreground">Orders placed with your account{user ? ` (${user.full_name})` : ""}.</p>
       </div>
 
       {query.isPending ? (

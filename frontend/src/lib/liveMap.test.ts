@@ -51,7 +51,10 @@ describe("live map pins (#111)", () => {
 
 describe("delivery boy status line (#111)", () => {
   it("covers every state", () => {
-    assert.deepEqual(boyStatus(boy(1, { on_round: false, position: null }), NOW), { text: "Not on a round", tone: "off" })
+    assert.deepEqual(boyStatus(boy(1, { on_round: false, position: null }), NOW), {
+      text: "Not on a round",
+      tone: "off",
+    })
     assert.equal(boyStatus(boy(1, { position: null }), NOW).tone, "waiting")
     assert.deepEqual(boyStatus(boy(1), NOW), { text: "On a round · updated 20 s ago", tone: "live" })
     const stale = boy(1, { position: { ...boy(1).position!, updated_at: "2026-11-16T07:55:00Z", is_stale: true } })

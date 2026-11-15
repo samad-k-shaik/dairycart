@@ -11,7 +11,13 @@ import { userFacingMessage } from "@/services/serviceError"
 import { FormField } from "@/components/common/FormField"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/useAuth"
-import { EMPTY_SIGN_UP, toRegisterRequest, validateSignUp, type SignUpErrors, type SignUpValues } from "@/lib/authValidation"
+import {
+  EMPTY_SIGN_UP,
+  toRegisterRequest,
+  validateSignUp,
+  type SignUpErrors,
+  type SignUpValues,
+} from "@/lib/authValidation"
 import { register } from "@/services/authService"
 import { ServiceError } from "@/services/serviceError"
 
@@ -78,10 +84,47 @@ function SignUpPage() {
       </div>
 
       <form onSubmit={handleSubmit} noValidate className="space-y-4 rounded-2xl bg-surface p-5 shadow-card">
-        <FormField id="signup-full_name" label="Full name" autoComplete="name" value={values.full_name} error={errors.full_name} onChange={(v) => setField("full_name", v)} placeholder="e.g. Ravi Kumar" />
-        <FormField id="signup-phone" label="Mobile number" type="tel" inputMode="tel" autoComplete="tel-national" leadingText="+91" value={values.phone} error={errors.phone} hint="You will log in with this number." onChange={(v) => setField("phone", v)} placeholder="98765 43210" />
-        <FormField id="signup-password" label="Password" type="password" autoComplete="new-password" value={values.password} error={errors.password} hint="At least 8 characters, with a letter and a number." onChange={(v) => setField("password", v)} />
-        <FormField id="signup-confirm_password" label="Confirm password" type="password" autoComplete="new-password" value={values.confirm_password} error={errors.confirm_password} onChange={(v) => setField("confirm_password", v)} />
+        <FormField
+          id="signup-full_name"
+          label="Full name"
+          autoComplete="name"
+          value={values.full_name}
+          error={errors.full_name}
+          onChange={(v) => setField("full_name", v)}
+          placeholder="e.g. Ravi Kumar"
+        />
+        <FormField
+          id="signup-phone"
+          label="Mobile number"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel-national"
+          leadingText="+91"
+          value={values.phone}
+          error={errors.phone}
+          hint="You will log in with this number."
+          onChange={(v) => setField("phone", v)}
+          placeholder="98765 43210"
+        />
+        <FormField
+          id="signup-password"
+          label="Password"
+          type="password"
+          autoComplete="new-password"
+          value={values.password}
+          error={errors.password}
+          hint="At least 8 characters, with a letter and a number."
+          onChange={(v) => setField("password", v)}
+        />
+        <FormField
+          id="signup-confirm_password"
+          label="Confirm password"
+          type="password"
+          autoComplete="new-password"
+          value={values.confirm_password}
+          error={errors.confirm_password}
+          onChange={(v) => setField("confirm_password", v)}
+        />
 
         {submitError && (
           <p role="alert" className="flex gap-2 rounded-xl bg-red-50 p-3 text-small text-danger">

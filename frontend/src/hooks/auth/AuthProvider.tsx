@@ -32,7 +32,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     getMe()
       .then((user) => {
         const current = readSession()
-        if (current?.token === token && (current.user.role !== user.role || current.user.full_name !== user.full_name)) {
+        if (
+          current?.token === token &&
+          (current.user.role !== user.role || current.user.full_name !== user.full_name)
+        ) {
           saveSession({ ...current, user })
         }
       })

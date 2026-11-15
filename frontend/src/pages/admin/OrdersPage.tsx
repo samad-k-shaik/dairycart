@@ -134,7 +134,12 @@ function OrdersPage() {
         {/* Day: ‹ date › and All dates */}
         <div role="group" aria-label="Choose a day" className="flex flex-wrap items-center gap-2">
           {date !== "all" && (
-            <Button variant="outline" size="icon-lg" aria-label="Previous day" onClick={() => goToDay(addDays(date, -1))}>
+            <Button
+              variant="outline"
+              size="icon-lg"
+              aria-label="Previous day"
+              onClick={() => goToDay(addDays(date, -1))}
+            >
               <ChevronLeft aria-hidden="true" />
             </Button>
           )}
@@ -195,9 +200,7 @@ function OrdersPage() {
             {boy && boy !== "unassigned" && !counts?.boy_counts?.some((c) => String(c.delivery_boy_id) === boy) && (
               <SelectItem value={boy}>Chosen delivery boy</SelectItem>
             )}
-            <SelectItem value="unassigned">
-              Not assigned{counts ? ` (${counts.unassigned_count ?? 0})` : ""}
-            </SelectItem>
+            <SelectItem value="unassigned">Not assigned{counts ? ` (${counts.unassigned_count ?? 0})` : ""}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -256,8 +259,7 @@ function OrdersPage() {
           </ul>
           <div className="flex flex-col items-center gap-2">
             <p className="text-small text-muted-foreground">
-              Showing {orders.length} of {first?.total ?? orders.length}{" "}
-              {first?.total === 1 ? "order" : "orders"}
+              Showing {orders.length} of {first?.total ?? orders.length} {first?.total === 1 ? "order" : "orders"}
             </p>
             {board.hasNextPage && (
               <Button
@@ -306,7 +308,10 @@ function SearchBox({ value, onChange }: { value: string; onChange: (value: strin
 
   return (
     <div className="relative w-full sm:w-64">
-      <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+      <Search
+        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+        aria-hidden="true"
+      />
       <Input
         type="search"
         aria-label="Search orders by name, phone or order number"
