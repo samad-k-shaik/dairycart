@@ -62,15 +62,18 @@ function AdminLinks({ compact = false }: { compact?: boolean }) {
       {adminLinks
         .filter((link) => !compact || link.phone !== false)
         .map(({ to, label, short, Icon, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={compact ? compactLinkClass : linkClass}
-            aria-label={compact && short ? label : undefined}
-          >
+          <NavLink key={to} to={to} end={end} className={compact ? compactLinkClass : linkClass}>
             <Icon className={compact ? "size-4" : "size-5"} aria-hidden="true" />
-            {compact && short ? short : label}
+            {compact && short ? (
+              // #55 (WCAG 2.5.3 "label in name"): the name must CONTAIN the visible word, so
+              // voice control ("click Home") works. Visible "Home", read as "Home, Dashboard".
+              <>
+                {short}
+                <span className="sr-only">, {label}</span>
+              </>
+            ) : (
+              label
+            )}
           </NavLink>
         ))}
     </>
