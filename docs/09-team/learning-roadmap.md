@@ -22,6 +22,9 @@ Every issue follows **Understand → Research → Plan → Implement → Test �
 | **M5 – Docker and CI** | Images, containers, multi-stage builds, Compose networking, GitHub Actions jobs/caching | What happens when you open a PR |
 | **M6 – GCP Deployment** | Cloud Run, Cloud SQL, Artifact Registry, Secret Manager, IAM, Workload Identity Federation, logging | How code gets from `main` to a public URL, and how secrets stay safe |
 | **M7 – Final Demonstration** | Presenting, retrospectives, technical storytelling | What you built, what you learned, what you'd do next |
+| **M8 – Ordering, Subscriptions and Delivery Operations** | Extending a data model with migrations, scheduled/idempotent order generation, time slots, address snapshots on orders, allocation rules (PIN code → delivery boy), aggregate queries and charts | Why a subscription can never create two orders for the same day; why an order keeps a copy of its address |
+| **M11 – User Authentication and Admin Management** | Password hashing (bcrypt), JWT tokens, roles and route guards, per-tab sessions, stock rules, changing the login identifier with a guarded migration | How a token proves who you are; why the #121 migration refuses to run on old data |
+| **M12 – Maps and Live Delivery Tracking** | Leaflet in React with a custom hook, Geolocation API, Haversine distance and ETA, polling vs Server-Sent Events, PostgreSQL `LISTEN/NOTIFY`, privacy rules for location data, deep links | How a delivery boy's position reaches the admin map in milliseconds; why Navigate is a link and not an embedded Google map |
 
 ## Recommended learning resources
 
