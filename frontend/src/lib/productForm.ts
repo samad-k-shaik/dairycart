@@ -124,6 +124,10 @@ export function changedFields(product: AdminProduct, values: ProductFormValues):
   return changes
 }
 
+function sameText(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase()
+}
+
 /** Same name AND size, ignoring upper/lower case: the backend's duplicate rule.
  *  `excludeId` skips the product being edited. */
 export function findDuplicate(
@@ -132,8 +136,5 @@ export function findDuplicate(
   size: string,
   excludeId?: number,
 ): Product | undefined {
-  const sameText = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
-  return products.find(
-    (p) => p.product_id !== excludeId && sameText(p.name, name) && sameText(p.size, size),
-  )
+  return products.find((p) => p.product_id !== excludeId && sameText(p.name, name) && sameText(p.size, size))
 }

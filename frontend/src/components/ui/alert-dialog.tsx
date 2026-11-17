@@ -12,10 +12,7 @@ function AlertDialog(props: React.ComponentProps<typeof AlertDialogPrimitive.Roo
   return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />
 }
 
-function AlertDialogContent({
-  className,
-  ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Content>) {
+function AlertDialogContent({ className, ...props }: React.ComponentProps<typeof AlertDialogPrimitive.Content>) {
   return (
     <AlertDialogPrimitive.Portal>
       <AlertDialogPrimitive.Overlay
@@ -48,10 +45,7 @@ function AlertDialogFooter({ className, ...props }: React.ComponentProps<"div">)
   )
 }
 
-function AlertDialogTitle({
-  className,
-  ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Title>) {
+function AlertDialogTitle({ className, ...props }: React.ComponentProps<typeof AlertDialogPrimitive.Title>) {
   return (
     <AlertDialogPrimitive.Title
       data-slot="alert-dialog-title"

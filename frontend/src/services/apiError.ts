@@ -7,8 +7,7 @@
 import type { ApiError } from "../types/api.ts"
 import { ServiceError } from "./serviceError.ts"
 
-export const NETWORK_ERROR_MESSAGE =
-  "We could not reach the DairyCart server. Check your connection and try again."
+export const NETWORK_ERROR_MESSAGE = "We could not reach the DairyCart server. Check your connection and try again."
 
 const GENERIC_MESSAGE = "Something went wrong on our side. Please try again."
 

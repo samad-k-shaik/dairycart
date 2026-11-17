@@ -43,6 +43,9 @@ export type Subscription = {
   delivery_slot: BookedSlot | null
   /** #102: where to deliver (null for subscriptions from before #102). */
   delivery_address: string | null
+  /** #108: copy of the address's map pin (null when it had none). */
+  delivery_latitude?: number | null
+  delivery_longitude?: number | null
   start_date: IsoDate
   /** Last delivery day, included. */
   end_date: IsoDate
@@ -75,7 +78,8 @@ export type CreateSubscriptionRequest = {
 /** One row of GET /admin/subscriptions. */
 export type AdminSubscriptionSummary = {
   subscription_id: number
-  username: string
+  /** #121: the account holder's full name (was `username`). */
+  account_name: string
   customer_name: string
   customer_phone: string
   plan: SubscriptionPlan
@@ -88,4 +92,3 @@ export type AdminSubscriptionSummary = {
   daily_total: Money
   orders_created: number
 }
-

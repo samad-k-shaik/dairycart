@@ -5,8 +5,9 @@ from typing import Annotated, Any, Self
 from pydantic import BaseModel, ConfigDict, StringConstraints, model_validator
 
 from app.models.address import PINCODE_PATTERN
-from app.schemas.common import UtcDateTime
-from app.schemas.order import CustomerName, Phone
+from app.schemas.auth import Password
+from app.schemas.common import Phone, UtcDateTime
+from app.schemas.order import CustomerName
 
 Pincode = Annotated[str, StringConstraints(strip_whitespace=True, pattern=PINCODE_PATTERN)]
 AreaName = Annotated[str, StringConstraints(strip_whitespace=True, max_length=50)]
@@ -77,3 +78,15 @@ class DeliveryBoyRead(BaseModel):
     # Orders in his areas today (India time), cancelled ones not counted; 0 when
     # inactive (his orders show as "Not assigned").
     today_orders: int = 0
+    # #109: true when he has a login (he logs in with `phone`).
+    has_login: bool = False
+
+
+class DeliveryLoginSet(BaseModel):
+    """PUT /admin/delivery-boys/{id}/login (#109): create his login, or set a new password.
+    He logs in with his mobile number (`phone`) and this password. The password rules are
+    the same as for sign-up."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    password: Password

@@ -111,7 +111,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Lint (ESLint) is added here once M4 issue #52 sets it up.
+      # #52: Oxlint (ADR-010; ESLint's TypeScript parser does not support TypeScript 7)
+      - name: Lint (oxlint)
+        run: npm run lint
+
+      - name: Formatting (prettier --check)
+        run: npm run format:check
 
       - name: Type check
         run: npm run typecheck

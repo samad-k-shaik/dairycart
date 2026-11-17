@@ -93,7 +93,7 @@ class ProductAlreadyExistsError(DomainError):
 
 
 class UserAlreadyExistsError(DomainError):
-    """Sign-up: the email address or the username is already used (#89)."""
+    """Sign-up: the mobile number already has an account (#89, #121)."""
 
     status_code = 409
     code = "USER_ALREADY_EXISTS"
@@ -172,6 +172,13 @@ class AddressLimitReachedError(DomainError):
 
     status_code = 409
     code = "ADDRESS_LIMIT_REACHED"
+
+
+class RoundNotStartedError(DomainError):
+    """#110: a location was sent while the delivery boy is not on a round."""
+
+    status_code = 409
+    code = "ROUND_NOT_STARTED"
 
 
 class DeliveryBoyAlreadyExistsError(DomainError):

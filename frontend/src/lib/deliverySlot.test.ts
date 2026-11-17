@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { describe, it } from "node:test"
+import { describe, it } from "vitest"
 
 import {
   changedSlotFields,
@@ -59,7 +59,7 @@ describe("admin slot form (#100)", () => {
 
   it("explains every problem", () => {
     const errors = validateSlotForm({ ...EMPTY_SLOT_FORM, capacity: "0" })
-    assert.deepEqual(Object.keys(errors).sort(), ["capacity", "end_time", "name", "start_time"])
+    assert.deepEqual(Object.keys(errors).toSorted(), ["capacity", "end_time", "name", "start_time"])
     assert.match(validateSlotForm({ ...valid, end_time: "07:00" }).end_time ?? "", /after the start/)
     assert.match(validateSlotForm({ ...valid, end_time: "08:00" }).end_time ?? "", /after the start/)
     assert.ok(validateSlotForm({ ...valid, name: "M" }).name)

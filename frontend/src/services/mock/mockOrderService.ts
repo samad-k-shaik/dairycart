@@ -20,16 +20,7 @@ import type {
 } from "@/types/order"
 import { ORDER_STATUSES } from "@/types/order"
 import { canTransition } from "@/lib/orderStatus"
-import {
-  db,
-  fail,
-  fromPaise,
-  ids,
-  readDb,
-  respond,
-  saveDb,
-  toPaise,
-} from "@/services/mock/mockServer"
+import { db, fail, fromPaise, ids, readDb, respond, saveDb, toPaise } from "@/services/mock/mockServer"
 
 /** 10-digit Indian mobile number (contract: `^[6-9]\d{9}$`). */
 const PHONE_PATTERN = /^[6-9]\d{9}$/
@@ -38,8 +29,7 @@ const PHONE_PATTERN = /^[6-9]\d{9}$/
  * Newest first, by order date; orders placed in the same second fall back to the
  * higher order id first, so the order is stable (backend: ORDER BY order_date DESC, order_id DESC).
  */
-const newestFirst = (a: Order, b: Order) =>
-  b.order_date.localeCompare(a.order_date) || b.order_id - a.order_id
+const newestFirst = (a: Order, b: Order) => b.order_date.localeCompare(a.order_date) || b.order_id - a.order_id
 
 /** POST /api/v1/orders — place an order. Resolves with the created order (201). */
 export function createOrder(request: CreateOrderRequest): Promise<Order> {
@@ -86,12 +76,9 @@ export function createOrder(request: CreateOrderRequest): Promise<Order> {
       ])
     }
     if (!product.is_available) {
-      return fail(
-        409,
-        "PRODUCT_UNAVAILABLE",
-        `Product '${product.name} ${product.size}' is currently unavailable.`,
-        [{ field: `items[${index}].product_id`, issue: "unavailable" }],
-      )
+      return fail(409, "PRODUCT_UNAVAILABLE", `Product '${product.name} ${product.size}' is currently unavailable.`, [
+        { field: `items[${index}].product_id`, issue: "unavailable" },
+      ])
     }
     items.push({
       order_item_id: ids.orderItem++,
@@ -106,9 +93,7 @@ export function createOrder(request: CreateOrderRequest): Promise<Order> {
 
   // 4. Find the customer by phone, or create one (BR-5).
   const existing = db.orders.find((o) => o.customer.phone === request.customer.phone)
-  const customer = existing
-    ? existing.customer
-    : { customer_id: ids.customer++, name, phone: request.customer.phone }
+  const customer = existing ? existing.customer : { customer_id: ids.customer++, name, phone: request.customer.phone }
 
   // 5. Save the order with status PLACED and the calculated total.
   const totalPaise = items.reduce((sum, item) => sum + toPaise(item.subtotal), 0)
@@ -137,15 +122,13 @@ export function getOrder(orderId: number): Promise<Order> {
 /** GET /api/v1/orders?phone= — customer order history, newest first (proposed, ADR-005). */
 /** GET /orders/mine (#90). The mock has no accounts, so offline every mock order is "mine". */
 export function getMyOrders(): Promise<OrderSummary[]> {
-  const summaries: OrderSummary[] = [...readDb().orders]
-    .sort(newestFirst)
-    .map((o) => ({
-      order_id: o.order_id,
-      order_date: o.order_date,
-      status: o.status,
-      total_amount: o.total_amount,
-      item_count: o.items.length,
-    }))
+  const summaries: OrderSummary[] = [...readDb().orders].toSorted(newestFirst).map((o) => ({
+    order_id: o.order_id,
+    order_date: o.order_date,
+    status: o.status,
+    total_amount: o.total_amount,
+    item_count: o.items.length,
+  }))
   return respond(summaries)
 }
 
@@ -167,7 +150,7 @@ export function getAdminOrders(query: AdminOrderQuery = {}): Promise<AdminOrderP
   const allOrders = readDb().orders // empty in the dev "empty" mock mode
   const filtered = allOrders
     .filter((o) => query.status === undefined || o.status === query.status)
-    .sort(newestFirst)
+    .toSorted(newestFirst)
   const start = (page - 1) * pageSize
   const items: AdminOrderSummary[] = filtered.slice(start, start + pageSize).map((o) => ({
     order_id: o.order_id,
@@ -180,10 +163,7 @@ export function getAdminOrders(query: AdminOrderQuery = {}): Promise<AdminOrderP
   }))
 
   // Counts across ALL orders, ignoring the status filter (contract).
-  const statusCounts = Object.fromEntries(ORDER_STATUSES.map((s) => [s, 0])) as Record<
-    OrderStatus,
-    number
-  >
+  const statusCounts = Object.fromEntries(ORDER_STATUSES.map((s) => [s, 0])) as Record<OrderStatus, number>
   for (const order of allOrders) statusCounts[order.status] += 1
 
   return respond({
@@ -207,11 +187,7 @@ export function updateOrderStatus(orderId: number, status: OrderStatus): Promise
     return fail(404, "NOT_FOUND", `Order ${orderId} was not found.`)
   }
   if (!canTransition(order.status, status)) {
-    return fail(
-      409,
-      "INVALID_STATUS_TRANSITION",
-      `Cannot change status from ${order.status} to ${status}.`,
-    )
+    return fail(409, "INVALID_STATUS_TRANSITION", `Cannot change status from ${order.status} to ${status}.`)
   }
   order.status = status
   saveDb()

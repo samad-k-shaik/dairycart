@@ -28,6 +28,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
+from app.models.map_pin import coordinate_type, pin_checks
 
 if TYPE_CHECKING:
     from app.models.customer import Customer
@@ -96,6 +97,7 @@ class Subscription(Base):
             name="every_n_days_allowed",
         ),
         CheckConstraint("daily_total >= 0", name="daily_total_non_negative"),
+        *pin_checks("delivery_latitude", "delivery_longitude"),  # #108
         Index("idx_subscriptions_user_id", "user_id"),
         Index("idx_subscriptions_status", "status"),
         Index("idx_subscriptions_delivery_slot_id", "delivery_slot_id"),  # #100
@@ -139,6 +141,9 @@ class Subscription(Base):
     delivery_address: Mapped[str | None] = mapped_column(String(500), default=None)
     # #103: the PIN code of that address (copied onto every delivery order).
     delivery_pincode: Mapped[str | None] = mapped_column(String(6), default=None)
+    # #108: a copy of the address's map pin (copied onto every delivery order).
+    delivery_latitude: Mapped[float | None] = mapped_column(coordinate_type(), default=None)
+    delivery_longitude: Mapped[float | None] = mapped_column(coordinate_type(), default=None)
     # One delivery's total from the LOCKED prices (sum of the item subtotals).
     daily_total: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

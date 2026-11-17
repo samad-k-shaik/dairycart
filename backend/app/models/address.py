@@ -24,6 +24,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.base import Base
+from app.models.map_pin import coordinate_type, pin_checks
 
 # The most addresses one user can keep.
 MAX_ADDRESSES_PER_USER = 10
@@ -35,6 +36,7 @@ class Address(Base):
     __tablename__ = "addresses"
     __table_args__ = (
         CheckConstraint(f"pincode ~ '{PINCODE_PATTERN}'", name="pincode_format"),
+        *pin_checks("latitude", "longitude"),  # #108
         Index("idx_addresses_user_id", "user_id"),
         # At most ONE default address per user, guaranteed by the database (a partial
         # unique index only looks at rows where is_default is true).
@@ -55,6 +57,9 @@ class Address(Base):
     landmark: Mapped[str | None] = mapped_column(String(100), default=None)
     city: Mapped[str] = mapped_column(String(50))
     pincode: Mapped[str] = mapped_column(String(6))
+    # #108: optional map pin dropped by the customer (see app/models/map_pin.py).
+    latitude: Mapped[float | None] = mapped_column(coordinate_type(), default=None)
+    longitude: Mapped[float | None] = mapped_column(coordinate_type(), default=None)
     is_default: Mapped[bool] = mapped_column(Boolean, server_default=false(), default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

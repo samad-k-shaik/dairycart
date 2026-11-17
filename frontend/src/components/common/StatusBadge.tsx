@@ -16,9 +16,5 @@ const STATUS_CLASSES: Record<OrderStatus, string> = {
 }
 
 export function StatusBadge({ status, className }: { status: OrderStatus; className?: string }) {
-  return (
-    <Badge className={cn("font-semibold", STATUS_CLASSES[status], className)}>
-      {STATUS_LABELS[status]}
-    </Badge>
-  )
+  return <Badge className={cn("font-semibold", STATUS_CLASSES[status], className)}>{STATUS_LABELS[status]}</Badge>
 }

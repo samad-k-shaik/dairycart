@@ -27,7 +27,7 @@ from app.models import (
 @dataclass(frozen=True)
 class AdminSubscriptionRow:
     subscription_id: int
-    username: str
+    account_name: str  # #121: the account holder's full name
     customer_name: str
     customer_phone: str
     plan: SubscriptionPlan
@@ -118,7 +118,7 @@ class SubscriptionRepository:
         query = (
             select(
                 Subscription.subscription_id,
-                User.username,
+                User.full_name,
                 Customer.name,
                 Customer.phone,
                 Subscription.plan,

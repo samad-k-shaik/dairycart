@@ -60,6 +60,9 @@ class SubscriptionRead(BaseModel):
     delivery_slot: BookedSlotRead | None
     # #102: where to deliver (null for subscriptions from before #102).
     delivery_address: str | None
+    # #108: copy of the address's map pin (null when the address had none).
+    delivery_latitude: float | None
+    delivery_longitude: float | None
     start_date: date
     end_date: date
     status: SubscriptionStatus
@@ -88,6 +91,8 @@ class SubscriptionRead(BaseModel):
                 else None
             ),
             delivery_address=subscription.delivery_address,
+            delivery_latitude=subscription.delivery_latitude,
+            delivery_longitude=subscription.delivery_longitude,
             start_date=subscription.start_date,
             end_date=subscription.end_date,
             status=subscription.status,
@@ -115,7 +120,7 @@ class AdminSubscriptionSummary(BaseModel):
     """One row of GET /admin/subscriptions."""
 
     subscription_id: int
-    username: str
+    account_name: str  # #121: the account holder's full name
     customer_name: str
     customer_phone: str
     plan: SubscriptionPlan

@@ -87,7 +87,7 @@ When the log calms down (or `docker compose ps` shows everything "Up"), open:
 
 | What | Address | Login (local only) |
 |---|---|---|
-| 🛒 Website (shop + admin) | http://localhost:5173 | Admin: `admin` / `admin_local_only_123` · customers register on the site |
+| 🛒 Website (shop + admin) | http://localhost:5173 | Admin: mobile `9000000001` / `admin_local_only_123` · customers register on the site |
 | ⚙️ Backend API docs | http://localhost:8000/docs | – |
 | 🗄️ pgAdmin (view the database) | http://localhost:5050 | `admin@example.com` / `admin123` |
 | 🐘 PostgreSQL (for other tools) | `localhost:5432` | user `milk_user` / `milk_password_local_only`, database `milk_delivery` |

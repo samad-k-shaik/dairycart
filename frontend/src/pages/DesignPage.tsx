@@ -9,45 +9,18 @@
  * never raw hex values. The hex values below are only labels for reviewers.
  */
 import type { ReactNode } from "react"
-import {
-  CheckCircle2,
-  LayoutDashboard,
-  Minus,
-  Package,
-  Plus,
-  ShoppingCart,
-  Truck,
-} from "lucide-react"
+import { CheckCircle2, LayoutDashboard, Minus, Package, Plus, ShoppingCart, Truck } from "lucide-react"
 import { toast } from "sonner"
 
+import LazyMapView from "@/components/map/LazyMapView"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import type { MapMarker } from "@/types/map"
 
 // ---- Data shown on the page (plain arrays keep the JSX below short) ----
 
@@ -92,6 +65,13 @@ const icons = [
   { name: "Truck", Icon: Truck },
   { name: "CheckCircle2", Icon: CheckCircle2 },
   { name: "LayoutDashboard", Icon: LayoutDashboard },
+]
+
+// Sample pins around Ameerpet, Hyderabad (#107): one of each look.
+const sampleMarkers: MapMarker[] = [
+  { id: "home", kind: "home", label: "12-3 Sai Residency, Ameerpet", position: { lat: 17.4375, lng: 78.4483 } },
+  { id: "ravi", kind: "delivery-boy", label: "Ravi Kumar", position: { lat: 17.4318, lng: 78.4569 } },
+  { id: "suresh", kind: "delivery-boy", label: "Suresh", stale: true, position: { lat: 17.4262, lng: 78.4421 } },
 ]
 
 // ---- Page ----
@@ -244,9 +224,7 @@ function DesignPage() {
             <SheetContent>
               <SheetHeader>
                 <SheetTitle>Order #1001</SheetTitle>
-                <SheetDescription>
-                  Sheets slide in from the side (used for admin order details).
-                </SheetDescription>
+                <SheetDescription>Sheets slide in from the side (used for admin order details).</SheetDescription>
               </SheetHeader>
             </SheetContent>
           </Sheet>
@@ -268,6 +246,14 @@ function DesignPage() {
             </div>
           ))}
         </div>
+      </Section>
+
+      <Section title="Map (Leaflet + OpenStreetMap, #107)">
+        <p className="text-muted-foreground">
+          Home (blue), delivery boy (amber) and a delivery boy whose location is old (grey). Tap a pin for its label;
+          drag to move; pinch or use the + / − buttons to zoom.
+        </p>
+        <LazyMapView label="Sample map with a delivery address and two delivery boys" markers={sampleMarkers} />
       </Section>
     </main>
   )

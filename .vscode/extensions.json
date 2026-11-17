@@ -1,0 +1,11 @@
+{
+  // Suggested when the repository is opened in VS Code (#52). Each one runs the same tool
+  // as CI, so problems show up while typing instead of in the pull request.
+  "recommendations": [
+    "oxc.oxc-vscode",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "charliermarsh.ruff",
+    "ms-python.python"
+  ]
+}

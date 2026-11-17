@@ -25,10 +25,12 @@ export function presetPeriod(preset: PeriodPreset, today: string): Period {
 
 /** Which preset matches a period (to highlight its button), or null for a custom range. */
 export function matchPreset(period: Period, today: string): PeriodPreset | null {
-  return PRESETS.find((p) => {
-    const dates = presetPeriod(p.id, today)
-    return dates.from === period.from && dates.to === period.to
-  })?.id ?? null
+  return (
+    PRESETS.find((p) => {
+      const dates = presetPeriod(p.id, today)
+      return dates.from === period.from && dates.to === period.to
+    })?.id ?? null
+  )
 }
 
 /** 8.5 → "+8.5%", -3 → "−3.0%", null → null (nothing to compare with). */
@@ -67,11 +69,15 @@ export function chartMoney(value: unknown): string {
   return (Number.isFinite(amount) ? amount : 0).toFixed(2)
 }
 
+/** 1.40 → "1.4", 16.0 → "16": `digits` decimals without trailing zeros. */
+function trimmed(value: number, digits: number): string {
+  return String(Number(value.toFixed(digits)))
+}
+
 /** Compact money for chart axes: 15820 → "₹16K", 1400 → "₹1.4K", 250000 → "₹2.5L"
  *  (lakh), 900 → "₹900". One decimal below 10K, so nearby ticks do not look the same. */
 export function compactRupees(amount: number): string {
-  const short = (value: number, digits: number) => String(Number(value.toFixed(digits)))
-  if (amount >= 100_000) return `₹${short(amount / 100_000, amount >= 1_000_000 ? 0 : 1)}L`
-  if (amount >= 1_000) return `₹${short(amount / 1_000, amount >= 10_000 ? 0 : 1)}K`
+  if (amount >= 100_000) return `₹${trimmed(amount / 100_000, amount >= 1_000_000 ? 0 : 1)}L`
+  if (amount >= 1_000) return `₹${trimmed(amount / 1_000, amount >= 10_000 ? 0 : 1)}K`
   return `₹${Math.round(amount)}`
 }

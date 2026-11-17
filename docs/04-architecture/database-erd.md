@@ -50,8 +50,7 @@ erDiagram
     USERS {
         int user_id PK
         varchar full_name
-        varchar email UK
-        varchar username UK
+        varchar phone UK
         varchar password_hash
         varchar role
         timestamptz created_at
@@ -160,6 +159,8 @@ erDiagram
 | | | UNIQUE (subscription_id, delivery_date) | #97: one order per subscription per day (NULLs never clash) |
 | delivery_address | VARCHAR(500) | NULL | #102: copy of the chosen address (`full_text`) when the order was made; NULL for orders from before #102 |
 | delivery_pincode | VARCHAR(6) | NULL | #103: that address's PIN code, to match the delivery boy |
+| delivery_latitude | NUMERIC(9,6) | NULL, CHECK −90…90 | #108: copy of the address's map pin |
+| delivery_longitude | NUMERIC(9,6) | NULL, CHECK −180…180 | #108; both NULL or both set |
 | delivery_slot | VARCHAR(100) | NULL | #100: copy of the subscription's slot label when the order was created, e.g. "Morning, 8:00 AM – 9:00 AM"; NULL for one-time orders |
 
 ### ORDER_ITEMS
@@ -184,16 +185,15 @@ erDiagram
 
 `ORDERS` ↔ `PRODUCTS` is a **many-to-many** relationship resolved by the junction table `ORDER_ITEMS`.
 
-### USERS (#89)
+### USERS (#89; mobile number login since #121)
 
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
 | user_id | SERIAL | PK | |
 | full_name | VARCHAR(100) | NOT NULL | 2–100 characters |
-| email | VARCHAR(254) | NOT NULL, UNIQUE | Stored in lower case |
-| username | VARCHAR(30) | NOT NULL, UNIQUE | Stored in lower case; letters, digits, `.`, `_`, `-` |
+| phone | VARCHAR(10) | NOT NULL, UNIQUE, CHECK `^[6-9][0-9]{9}$` | The login (#121): 10-digit mobile number, saved without `+91` or spaces. Separate from `customers.phone`, which is the delivery contact typed at checkout. (`email` and `username` were removed in #121.) |
 | password_hash | VARCHAR(100) | NOT NULL | bcrypt hash (60 chars). **Never** the password |
-| role | VARCHAR(10) | NOT NULL, DEFAULT `'USER'`, CHECK in (`USER`, `ADMIN`) | `ADMIN` only via `python -m app.scripts.create_admin` |
+| role | VARCHAR(20) | NOT NULL, DEFAULT `'USER'`, CHECK in (`USER`, `ADMIN`, `DELIVERY_BOY`) | `ADMIN` only via `python -m app.scripts.create_admin`; `DELIVERY_BOY` only via the admin's "Give login" (#109) |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
 
 ### SUBSCRIPTIONS (#97)
@@ -211,6 +211,8 @@ erDiagram
 | delivery_slot_id | INTEGER | FK → delivery_slots, NULL, ON DELETE RESTRICT | #100: booked delivery time; NULL only for subscriptions from before #100 |
 | delivery_address | VARCHAR(500) | NULL | #102: copy of the chosen address; each delivery order copies it. NULL before #102 |
 | delivery_pincode | VARCHAR(6) | NULL | #103: its PIN code (copied onto each delivery order) |
+| delivery_latitude | NUMERIC(9,6) | NULL, CHECK −90…90 | #108: copy of the address's map pin (copied onto each delivery order) |
+| delivery_longitude | NUMERIC(9,6) | NULL, CHECK −180…180 | #108; both NULL or both set |
 | daily_total | NUMERIC(10,2) | NOT NULL, CHECK ≥ 0 | One delivery's total: sum of the item subtotals (locked prices) |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
 | cancelled_at | TIMESTAMPTZ | NULL | Set when cancelled |
@@ -255,6 +257,9 @@ The migration inserts two standard slots: Morning 08:00–09:00 and Evening 17:0
 | landmark | VARCHAR(100) | NULL | Optional |
 | city | VARCHAR(50) | NOT NULL | |
 | pincode | VARCHAR(6) | NOT NULL, CHECK `^[1-9][0-9]{5}$` | Indian PIN code |
+| latitude | NUMERIC(9,6) | NULL, CHECK −90…90 | #108: optional map pin (6 decimals ≈ 11 cm; read as a float, sent as a JSON number) |
+| longitude | NUMERIC(9,6) | NULL, CHECK −180…180 | #108 |
+| | | CHECK both NULL or both set | #108: half a pin is refused |
 | is_default | BOOLEAN | NOT NULL, DEFAULT FALSE | |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
 | | | UNIQUE (user_id) WHERE is_default | One default per user (partial unique index) |
@@ -268,8 +273,10 @@ The migration inserts two standard slots: Morning 08:00–09:00 and Evening 17:0
 | phone | VARCHAR(10) | NOT NULL, UNIQUE, CHECK `^[6-9][0-9]{9}$` | 10-digit mobile number |
 | is_active | BOOLEAN | NOT NULL, DEFAULT TRUE | Inactive: areas kept, orders not assigned |
 | created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | |
+| user_id | INTEGER | FK → users, NULL, UNIQUE, ON DELETE SET NULL | #109: his login (role `DELIVERY_BOY`, same phone and name); NULL = no login |
+| round_started_at | TIMESTAMPTZ | NULL | #110: when he pressed "Start round"; NULL = not on a round (his location is refused) |
 
-Admin records only: delivery boys do not log in.
+Admin records. Since #109 the admin can give a delivery boy a login (`user_id`); deleting the delivery boy also deletes that account.
 
 ### DELIVERY_AREAS (#103)
 
@@ -286,23 +293,13 @@ The migration fills `orders.delivery_pincode` and `subscriptions.delivery_pincod
 
 Approved by #106 (ADR-018). Each change arrives in its own Alembic migration in the issue named. Until then, the tables above are the real schema.
 
-**New columns on ADDRESSES, ORDERS and SUBSCRIPTIONS (#108)**
+**Map pins (#108): done.** Now part of ADDRESSES, ORDERS and SUBSCRIPTIONS above (migration `aa76e3a3f9c4`).
 
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| latitude | NUMERIC(9,6) | NULL, CHECK −90…90 | Optional map pin; final type confirmed in #108 |
-| longitude | NUMERIC(9,6) | NULL, CHECK −180…180 | |
-| | | CHECK both NULL or both set | |
+**Delivery boy login (#109): done.** `delivery_boys.user_id` and the `DELIVERY_BOY` role are part of the tables above (migration `55754c848525`).
 
-Orders and subscriptions copy the pin from the address, like `delivery_address`, so editing or deleting an address never moves a past order.
+### DELIVERY_LOCATIONS (#110)
 
-**New column on DELIVERY_BOYS (#109)**
-
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| user_id | INTEGER | FK → users, NULL, UNIQUE | The delivery boy's login (role `DELIVERY_BOY`); NULL = no login yet |
-
-**New table DELIVERY_LOCATIONS (#110)**: the latest position only, one row per delivery boy, overwritten on every update (upsert).
+The latest position only, one row per delivery boy, overwritten on every update (upsert, migration `b01d7b7a246d`). The row exists only during a round.
 
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
@@ -313,7 +310,7 @@ Orders and subscriptions copy the pin from the address, like `delivery_address`,
 | recorded_at | TIMESTAMPTZ | NOT NULL | Time on the phone when the position was read |
 | updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | Time the server saved it; older than 2 minutes = stale |
 
-Whether a round is active is decided in #110 (for example an `is_sharing` flag); stopping a round removes the position (NFR-17).
+A reading only replaces the saved one if its `recorded_at` is **newer** (late requests never move the pin back); a phone clock ahead of the server is clamped to the server's time. Stopping the round (or logging out) deletes the row; there is no location history (NFR-17).
 
 ## Normalization notes
 
@@ -323,7 +320,7 @@ Whether a round is active is decided in #110 (for example an `is_sharing` flag);
 
 **Deliberate denormalization (and why it's correct):**
 - `order_items.unit_price` copies `products.price` so historical orders keep the price paid even if the product price changes later.
-- `orders.delivery_address` and `subscriptions.delivery_address` (#102) copy the address text for the same reason.
+- `orders.delivery_address` and `subscriptions.delivery_address` (#102) copy the address text for the same reason, and `delivery_latitude` / `delivery_longitude` (#108) copy its map pin.
 - `orders.delivery_slot` (#100) copies the slot's label for the same reason: an order keeps the time it was booked for even if the admin edits the slot later.
 - `order_items.subtotal` and `orders.total_amount` are derived values stored for fast reads and auditability. They are written once by the backend service and never edited by clients.
 
@@ -375,14 +372,16 @@ Every constraint has an explicit, readable name (set by the naming convention in
 | delivery_slots | `uq_delivery_slots_times` | (start_time, end_time) is unique (#100) |
 | addresses | `addresses_user_id_fkey` | → users, ON DELETE CASCADE (#102) |
 | addresses | `ck_addresses_pincode_format` | 6-digit PIN code not starting with 0 (#102) |
+| addresses, orders, subscriptions | `ck_<table>_<latitude column>_range`, `ck_<table>_<longitude column>_range`, `ck_<table>_map_pin_complete` | map pin in range, and both set or both NULL (#108) |
 | delivery_boys | `uq_delivery_boys_phone`, `ck_delivery_boys_phone_format` | phone unique and a 10-digit mobile number (#103) |
 | delivery_areas | `uq_delivery_areas_pincode`, `ck_delivery_areas_pincode_format` | one delivery boy per PIN code; PIN format (#103) |
+| delivery_locations | `ck_delivery_locations_latitude_range`, `…_longitude_range`, `…_accuracy_non_negative`; `delivery_locations_delivery_boy_id_fkey` | position in range, accuracy ≥ 0; → delivery_boys, ON DELETE CASCADE (#110) |
 | delivery_areas | `delivery_areas_delivery_boy_id_fkey` | → delivery_boys, ON DELETE CASCADE (#103) |
 | subscription_items | `ck_subscription_items_quantity_range`, `…_unit_price_positive`, `…_subtotal_non_negative` | as for order_items (#97) |
 | subscription_items | `uq_subscription_items_product` | (subscription_id, product_id) is unique (#97) |
-| users | `uq_users_email` | email is unique |
-| users | `uq_users_username` | username is unique |
-| users | `ck_users_role_allowed` | role is `USER` or `ADMIN` |
+| users | `uq_users_phone`, `ck_users_phone_format` | phone unique and a 10-digit mobile number (#121) |
+| users | `ck_users_role_allowed` | role is `USER`, `ADMIN` or `DELIVERY_BOY` (#109) |
+| delivery_boys | `uq_delivery_boys_user_id`, `delivery_boys_user_id_fkey` | one login per delivery boy; → users, ON DELETE SET NULL (#109) |
 
 Primary keys use PostgreSQL's default names (`customers_pkey`, …).
 

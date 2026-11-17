@@ -25,8 +25,9 @@ export function parseSession(raw: string | null, now: number = Date.now()): Sess
     if (
       typeof value?.token !== "string" ||
       typeof value.expiresAt !== "number" ||
-      typeof value.user?.username !== "string" ||
-      (value.user.role !== "USER" && value.user.role !== "ADMIN")
+      // #121: sessions saved before mobile login have no phone: treat them as logged out.
+      typeof value.user?.phone !== "string" ||
+      !["USER", "ADMIN", "DELIVERY_BOY"].includes(value.user.role) // #109
     ) {
       return null
     }
@@ -37,6 +38,11 @@ export function parseSession(raw: string | null, now: number = Date.now()): Sess
   }
 }
 
-export function sessionFromLogin(token: string, expiresInSeconds: number, user: User, now: number = Date.now()): Session {
+export function sessionFromLogin(
+  token: string,
+  expiresInSeconds: number,
+  user: User,
+  now: number = Date.now(),
+): Session {
   return { token, expiresAt: now + expiresInSeconds * 1000, user }
 }

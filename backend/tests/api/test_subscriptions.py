@@ -307,7 +307,7 @@ def test_admin_list_with_status_filter(
     cancelled = client.get(ADMIN, params={"status": "CANCELLED"}, headers=as_admin)
 
     row = next(r for r in active if r["subscription_id"] == created["subscription_id"])
-    assert row["username"] == normal_user.username
+    assert row["account_name"] == normal_user.full_name  # #121
     assert (row["customer_name"], row["customer_phone"]) == ("Ravi Kumar", "9876543210")
     assert (row["plan"], row["daily_total"], row["orders_created"]) == (
         "WEEK",

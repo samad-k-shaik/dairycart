@@ -1,6 +1,6 @@
 /** Tests for checkout validation, the order request and IST date formatting. */
 import assert from "node:assert/strict"
-import { describe, it } from "node:test"
+import { describe, it } from "vitest"
 
 import { formatDate, formatDateTime, istDateKey } from "./format.ts"
 import { buildCreateOrderRequest } from "./orderRequest.ts"
@@ -22,7 +22,16 @@ describe("validatePhone (^[6-9]\\d{9}$)", () => {
     }
   })
   it("rejects everything else", () => {
-    for (const phone of ["", "12345", "5876543210", "98765432100", "987654321", "+919876543210", "98765 43210", "98765abcde"]) {
+    for (const phone of [
+      "",
+      "12345",
+      "5876543210",
+      "98765432100",
+      "987654321",
+      "+919876543210",
+      "98765 43210",
+      "98765abcde",
+    ]) {
       assert.ok(validatePhone(phone), phone)
     }
   })

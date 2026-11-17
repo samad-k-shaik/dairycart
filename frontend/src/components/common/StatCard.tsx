@@ -16,7 +16,10 @@ export function StatCard({ label, value, icon: Icon, iconClassName, hint }: Stat
   return (
     <div className="flex items-center gap-4 rounded-2xl bg-surface p-4 shadow-card">
       <span
-        className={cn("flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary", iconClassName)}
+        className={cn(
+          "flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary",
+          iconClassName,
+        )}
         aria-hidden="true"
       >
         <Icon className="size-5" />

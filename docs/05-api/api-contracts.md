@@ -18,6 +18,8 @@
 | GET | `/products/{id}` | Product details | 200 |
 | POST | `/orders` | Place an order | 201 |
 | GET | `/orders/{id}` | Order details | 200 |
+| GET | `/orders/{id}/tracking` | Where is my order? Delivery boy, distance, ETA *(#112)* | 200 |
+| GET | `/orders/{id}/tracking/stream` | The same, pushed as Server-Sent Events *(#113)* | 200 |
 | GET | `/orders/mine` | The logged-in user's orders *(#90)* | 200 |
 | GET | `/admin/orders` | Orders board: filter (status, day, delivery boy, search), paginate *(#104)* | 200 |
 | PATCH | `/admin/orders/{id}/status` | Update order status | 200 |
@@ -53,6 +55,15 @@
 | DELETE | `/admin/delivery-boys/{id}` | Delete (frees his areas) *(#103)* | 204 |
 | POST | `/admin/delivery-boys/{id}/areas` | Allocate a PIN code *(#103)* | 200 |
 | DELETE | `/admin/delivery-boys/{id}/areas/{pincode}` | Remove a PIN code *(#103)* | 200 |
+| PUT | `/admin/delivery-boys/{id}/login` | Give a delivery boy a login, or a new password *(#109)* | 200 |
+| GET | `/admin/delivery-boys/locations` | Live map: positions, stale flags, today's order pins *(#111)* | 200 |
+| GET | `/admin/delivery-boys/locations/stream` | The same, pushed as Server-Sent Events *(#113)* | 200 |
+| GET | `/delivery/me` | Logged-in delivery boy: his record and areas *(#109)* | 200 |
+| GET | `/delivery/me/orders` | His day's orders (his PIN codes, not cancelled) *(#109)* | 200 |
+| PATCH | `/delivery/me/orders/{id}/status` | Mark his order out for delivery / delivered *(#109)* | 200 |
+| POST | `/delivery/me/round/start` | Start his round: location sharing on *(#110)* | 200 |
+| POST | `/delivery/me/round/stop` | Stop his round; his position is deleted *(#110)* | 200 |
+| PUT | `/delivery/me/location` | His latest GPS reading *(#110)* | 204 |
 | GET | `/admin/users/{id}` | One user with order count and amount spent *(#101)* | 200 |
 | GET | `/admin/users/{id}/orders` | All orders of one user *(#101)* | 200 |
 
@@ -114,7 +125,7 @@ Returns `[]` (not 404) if there are no products.
 
 Needs a logged-in user (#90): no token → `401 UNAUTHORIZED`. The order is saved with that account; `customer` (name + phone) is the delivery contact.
 
-*(#102)* `address_id` is one of the user's saved addresses ([Addresses](#addresses-102)); if it is left out, the user's **default** address is used. The backend copies the address text onto the order (`delivery_address` in the response). A user with no saved address → **422** with detail `{ "field": "address_id", "issue": "required" }`; someone else's or a missing address → **422** `{ "field": "address_id", "issue": "not available" }`.
+*(#102)* `address_id` is one of the user's saved addresses ([Addresses](#addresses-102)); if it is left out, the user's **default** address is used. The backend copies the address text onto the order (`delivery_address` in the response) and its map pin, if any (`delivery_latitude` / `delivery_longitude`, #108; `null` without a pin). A user with no saved address → **422** with detail `{ "field": "address_id", "issue": "required" }`; someone else's or a missing address → **422** `{ "field": "address_id", "issue": "not available" }`.
 
 **Request**
 ```json
@@ -181,6 +192,20 @@ Needs a logged-in user (#90). Only the user who placed the order, or an ADMIN, m
 
 ---
 
+## GET /api/v1/orders/{id}/tracking *(#112)*
+
+Same visibility as `GET /orders/{id}`: the order's **owner** or an ADMIN; anyone else → **404**, without login → **401**. The order page asks every 10 s while the order is out for delivery.
+```json
+{ "order_id": 41, "status": "OUT_FOR_DELIVERY",
+  "delivery_boy": { "name": "Ravi", "position": { "latitude": 17.4465, "longitude": 78.4483 },
+                    "updated_at": "2026-11-16T02:41:05Z", "is_stale": false },
+  "destination": { "latitude": 17.4375, "longitude": 78.4483 },
+  "distance_km": 1.0, "eta_minutes": 3 }
+```
+- `delivery_boy` is set **only** while the order is `OUT_FOR_DELIVERY` **and** the delivery boy covering its PIN code is on a round with a position (#110); otherwise `null` (privacy, NFR-17). First name only: never his phone number or past positions. `is_stale`: no update for more than 2 minutes.
+- `destination`: the order's map pin (#108), or `null`.
+- `distance_km`: straight-line (Haversine) distance, 1 decimal; `eta_minutes`: at an average **20 km/h**, rounded up, at least 1. Both `null` unless both points are known. Roads are longer than a straight line, so this is an estimate.
+
 ## GET /api/v1/orders/mine *(#90)*
 
 "My orders": the logged-in user's orders, newest first. Needs a token (401 without one). Returns `[]` when the user has no orders.
@@ -222,7 +247,7 @@ Newest first. Bad `date`, `boy` (not an id / `unassigned`) or `q` → 422.
     { "order_id": 101, "customer_name": "Ravi Kumar", "customer_phone": "9876543210",
       "order_date": "2026-11-07T04:30:00Z", "status": "PLACED", "total_amount": "155.00", "item_count": 2,
       "subscription_id": 3, "delivery_slot": "Morning, 8:00 AM – 9:00 AM",
-      "user_id": 7, "username": "ravi", "delivery_date": "2026-11-07", "delivery_pincode": "500016",
+      "user_id": 7, "account_name": "Ravi Kumar", "delivery_date": "2026-11-07", "delivery_pincode": "500016",
       "delivery_boy": { "delivery_boy_id": 1, "name": "Kiran", "phone": "9876500001" },
       "items": [ { "product_id": 2, "product_name": "Cow Milk", "size": "1 Litre", "quantity": 2, "unit_price": "60.00", "subtotal": "120.00" } ] }
   ],
@@ -237,7 +262,7 @@ Newest first. Bad `date`, `boy` (not an id / `unassigned`) or `q` → 422.
 
 - `status_counts` follow `date`, `boy` and `q` but **ignore `status`** (so the status chips keep their numbers); without those filters they count **all** orders and feed the admin dashboard.
 - *(#104)* `boy_counts` (per active delivery boy) and `unassigned_count` follow `date` and `q`, ignoring `boy` and `status`.
-- `delivery_boy` is the ACTIVE delivery boy covering `delivery_pincode` (looked up when read), or `null`. `user_id` / `username` are `null` only for old guest orders (before #90).
+- `delivery_boy` is the ACTIVE delivery boy covering `delivery_pincode` (looked up when read), or `null`. `user_id` / `account_name` (the account holder's full name; `username` before #121) are `null` only for old guest orders (before #90).
 
 ---
 
@@ -367,7 +392,7 @@ Rules:
   "items": [ { "product_id": 2, "quantity": 1 } ]
 }
 ```
-`every_n_days` is optional (default `1`); only `1`, `2` or `3` are accepted (otherwise 422). `delivery_slot_id` is **required** *(#100)*. `address_id` works as for `POST /orders` *(#102)*; the subscription keeps the address text (`delivery_address`) and every delivery order copies it. `customer` and `items` follow the same rules as `POST /orders` (1–10 items, quantity 1–20, no duplicates; the products must be available and in stock today).
+`every_n_days` is optional (default `1`); only `1`, `2` or `3` are accepted (otherwise 422). `delivery_slot_id` is **required** *(#100)*. `address_id` works as for `POST /orders` *(#102)*; the subscription keeps the address text (`delivery_address`) and map pin (`delivery_latitude` / `delivery_longitude`, #108), and every delivery order copies them. `customer` and `items` follow the same rules as `POST /orders` (1–10 items, quantity 1–20, no duplicates; the products must be available and in stock today).
 
 **201 Created** + `Location: /api/v1/subscriptions/{id}`:
 ```json
@@ -404,7 +429,7 @@ Owner or ADMIN only; anyone else gets **404** (same answer as a missing id). Can
 
 Optional `?status=ACTIVE|CANCELLED|COMPLETED` and *(#101)* `?user_id=` (only that user's subscriptions). Newest first:
 ```json
-[ { "subscription_id": 3, "username": "ravi", "customer_name": "Ravi Kumar", "customer_phone": "9876543210",
+[ { "subscription_id": 3, "account_name": "Ravi Kumar", "customer_name": "Ravi Kumar", "customer_phone": "9876543210",
     "plan": "WEEK", "every_n_days": 2, "delivery_slot": "Morning, 8:00 AM – 9:00 AM", "start_date": "2026-11-21", "end_date": "2026-11-27", "status": "ACTIVE",
     "daily_total": "60.00", "orders_created": 2 } ]
 ```
@@ -432,7 +457,7 @@ Change the delivery time of an `ACTIVE` subscription. Owner or ADMIN (anyone els
 
 ### PATCH /api/v1/subscriptions/{id}/address *(#102)*
 
-Owner only (anyone else, admins included: 404, since only the owner's saved addresses can be chosen). Body `{ "address_id": 5 }`. **200** with the subscription and its new `delivery_address`; orders already created keep theirs. **409 `SUBSCRIPTION_NOT_ACTIVE`** for a cancelled or completed plan; **422** on `address_id` for an address that is not yours.
+Owner only (anyone else, admins included: 404, since only the owner's saved addresses can be chosen). Body `{ "address_id": 5 }`. **200** with the subscription and its new `delivery_address` and map pin (#108); orders already created keep theirs. **409 `SUBSCRIPTION_NOT_ACTIVE`** for a cancelled or completed plan; **422** on `address_id` for an address that is not yours.
 
 ---
 
@@ -445,13 +470,14 @@ Rules:
 - The first address becomes the default; exactly one default while the user has addresses (also a database rule: a partial unique index). `is_default: true` on create, or `POST /addresses/{id}/default`, moves the default. Deleting the default makes the oldest remaining address the default.
 - Fields: `label` 2–30, `house` 1–100, `street` 2–150, `landmark` optional ≤ 100 (`null` or `""` removes it), `city` 2–50, `pincode` 6 digits not starting with 0. Text is trimmed.
 - Orders and subscriptions keep a **text copy** (`full_text`), so editing or deleting an address never changes them.
+- **Map pin (optional, #108):** `latitude` (−90…90) and `longitude` (−180…180) in degrees, sent **together** (one without the other → 422). Stored with 6 decimals (about 11 cm); more decimals are rounded. Returned as JSON numbers, or both `null` when there is no pin. Orders and subscriptions copy the pin as `delivery_latitude` / `delivery_longitude`, like the address text.
 
 ### GET /api/v1/addresses
 
 Default first, then oldest first:
 ```json
 [ { "address_id": 4, "label": "Home", "house": "12-3 Sai Residency", "street": "MG Road, Ameerpet",
-    "landmark": null, "city": "Hyderabad", "pincode": "500016", "is_default": true,
+    "landmark": null, "city": "Hyderabad", "pincode": "500016", "latitude": 17.4375, "longitude": 78.4483, "is_default": true,
     "full_text": "12-3 Sai Residency, MG Road, Ameerpet, Hyderabad - 500016", "created_at": "2026-11-13T09:00:00Z" } ]
 ```
 
@@ -459,9 +485,9 @@ Default first, then oldest first:
 
 ```json
 { "label": "Office", "house": "Plot 5, Cyber Towers", "street": "Hitech City", "landmark": "Opposite metro",
-  "city": "Hyderabad", "pincode": "500081", "is_default": false }
+  "city": "Hyderabad", "pincode": "500081", "latitude": 17.4474, "longitude": 78.3762, "is_default": false }
 ```
-`label` defaults to `"Home"`, `is_default` to `false`. PATCH: only the fields that change (at least one; not `is_default`).
+`label` defaults to `"Home"`, `is_default` to `false`; `latitude`/`longitude` are optional (#108). PATCH: only the fields that change (at least one; not `is_default`). The pin changes as a pair: both numbers move it, both `null` remove it.
 
 ### POST /api/v1/addresses/{id}/default → 200 · DELETE /api/v1/addresses/{id} → 204
 
@@ -551,7 +577,7 @@ Rules:
 
 ## Delivery boys (#103) *(ADMIN)*
 
-The admin's list of delivery boys and their areas. Delivery boys do **not** log in.
+The admin's list of delivery boys and their areas. Since #109 a delivery boy can get a **login** (see [Delivery boy app](#delivery-boy-app-109)).
 
 - Delivery boy: `name` 2–100, `phone` 10-digit Indian mobile number (unique → **409 `DELIVERY_BOY_ALREADY_EXISTS`**), `is_active` (default `true`).
 - Area: `pincode` (6 digits, not starting with 0) + optional `area_name` ≤ 50. **One delivery boy per PIN code**: allocating a PIN code someone has → **409 `AREA_ALREADY_ALLOCATED`** ("500016 is already allocated to Ravi Kumar. Remove it there first.").
@@ -560,9 +586,73 @@ The admin's list of delivery boys and their areas. Delivery boys do **not** log 
 ```json
 { "delivery_boy_id": 1, "name": "Ravi Kumar", "phone": "9876500001", "is_active": true,
   "areas": [ { "pincode": "500016", "area_name": "Ameerpet" } ],
-  "created_at": "2026-11-14T10:00:00Z", "today_orders": 3 }
+  "created_at": "2026-11-14T10:00:00Z", "today_orders": 3, "has_login": true }
 ```
-`today_orders`: today's orders (India time, not cancelled) in his areas. `GET` lists active first, then by name. `POST /admin/delivery-boys/{id}/areas` takes `{ "pincode": "500016", "area_name": "Ameerpet" }` and returns the delivery boy; `DELETE …/areas/{pincode}` returns him too (404 if it is not his area). `PATCH`: only the fields that change.
+`today_orders`: today's orders (India time, not cancelled) in his areas. `GET` lists active first, then by name. `POST /admin/delivery-boys/{id}/areas` takes `{ "pincode": "500016", "area_name": "Ameerpet" }` and returns the delivery boy; `DELETE …/areas/{pincode}` returns him too (404 if it is not his area). `PATCH`: only the fields that change; if he has a login, its mobile number and name follow (another account already using the new number → **409 `USER_ALREADY_EXISTS`**). Deleting a delivery boy also deletes his login.
+
+### PUT /api/v1/admin/delivery-boys/{id}/login *(#109)*
+
+Body `{ "password": "deliver123" }` (same rules as sign-up: 8+ characters, a letter and a number → otherwise **422**). Creates his account (his `phone` and `name`, role `DELIVERY_BOY`), or sets a new password if he has one. **200** with the delivery boy (`has_login: true`); the password is never returned. **409 `USER_ALREADY_EXISTS`** if another account (e.g. a customer) already uses his mobile number: an existing account is never taken over. **404** for an unknown id.
+
+### GET /api/v1/admin/delivery-boys/locations *(#111)*
+
+The admin live map (asked every 10 s by the page). Every **active** delivery boy, those on a round first, then by name:
+```json
+[ { "delivery_boy_id": 1, "name": "Ravi Kumar", "phone": "9876500001",
+    "on_round": true, "round_started_at": "2026-11-16T02:30:00Z",
+    "position": { "latitude": 17.4375, "longitude": 78.4483, "accuracy_m": 12,
+                  "updated_at": "2026-11-16T02:41:05Z", "is_stale": false },
+    "orders": [ { "order_id": 41, "status": "CONFIRMED", "customer_name": "Asha",
+                  "latitude": 17.4401, "longitude": 78.4512 } ] } ]
+```
+- `position`: his latest reading (#110) while on a round, else `null` (also `null` on a round before the first reading). `is_stale`: no update for more than **2 minutes** (screen locked, no signal…).
+- `orders`: his orders for today (same day rule as the Orders board, matched by PIN code) that are **not delivered or cancelled** and have a **map pin** (#108).
+- A fixed number of queries however many delivery boys there are.
+
+---
+
+## Delivery boy app (#109)
+
+For a logged-in **DELIVERY_BOY** whose delivery boy record is **active**: **401** without a login, **403 `FORBIDDEN`** for customers, admins and switched-off delivery boys (checked on every request, so switching him off ends his access at once).
+
+### GET /api/v1/delivery/me
+
+```json
+{ "delivery_boy_id": 1, "name": "Ravi Kumar", "phone": "9876500001",
+  "areas": [ { "pincode": "500016", "area_name": "Ameerpet" } ],
+  "on_round": true, "round_started_at": "2026-11-16T02:30:00Z" }
+```
+`on_round` / `round_started_at` *(#110)*: whether he is sharing his location now.
+
+### GET /api/v1/delivery/me/orders?date=YYYY-MM-DD
+
+The orders to deliver that day (default: today, India time; same day rule as the admin Orders board) whose `delivery_pincode` is one of **his** areas, **not cancelled**, sorted by slot time (one-time orders last), then order id. Only what he needs at the door: no item prices.
+```json
+[ { "order_id": 41, "status": "CONFIRMED", "delivery_date": "2026-11-16", "delivery_slot": "Morning, 8:00 AM – 9:00 AM",
+    "customer_name": "Ravi Kumar", "customer_phone": "9876543210",
+    "delivery_address": "12-3 Sai Residency, MG Road, Ameerpet, Hyderabad - 500016", "delivery_pincode": "500016",
+    "delivery_latitude": 17.4375, "delivery_longitude": 78.4483, "total_amount": "120.00",
+    "items": [ { "product_name": "Cow Milk", "size": "1L", "quantity": 2 } ] } ]
+```
+An invalid `date` → **422**.
+
+### PATCH /api/v1/delivery/me/orders/{id}/status
+
+Body `{ "status": "OUT_FOR_DELIVERY" }` or `{ "status": "DELIVERED" }`; any other status → **422** (confirming and cancelling stay with the admin). The normal transition rules apply: `CONFIRMED → OUT_FOR_DELIVERY → DELIVERED`, otherwise **409 `INVALID_STATUS_TRANSITION`**. An order outside his areas → **404** (like a missing one). **200** with the order in the shape above.
+
+### Live location (#110)
+
+Privacy (NFR-17): a position is accepted **only during a round**, the round's start screen tells him what is shared, stopping the round (or logging out) **deletes** his position, there is **no history**, and coordinates are never logged.
+
+- `POST /delivery/me/round/start` → **200** `{ "on_round": true, "round_started_at": "2026-11-16T02:30:00Z" }` (pressing it again keeps the first time).
+- `POST /delivery/me/round/stop` → **200** `{ "on_round": false, "round_started_at": null }`; his saved position is deleted.
+- `PUT /delivery/me/location` with
+  ```json
+  { "latitude": 17.4375, "longitude": 78.4483, "accuracy_m": 12, "recorded_at": "2026-11-16T02:31:10Z" }
+  ```
+  → **204**. `accuracy_m` is optional (0–10 000). `recorded_at` must include a time zone. Only the **latest** position is kept (one row, updated in place); a reading **older** than the saved one is ignored (still 204), and a `recorded_at` in the future is treated as now. Not on a round → **409 `ROUND_NOT_STARTED`**; out-of-range values, a time without a zone or unknown fields → **422**.
+
+The phone sends a reading every 10 s, or after moving 20 m, never more than every 5 s, and skips readings less precise than 100 m.
 
 ### GET /api/v1/admin/users/{id} *(ADMIN)*
 
@@ -574,7 +664,7 @@ All of that user's orders, newest first, in the same shape as `GET /orders/mine`
 
 ---
 
-## Accounts and login (#89)
+## Accounts and login (#89; mobile number login since #121)
 
 Tokens are JWTs (HS256) that expire after `JWT_EXPIRE_MINUTES` (default 60). Send them as `Authorization: Bearer <access_token>`. Logout has no endpoint: the client deletes its token.
 
@@ -582,42 +672,43 @@ Tokens are JWTs (HS256) that expire after `JWT_EXPIRE_MINUTES` (default 60). Sen
 
 **Request** (no `role`: every new account is `USER`; unknown fields → 422)
 ```json
-{ "full_name": "Ravi Kumar", "email": "ravi@example.com", "username": "ravi_k", "password": "milk1234" }
+{ "full_name": "Ravi Kumar", "phone": "9876543210", "password": "milk1234" }
 ```
 
 | Field | Rule |
 |---|---|
 | `full_name` | 2–100 characters after trimming |
-| `email` | `something@something.something`, max 254; stored in lower case |
-| `username` | 3–30 of letters, digits, `.`, `_`, `-`; stored in lower case |
+| `phone` | The login (#121). 10-digit Indian mobile number starting with 6–9. Spaces, dashes and a `+91` or leading `0` are removed first, so `"+91 98765 43210"` is saved as `"9876543210"` |
 | `password` | 8+ characters and at most 72 bytes (bcrypt's limit), at least one letter and one number |
 
 **201 Created**
 ```json
-{ "user_id": 7, "full_name": "Ravi Kumar", "email": "ravi@example.com", "username": "ravi_k", "role": "USER", "created_at": "2026-11-10T10:00:00Z" }
+{ "user_id": 7, "full_name": "Ravi Kumar", "phone": "9876543210", "role": "USER", "created_at": "2026-11-10T10:00:00Z" }
 ```
 
 | Status | Code | When |
 |---|---|---|
-| 409 | `USER_ALREADY_EXISTS` | Email and/or username already used (any letter case). `details` names the field(s): `email`, `username` |
-| 422 | `VALIDATION_ERROR` | A field breaks the rules above, or `role` was sent |
+| 409 | `USER_ALREADY_EXISTS` | The mobile number already has an account. `details`: `[{ "field": "phone", "issue": "already registered" }]` |
+| 422 | `VALIDATION_ERROR` | A field breaks the rules above, or an unknown field (`role`, and since #121 `email` / `username`) was sent |
 
 ### POST /api/v1/auth/login
 
-**Request** (`login` is the username **or** the email)
+**Request** (#121: the mobile number used at sign-up, normalised like at sign-up)
 ```json
-{ "login": "ravi_k", "password": "milk1234" }
+{ "phone": "9876543210", "password": "milk1234" }
 ```
 
 **200 OK**
 ```json
-{ "access_token": "eyJhbGciOiJIUzI1NiIs...", "token_type": "bearer", "expires_in": 3600, "user": { "user_id": 7, "full_name": "Ravi Kumar", "email": "ravi@example.com", "username": "ravi_k", "role": "USER", "created_at": "2026-11-10T10:00:00Z" } }
+{ "access_token": "eyJhbGciOiJIUzI1NiIs...", "token_type": "bearer", "expires_in": 3600, "user": { "user_id": 7, "full_name": "Ravi Kumar", "phone": "9876543210", "role": "USER", "created_at": "2026-11-10T10:00:00Z" } }
 ```
+`role` is `USER`, `ADMIN` or `DELIVERY_BOY` (#109); the frontend opens `/account`, `/admin` or `/delivery` accordingly.
 
 | Status | Code | When |
 |---|---|---|
-| 401 | `UNAUTHORIZED` | "Invalid username/email or password." The same message for an unknown user and a wrong password |
-| 422 | `VALIDATION_ERROR` | `login` or `password` missing |
+| 401 | `UNAUTHORIZED` | "Invalid mobile number or password." The same message for a number without an account and a wrong password |
+| 403 | `FORBIDDEN` | *(#109)* Right password, but a delivery boy the admin switched off: "Your delivery account is switched off. Please contact the dairy." |
+| 422 | `VALIDATION_ERROR` | `phone` or `password` missing, or `phone` is not a valid mobile number |
 
 ### GET /api/v1/auth/me
 
@@ -640,6 +731,23 @@ ADMIN only. **200 OK**: every user, oldest first (same shape as above, never pas
 The role is read from the database on every request, so an admin who is demoted loses access at once. Admins are created only with `python -m app.scripts.create_admin` (see `backend/README.md`).
 
 ---
+
+## Live streams (Server-Sent Events, #113)
+
+`GET /admin/delivery-boys/locations/stream` (ADMIN) and `GET /orders/{id}/tracking/stream` (order owner or ADMIN) send the **same JSON** as their non-stream endpoints, as Server-Sent Events (`Content-Type: text/event-stream`, `Cache-Control: no-cache`):
+```text
+retry: 3000
+
+event: snapshot
+data: {"order_id": 41, "status": "OUT_FOR_DELIVERY", ...}
+
+: ping
+
+```
+- A `snapshot` at once, then again **whenever the data changes** (a location saved, a round started or stopped, an order status changed: PostgreSQL `NOTIFY`, ADR-020), otherwise a `: ping` comment every 15 s.
+- Access is checked **before** streaming (401 / 403 / 404 as for the normal endpoints) and again for every snapshot; losing access ends the stream.
+- A stream ends after **25 minutes**; clients reconnect (the frontend waits 1, 2, 5, then 10 s after failures and **falls back to polling** the normal endpoint every 10 s while the stream is down).
+- Send the token as `Authorization: Bearer …` (the browser's `EventSource` cannot, so the frontend reads the stream with `fetch`).
 
 ## Error format
 
@@ -679,12 +787,12 @@ Errors that do not come from a specific endpoint use the same shape: an unknown 
 |---|---|
 | 200 | Success |
 | 201 | Order, product or user created |
-| 204 | Deleted (no body) |
+| 204 | Deleted, or a location saved (#110) (no body) |
 | 400 | Request is well-formed but breaks a simple rule (duplicate product) |
 | 401 | Not logged in, invalid/expired token, or wrong login details |
 | 403 | Logged in, but not allowed (a `USER` on an admin endpoint) |
 | 404 | Resource not found |
-| 409 | Conflicts with current state (unavailable product, illegal transition, duplicate product name + size, deleting an ordered product, email/username already registered, a second active subscription or cancelling one that is not active (#97), a full delivery slot, deleting a booked slot or switching off the last active one (#100), more than 10 saved addresses (#102), a delivery boy phone or PIN code already taken (#103)) |
+| 409 | Conflicts with current state (unavailable product, illegal transition, duplicate product name + size, deleting an ordered product, mobile number already registered (#121), a second active subscription or cancelling one that is not active (#97), a full delivery slot, deleting a booked slot or switching off the last active one (#100), more than 10 saved addresses (#102), a delivery boy phone or PIN code already taken (#103), another account already using a delivery boy's number (#109), a location sent outside a round (#110)) |
 | 422 | Schema validation failed |
 | 500 | Unexpected server error (details only in logs) |
 | 503 | Dependency (database) unavailable |

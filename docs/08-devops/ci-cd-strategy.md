@@ -8,7 +8,7 @@ CI/CD is built **incrementally**. **CI is live since M5** (`.github/workflows/ci
 flowchart LR
     pr[PR opened / updated] --> ci{CI workflow}
     ci --> be[Backend: ruff, pytest + Postgres service]
-    ci --> fe[Frontend: eslint, tsc, vitest, vite build]
+    ci --> fe[Frontend: oxlint, prettier, tsc, vitest, vite build]
     ci --> dk[Docker: build images]
     be & fe & dk --> ok{All green?}
     ok -->|yes| merge[Merge to develop]
@@ -33,7 +33,7 @@ flowchart LR
 | Job | Steps |
 |---|---|
 | backend | Python 3.12 (pip cache) → install deps → `ruff check` → `ruff format --check` → `alembic upgrade head` on a PostgreSQL 16 service container → `pytest --cov` (test database `milk_delivery_test`) |
-| frontend | Node 24 (npm cache) → `npm ci` → `npm run typecheck` → `npm test` → `npm run build` |
+| frontend | Node 24 (npm cache) → `npm ci` → `npm run lint` (Oxlint) → `npm run format:check` (Prettier) → `npm run typecheck` → `npm test` (Vitest) → `npm run build` |
 | docker-build | `docker compose build backend frontend` (builds both images, nothing is pushed) |
 
 - Node 24, not 20: Vite 8 needs Node 20.19+/22.12+ and Node 20 is end-of-life; same version as the frontend Docker image.

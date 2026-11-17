@@ -25,7 +25,7 @@ Learning maps without live data first is easier. This issue only draws a map; no
 - [ ] Add Leaflet (and react-leaflet, if the ADR chose it) with exact pinned versions
 - [ ] Add `VITE_MAP_TILE_URL` and `VITE_MAP_ATTRIBUTION` to `frontend/.env.example`, with OpenStreetMap defaults
 - [ ] Create `src/components/map/MapView.tsx`: props for centre, zoom and a list of markers (`{ id, lat, lng, label, kind }`)
-- [ ] Marker icons for `home`, `delivery-boy` and `stale` (grey) using Lucide icons and design-system colours
+- [ ] Marker icons for `home` and `delivery-boy`, drawn grey when the marker is `stale` (a flag, not a third kind), using Lucide icons and design-system colours
 - [ ] Always show the attribution "© OpenStreetMap contributors"
 - [ ] Add a `LatLng` type in `src/types/`
 - [ ] Show the component on `DesignPage.tsx` with a few sample markers

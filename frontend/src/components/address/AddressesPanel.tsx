@@ -3,7 +3,7 @@
  * addresses (default first) with Edit, Make default and Delete, and "Add address".
  */
 import { useState } from "react"
-import { Loader2, MapPin, Pencil, Plus, Star, Trash2 } from "lucide-react"
+import { Loader2, LocateFixed, MapPin, Pencil, Plus, Star, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { AddressFormSheet } from "@/components/address/AddressFormSheet"
@@ -82,6 +82,12 @@ export function AddressesPanel() {
                 {address.is_default && <Badge className="bg-primary-soft font-semibold text-primary">Default</Badge>}
               </div>
               <p className="text-small break-words">{address.full_text}</p>
+              {address.latitude !== null && (
+                <p className="flex items-center gap-1 text-small text-muted-foreground">
+                  <LocateFixed className="size-3.5" aria-hidden="true" />
+                  Map pin saved
+                </p>
+              )}
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" className="h-11" onClick={() => setForm({ open: true, address })}>
                   <Pencil aria-hidden="true" />

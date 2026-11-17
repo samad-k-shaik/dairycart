@@ -110,13 +110,13 @@ def test_newest_first(db_session: Session, milk: Product) -> None:
     assert mine == [newer.order_id, older.order_id]
 
 
-def test_rows_have_username_and_items(db_session: Session, milk: Product) -> None:
+def test_rows_have_account_name_and_items(db_session: Session, milk: Product) -> None:
     user = factories.make_user(db_session, full_name="Ravi Kumar")
     order = subscription_order(db_session, user, milk)
 
-    [(row, username, boy)] = [r for r in board(db_session, day=DAY).rows if r[0] == order]
+    [(row, account_name, boy)] = [r for r in board(db_session, day=DAY).rows if r[0] == order]
 
-    assert (username, boy) == (user.username, None)
+    assert (account_name, boy) == ("Ravi Kumar", None)  # #121: the account's name
     assert [(i.product.name, i.quantity) for i in row.items] == [("Cow Milk", 2)]
 
 

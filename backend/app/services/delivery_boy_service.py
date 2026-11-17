@@ -19,9 +19,12 @@ from app.core.errors import (
     AreaAlreadyAllocatedError,
     DeliveryBoyAlreadyExistsError,
     NotFoundError,
+    UserAlreadyExistsError,
 )
-from app.models import DeliveryArea, DeliveryBoy
+from app.core.security import hash_password
+from app.models import DeliveryArea, DeliveryBoy, User, UserRole
 from app.repositories.delivery_boy_repository import DeliveryBoyRepository
+from app.repositories.user_repository import UserRepository
 from app.schemas.common import ErrorDetail
 from app.schemas.delivery_boy import AreaCreate, DeliveryBoyCreate, DeliveryBoyUpdate
 
@@ -83,9 +86,15 @@ def update_delivery_boy(db: Session, delivery_boy_id: int, data: DeliveryBoyUpda
     phone = changes.get("phone", boy.phone)
     if repository.find_by_phone(phone, exclude_id=delivery_boy_id):
         raise _phone_taken(phone)
+    # #109: his login follows the record (he logs in with the number the admin sees).
+    if boy.user is not None and phone != boy.user.phone and UserRepository(db).phone_taken(phone):
+        raise _account_exists(phone)
     try:
         for field, value in changes.items():
             setattr(boy, field, value)
+        if boy.user is not None:
+            boy.user.phone = boy.phone
+            boy.user.full_name = boy.name
         db.commit()
     except IntegrityError as error:
         _raise_for_integrity_error(db, error, phone)
@@ -93,14 +102,55 @@ def update_delivery_boy(db: Session, delivery_boy_id: int, data: DeliveryBoyUpda
 
 
 def delete_delivery_boy(db: Session, delivery_boy_id: int) -> None:
-    """His areas go with him (ON DELETE CASCADE); orders are not linked to him."""
+    """His areas go with him (ON DELETE CASCADE); orders are not linked to him.
+    #109: his login account is deleted too, so it cannot be used any more."""
     boy = get_delivery_boy(db, delivery_boy_id)
     try:
+        account = boy.user
         DeliveryBoyRepository(db).delete(boy)
+        if account is not None:
+            db.delete(account)
         db.commit()
     except Exception:
         db.rollback()
         raise
+
+
+def _account_exists(phone: str) -> UserAlreadyExistsError:
+    return UserAlreadyExistsError(
+        "Another account already uses this mobile number. A delivery boy logs in with his "
+        "own number, so use a different one.",
+        details=[ErrorDetail(field="phone", issue="already registered")],
+    )
+
+
+def set_login(db: Session, delivery_boy_id: int, password: str) -> DeliveryBoy:
+    """#109: give the delivery boy a login, or a new password if he has one.
+
+    The account uses his mobile number and name, with the role DELIVERY_BOY. A number
+    that already belongs to a customer's account is refused (409): we never take over
+    someone else's account."""
+    boy = get_delivery_boy(db, delivery_boy_id)
+    try:
+        if boy.user is not None:
+            boy.user.password_hash = hash_password(password)
+        else:
+            if UserRepository(db).phone_taken(boy.phone):
+                raise _account_exists(boy.phone)
+            boy.user = User(
+                full_name=boy.name,
+                phone=boy.phone,
+                password_hash=hash_password(password),
+                role=UserRole.DELIVERY_BOY,
+            )
+        db.commit()
+    except IntegrityError as error:  # the same number registered at the same moment
+        db.rollback()
+        raise _account_exists(boy.phone) from error
+    except Exception:
+        db.rollback()
+        raise
+    return get_delivery_boy(db, delivery_boy_id)
 
 
 def add_area(db: Session, delivery_boy_id: int, data: AreaCreate) -> DeliveryBoy:

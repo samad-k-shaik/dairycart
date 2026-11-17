@@ -40,11 +40,11 @@ Priority uses **MoSCoW**: Must / Should / Could. All "Must" items are required f
 
 | ID | Requirement | Priority | Acceptance criteria |
 |---|---|---|---|
-| FR-U1 | Sign up | Must | Full name (2–100), email (valid format), username (3–30: letters, digits, `.`, `_`, `-`), password (8–72 bytes, at least one letter and one number) and confirm password (must match). Duplicate email or username (any letter case) is rejected at that field. New accounts are always `USER`. |
-| FR-U2 | Log in | Must | Username **or** email + password. Wrong details show "Invalid username/email or password." (the same for unknown user and wrong password). A USER goes to the User Dashboard (`/account`), an ADMIN to the Admin Dashboard (`/admin`), or back to the page that asked for the login. |
-| FR-U3 | User Dashboard | Must | `/account` shows full name, username, email, role and member-since date. Logged-out visitors are sent to the login page. |
+| FR-U1 | Sign up | Must | Full name (mandatory, 2–100), mobile number (10 digits starting with 6–9; `+91`, a leading `0`, spaces and dashes are allowed and removed), password (8–72 bytes, at least one letter and one number) and confirm password (must match). No email or username (#121). A mobile number that already has an account is rejected at that field. New accounts are always `USER`. |
+| FR-U2 | Log in | Must | Mobile number + password (#121). Wrong details show "Invalid mobile number or password." (the same for a number without an account and a wrong password). Future (out of scope for the POC): mobile number + OTP (ADR-019). A USER goes to the User Dashboard (`/account`), an ADMIN to the Admin Dashboard (`/admin`), or back to the page that asked for the login. |
+| FR-U3 | User Dashboard | Must | `/account` shows full name, mobile number, role and member-since date. Logged-out visitors are sent to the login page. |
 | FR-U4 | Admin only | Must | Every `/admin` page and `/api/v1/admin/*` API needs an ADMIN login: not logged in → login page / 401; logged in as USER → "Admins only" / 403. |
-| FR-U5 | Admin users list | Must | `/admin/users` lists every user (name, username, email, role, joined date). Never shows passwords or hashes. |
+| FR-U5 | Admin users list | Must | `/admin/users` lists every user (name, mobile number, role, joined date). Never shows passwords or hashes. |
 | FR-U6 | Log out | Must | Log out (account page, admin sidebar/top bar) removes the session and cached data; protected pages need a new login. The session also ends when the token expires (60 min). |
 
 Admins are created only with `python -m app.scripts.create_admin` (see `backend/README.md`).

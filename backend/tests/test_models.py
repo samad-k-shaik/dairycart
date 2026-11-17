@@ -66,6 +66,7 @@ def test_all_tables_are_registered_for_alembic() -> None:
         "addresses",  # #102
         "delivery_boys",  # #103
         "delivery_areas",  # #103
+        "delivery_locations",  # #110
     }
 
 
@@ -110,6 +111,8 @@ ERD_COLUMNS = {
         "delivery_slot": ("VARCHAR(100)", True),  # #100: copy of the slot's label
         "delivery_address": ("VARCHAR(500)", True),  # #102: copy of the address
         "delivery_pincode": ("VARCHAR(6)", True),  # #103: its PIN code
+        "delivery_latitude": ("NUMERIC(9, 6)", True),  # #108: copy of the map pin
+        "delivery_longitude": ("NUMERIC(9, 6)", True),  # #108
     },
     "order_items": {
         "order_item_id": ("INTEGER", False),
@@ -132,6 +135,8 @@ ERD_COLUMNS = {
         "delivery_slot_id": ("INTEGER", True),  # #100: null before #100
         "delivery_address": ("VARCHAR(500)", True),  # #102: null before #102
         "delivery_pincode": ("VARCHAR(6)", True),  # #103
+        "delivery_latitude": ("NUMERIC(9, 6)", True),  # #108: copy of the map pin
+        "delivery_longitude": ("NUMERIC(9, 6)", True),  # #108
         "daily_total": ("NUMERIC(10, 2)", False),
         "created_at": ("TIMESTAMP WITH TIME ZONE", False),
         "cancelled_at": ("TIMESTAMP WITH TIME ZONE", True),
@@ -164,6 +169,8 @@ ERD_COLUMNS = {
         "landmark": ("VARCHAR(100)", True),
         "city": ("VARCHAR(50)", False),
         "pincode": ("VARCHAR(6)", False),
+        "latitude": ("NUMERIC(9, 6)", True),  # #108: optional map pin
+        "longitude": ("NUMERIC(9, 6)", True),  # #108
         "is_default": ("BOOLEAN", False),
         "created_at": ("TIMESTAMP WITH TIME ZONE", False),
     },
@@ -174,6 +181,17 @@ ERD_COLUMNS = {
         "phone": ("VARCHAR(10)", False),
         "is_active": ("BOOLEAN", False),
         "created_at": ("TIMESTAMP WITH TIME ZONE", False),
+        "user_id": ("INTEGER", True),  # #109: his login (NULL = none)
+        "round_started_at": ("TIMESTAMP WITH TIME ZONE", True),  # #110: NULL = not on a round
+    },
+    # #110: latest position only, one row per delivery boy
+    "delivery_locations": {
+        "delivery_boy_id": ("INTEGER", False),
+        "latitude": ("NUMERIC(9, 6)", False),
+        "longitude": ("NUMERIC(9, 6)", False),
+        "accuracy_m": ("INTEGER", True),
+        "recorded_at": ("TIMESTAMP WITH TIME ZONE", False),
+        "updated_at": ("TIMESTAMP WITH TIME ZONE", False),
     },
     "delivery_areas": {
         "delivery_area_id": ("INTEGER", False),
@@ -251,6 +269,20 @@ def test_check_and_unique_constraints_have_readable_names(schema: Engine) -> Non
         "ck_addresses_pincode_format",  # #102
         "ck_delivery_boys_phone_format",  # #103
         "ck_delivery_areas_pincode_format",  # #103
+        # #108: map pins (range, and both-or-neither)
+        "ck_addresses_latitude_range",
+        "ck_addresses_longitude_range",
+        "ck_addresses_map_pin_complete",
+        "ck_orders_delivery_latitude_range",
+        "ck_orders_delivery_longitude_range",
+        "ck_orders_map_pin_complete",
+        "ck_subscriptions_delivery_latitude_range",
+        "ck_subscriptions_delivery_longitude_range",
+        "ck_subscriptions_map_pin_complete",
+        # #110
+        "ck_delivery_locations_latitude_range",
+        "ck_delivery_locations_longitude_range",
+        "ck_delivery_locations_accuracy_non_negative",
     }
     assert uniques == {
         "uq_customers_phone",
@@ -261,6 +293,7 @@ def test_check_and_unique_constraints_have_readable_names(schema: Engine) -> Non
         "uq_delivery_slots_times",  # #100
         "uq_delivery_boys_phone",  # #103
         "uq_delivery_areas_pincode",  # #103
+        "uq_delivery_boys_user_id",  # #109: one login per delivery boy
     }
 
 

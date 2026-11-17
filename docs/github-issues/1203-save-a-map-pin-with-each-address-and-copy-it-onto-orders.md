@@ -24,7 +24,7 @@ Orders already keep a text copy of the address (`delivery_address`) so editing a
 - M12-02 done
 
 ## 5. Tasks
-- [ ] Alembic migration: `latitude NUMERIC(9,6) NULL`, `longitude NUMERIC(9,6) NULL` on `addresses`, `orders` and `subscriptions`, with CHECK constraints (−90…90, −180…180, both null or both set)
+- [ ] Alembic migration: `latitude NUMERIC(9,6) NULL`, `longitude NUMERIC(9,6) NULL` on `addresses`, and `delivery_latitude` / `delivery_longitude` on `orders` and `subscriptions` (matching `delivery_address` / `delivery_pincode`), with CHECK constraints (−90…90, −180…180, both null or both set)
 - [ ] Update models, schemas and the address service; checkout copies the pin onto the order (and subscription) like it copies the address text
 - [ ] Update `docs/05-api/api-contracts.md` (address request/response, order response)
 - [ ] Address form: a `MapView` with a draggable pin and a "Use my current location" button (`navigator.geolocation.getCurrentPosition`)

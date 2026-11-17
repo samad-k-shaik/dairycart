@@ -1,6 +1,6 @@
 /** Timeline tests for all five statuses (M2-10 acceptance criterion). */
 import assert from "node:assert/strict"
-import { describe, it } from "node:test"
+import { describe, it } from "vitest"
 
 import { ORDER_STATUSES } from "../types/order.ts"
 import {
@@ -26,10 +26,7 @@ describe("ALLOWED_TRANSITIONS (matches the requirements lifecycle table)", () =>
   it("DELIVERED and CANCELLED are final: no update options", () => {
     assert.deepEqual(getNextStatuses("DELIVERED"), [])
     assert.deepEqual(getNextStatuses("CANCELLED"), [])
-    assert.deepEqual(
-      ORDER_STATUSES.filter(isFinalStatus),
-      ["DELIVERED", "CANCELLED"],
-    )
+    assert.deepEqual(ORDER_STATUSES.filter(isFinalStatus), ["DELIVERED", "CANCELLED"])
   })
 
   it("rejects going backwards, skipping steps and staying the same", () => {
@@ -81,12 +78,7 @@ describe("getTimelineSteps", () => {
   })
 
   it("DELIVERED: all earlier steps done, Delivered is the current (final) step", () => {
-    assert.deepEqual(show("DELIVERED"), [
-      "Placed:done",
-      "Confirmed:done",
-      "Out for delivery:done",
-      "Delivered:current",
-    ])
+    assert.deepEqual(show("DELIVERED"), ["Placed:done", "Confirmed:done", "Out for delivery:done", "Delivered:current"])
   })
 
   it("CANCELLED: Placed then Cancelled, no delivery steps", () => {

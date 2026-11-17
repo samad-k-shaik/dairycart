@@ -21,6 +21,6 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  /* vite.config.ts and the unit tests run in Node, not the browser. */
-  "include": ["vite.config.ts", "src/**/*.test.ts"]
+  /* vite.config.ts runs in Node, not the browser. (Tests: tsconfig.test.json, #49.) */
+  "include": ["vite.config.ts"]
 }

@@ -28,7 +28,11 @@ export function DevMockSwitch() {
   return (
     <div className="fixed bottom-3 left-3 z-[60] text-small">
       {open && (
-        <div className="mb-2 w-56 space-y-2 rounded-2xl border bg-surface p-3 shadow-lg" role="dialog" aria-label="Mock services (dev only)">
+        <div
+          className="mb-2 w-56 space-y-2 rounded-2xl border bg-surface p-3 shadow-lg"
+          role="dialog"
+          aria-label="Mock services (dev only)"
+        >
           <p className="font-bold">Mock services (dev only)</p>
           <fieldset className="space-y-1">
             <legend className="sr-only">Mock mode</legend>

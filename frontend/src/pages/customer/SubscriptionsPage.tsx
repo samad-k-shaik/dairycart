@@ -161,8 +161,7 @@ function SubscriptionCard({
         {subscription.items.map((item) => (
           <li key={item.product_id} className="flex justify-between gap-3 px-3 py-2.5">
             <span>
-              {item.quantity} × {item.product_name}{" "}
-              <span className="text-muted-foreground">{item.size}</span>
+              {item.quantity} × {item.product_name} <span className="text-muted-foreground">{item.size}</span>
             </span>
             <span className="font-semibold">{formatCurrency(item.subtotal)}</span>
           </li>
@@ -237,8 +236,8 @@ function CancelDialog({ subscription, onClose }: { subscription: Subscription | 
         <AlertDialogHeader>
           <AlertDialogTitle>Cancel this subscription?</AlertDialogTitle>
           <AlertDialogDescription>
-            There will be no more deliveries after today. An order already created for today
-            still arrives. You can subscribe again at any time.
+            There will be no more deliveries after today. An order already created for today still arrives. You can
+            subscribe again at any time.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

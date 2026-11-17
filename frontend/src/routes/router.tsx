@@ -11,12 +11,14 @@ import { RequireAuth } from "@/components/auth/RequireAuth"
 import { RouteErrorFallback } from "@/components/common/RouteErrorFallback"
 import AdminLayout from "@/layouts/AdminLayout"
 import CustomerLayout from "@/layouts/CustomerLayout"
+import DeliveryLayout from "@/layouts/DeliveryLayout"
 import DashboardPage from "@/pages/admin/DashboardPage"
 import OrdersPage from "@/pages/admin/OrdersPage"
 import ProductsPage from "@/pages/admin/ProductsPage"
 import AdminSubscriptionsPage from "@/pages/admin/SubscriptionsPage"
 import DeliverySlotsPage from "@/pages/admin/DeliverySlotsPage"
 import DeliveryBoysPage from "@/pages/admin/DeliveryBoysPage"
+import LiveMapPage from "@/pages/admin/LiveMapPage"
 import UserDetailsPage from "@/pages/admin/UserDetailsPage"
 import UsersPage from "@/pages/admin/UsersPage"
 import LoginPage from "@/pages/auth/LoginPage"
@@ -30,6 +32,7 @@ import OrderHistoryPage from "@/pages/customer/OrderHistoryPage"
 import ProductDetailsPage from "@/pages/customer/ProductDetailsPage"
 import SubscriptionsPage from "@/pages/customer/SubscriptionsPage"
 import UserDashboardPage from "@/pages/customer/UserDashboardPage"
+import TodayDeliveriesPage from "@/pages/delivery/TodayDeliveriesPage"
 import DesignPage from "@/pages/DesignPage"
 import NotFoundPage from "@/pages/NotFoundPage"
 
@@ -46,12 +49,47 @@ export const router = createBrowserRouter([
       { path: "cart", element: <CartPage /> },
       // Ordering needs an account (#90): these pages send logged-out visitors to /login
       // and bring them back afterwards. Browsing and the cart stay open to everyone.
-      { path: "checkout", element: <RequireAuth><CheckoutPage /></RequireAuth> },
-      { path: "orders", element: <RequireAuth><OrderHistoryPage /></RequireAuth> }, // My orders
-      { path: "orders/:id", element: <RequireAuth><OrderDetailsPage /></RequireAuth> },
-      { path: "orders/:id/confirmation", element: <RequireAuth><OrderConfirmationPage /></RequireAuth> },
+      {
+        path: "checkout",
+        element: (
+          <RequireAuth>
+            <CheckoutPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "orders",
+        element: (
+          <RequireAuth>
+            <OrderHistoryPage />
+          </RequireAuth>
+        ),
+      }, // My orders
+      {
+        path: "orders/:id",
+        element: (
+          <RequireAuth>
+            <OrderDetailsPage />
+          </RequireAuth>
+        ),
+      },
+      {
+        path: "orders/:id/confirmation",
+        element: (
+          <RequireAuth>
+            <OrderConfirmationPage />
+          </RequireAuth>
+        ),
+      },
       // Subscriptions (#97): "My subscriptions" with Cancel.
-      { path: "subscriptions", element: <RequireAuth><SubscriptionsPage /></RequireAuth> },
+      {
+        path: "subscriptions",
+        element: (
+          <RequireAuth>
+            <SubscriptionsPage />
+          </RequireAuth>
+        ),
+      },
       // Accounts (#89).
       { path: "signup", element: <SignUpPage /> },
       { path: "login", element: <LoginPage /> },
@@ -85,11 +123,27 @@ export const router = createBrowserRouter([
       // #104: the Deliveries page was merged into the Orders board.
       { path: "deliveries", element: <Navigate to="/admin/orders" replace /> },
       { path: "delivery-boys", element: <DeliveryBoysPage /> }, // #103
+      { path: "live-map", element: <LiveMapPage /> }, // #111
       // #105: loaded only when opened, so Recharts (~120 kB gzip) is not in everyone's bundle.
       { path: "income", lazy: async () => ({ Component: (await import("@/pages/admin/IncomePage")).default }) },
       { path: "subscriptions", element: <AdminSubscriptionsPage /> }, // #97
       { path: "delivery-slots", element: <DeliverySlotsPage /> }, // #100
       { path: "*", element: <NotFoundPage homePath="/admin" /> },
+    ],
+  },
+  {
+    // Delivery boy route tree (#109): his own phone pages. Not logged in → /login;
+    // logged in with another role → "Delivery boys only".
+    path: "/delivery",
+    element: (
+      <RequireAuth role="DELIVERY_BOY">
+        <DeliveryLayout />
+      </RequireAuth>
+    ),
+    errorElement: <RouteErrorFallback />,
+    children: [
+      { index: true, element: <TodayDeliveriesPage /> },
+      { path: "*", element: <NotFoundPage homePath="/delivery" /> },
     ],
   },
   // TEMPORARY design review page (M2-02); no layout. Remove after M2-14 approval.

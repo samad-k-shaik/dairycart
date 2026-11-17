@@ -28,6 +28,7 @@ from app.models import (
 )
 from app.repositories.customer_repository import CustomerRepository
 from app.repositories.delivery_boy_repository import DeliveryBoyRepository
+from app.repositories.live_update_repository import notify_change
 from app.repositories.order_repository import (
     AdminOrderFilters,
     OrderRepository,
@@ -136,6 +137,8 @@ def create_order(db: Session, data: OrderCreate, user: User) -> Order:
             user_id=user_id,  # the account that placed it (#90)
             delivery_address=address.text,  # #102
             delivery_pincode=address.pincode,  # #103
+            delivery_latitude=address.latitude,  # #108
+            delivery_longitude=address.longitude,
             items=items,
             status=OrderStatus.PLACED,
             total_amount=sum((item.subtotal for item in items), Decimal("0.00")),
@@ -183,7 +186,7 @@ def list_my_orders(db: Session, user: User) -> list[OrderRow]:
 class AdminOrderBoard:
     """#104: one page of the admin Orders board."""
 
-    rows: list[tuple[Order, str | None, DeliveryBoy | None]]  # order, username, boy
+    rows: list[tuple[Order, str | None, DeliveryBoy | None]]  # order, account name, boy
     total: int
     status_counts: dict[OrderStatus, int]
     boy_counts: list[tuple[DeliveryBoy, int]]
@@ -208,8 +211,8 @@ def list_admin_orders(
     boys = {boy.delivery_boy_id: boy for boy in allocation.values()}
     return AdminOrderBoard(
         rows=[
-            (order, username, allocation.get(order.delivery_pincode or ""))
-            for order, username in orders
+            (order, account_name, allocation.get(order.delivery_pincode or ""))
+            for order, account_name in orders
         ],
         total=total,
         status_counts=repository.count_by_status(filters),
@@ -245,6 +248,7 @@ def update_status(db: Session, order_id: int, new_status: OrderStatus) -> Order:
             for product_id, quantity in quantities.items():
                 products[product_id].stock_quantity += quantity
         order.status = new_status
+        notify_change(db)  # #113: e.g. the customer's tracking sees DELIVERED at once
         db.commit()  # also releases the row locks
     except Exception:
         db.rollback()

@@ -8,6 +8,7 @@
 import { api, queryString } from "@/services/apiClient"
 import * as mock from "@/services/mock/mockOrderService"
 import { USE_MOCKS } from "@/services/mockMode"
+import type { OrderTracking } from "@/types/tracking"
 import type {
   AdminOrderPage,
   AdminOrderQuery,
@@ -25,6 +26,11 @@ export function createOrder(request: CreateOrderRequest): Promise<Order> {
 }
 
 /** GET /api/v1/orders/{id} */
+/** #112: where is my order? Real backend only (the mocks have no delivery boys). */
+export function getOrderTracking(orderId: number): Promise<OrderTracking> {
+  return api.get(`/orders/${orderId}/tracking`)
+}
+
 export function getOrder(orderId: number): Promise<Order> {
   if (USE_MOCKS) return mock.getOrder(orderId)
   return api.get(`/orders/${orderId}`)

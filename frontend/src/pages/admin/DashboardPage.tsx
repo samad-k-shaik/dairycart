@@ -10,7 +10,18 @@
  *   backend field would be needed once there are more than 100 orders.
  */
 import { Link } from "react-router"
-import { CalendarDays, CheckCircle2, ChevronRight, ClipboardList, IndianRupee, PackageCheck, ShoppingBag, Truck, XCircle, type LucideIcon } from "lucide-react"
+import {
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  ClipboardList,
+  IndianRupee,
+  PackageCheck,
+  ShoppingBag,
+  Truck,
+  XCircle,
+  type LucideIcon,
+} from "lucide-react"
 
 import { EmptyState } from "@/components/common/EmptyState"
 import { ErrorState } from "@/components/common/ErrorState"
@@ -140,8 +151,8 @@ function DashboardPage() {
 }
 
 /** Same shapes as the real dashboard: 2 overview cards, 5 status cards, a list. */
-function DashboardSkeleton() {
-  const card = (key: number) => (
+function skeletonCard(key: number) {
+  return (
     <div key={key} className="flex items-center gap-4 rounded-2xl bg-surface p-4 shadow-card">
       <Skeleton className="size-11 rounded-xl" />
       <div className="flex-1 space-y-2">
@@ -150,10 +161,15 @@ function DashboardSkeleton() {
       </div>
     </div>
   )
+}
+
+function DashboardSkeleton() {
   return (
     <div className="space-y-6" aria-hidden="true">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{[0, 1].map(card)}</div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">{[2, 3, 4, 5, 6].map(card)}</div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{[0, 1].map(skeletonCard)}</div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {[2, 3, 4, 5, 6].map(skeletonCard)}
+      </div>
       <Skeleton className="h-64 rounded-2xl" />
     </div>
   )

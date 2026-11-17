@@ -34,8 +34,8 @@ function SubscriptionsPage() {
       <div className="space-y-1">
         <h1 className="text-h1 font-bold">Subscriptions</h1>
         <p className="text-muted-foreground">
-          Plans for 1 week, 15 days or 1 month, delivered every day, every 2 days or every 3 days. Delivery
-          orders are created automatically and appear on the Orders page.
+          Plans for 1 week, 15 days or 1 month, delivered every day, every 2 days or every 3 days. Delivery orders are
+          created automatically and appear on the Orders page.
         </p>
         {/* Phones: Delivery slots is not in the tab bar (#101), so link it here. */}
         <Link
@@ -104,7 +104,7 @@ function SubscriptionsPage() {
                   <TableCell>
                     <p className="font-semibold">{row.customer_name}</p>
                     <p className="text-small text-muted-foreground">
-                      {row.customer_phone} · @{row.username}
+                      {row.customer_phone} · account: {row.account_name}
                     </p>
                   </TableCell>
                   <TableCell>
@@ -121,7 +121,9 @@ function SubscriptionsPage() {
                   <TableCell className="hidden sm:table-cell">{formatCurrency(row.daily_total)}</TableCell>
                   <TableCell className="hidden md:table-cell">{row.orders_created}</TableCell>
                   <TableCell>
-                    <Badge className={cn("font-semibold", STATUS_STYLES[row.status])}>{STATUS_LABELS[row.status]}</Badge>
+                    <Badge className={cn("font-semibold", STATUS_STYLES[row.status])}>
+                      {STATUS_LABELS[row.status]}
+                    </Badge>
                   </TableCell>
                 </TableRow>
               ))}

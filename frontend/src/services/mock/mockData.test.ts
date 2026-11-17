@@ -4,7 +4,7 @@
  * Runs with Node's built-in test runner (`npm test`).
  */
 import assert from "node:assert/strict"
-import { describe, it } from "node:test"
+import { describe, it } from "vitest"
 
 import { ORDER_STATUSES } from "../../types/order.ts"
 import orders from "./orders.json" with { type: "json" }

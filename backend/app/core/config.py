@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     # N minutes). Turned off in tests, which call the service themselves.
     subscription_auto_orders: bool = True
     subscription_orders_interval_minutes: int = Field(default=15, ge=1, le=1440)
+    # #113: listen for PostgreSQL notifications so live maps update at once (SSE).
+    # Off: live streams still re-check every 15 s.
+    live_updates: bool = True
 
     log_level: LogLevel = "INFO"
     app_env: AppEnv = "local"

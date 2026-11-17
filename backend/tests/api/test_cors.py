@@ -30,6 +30,23 @@ def test_preflight_for_a_post_from_the_frontend(client: TestClient) -> None:
     assert "POST" in response.headers["access-control-allow-methods"]
 
 
+@pytest.mark.parametrize("method", ["GET", "POST", "PATCH", "PUT", "DELETE"])
+def test_every_method_the_frontend_uses_is_allowed(client: TestClient, method: str) -> None:
+    """#109: the browser asks first (preflight); a method missing here would be blocked in
+    the browser even though the API itself works (PUT for a delivery boy's login)."""
+    response = client.options(
+        "/api/v1/admin/delivery-boys/1/login",
+        headers={
+            "Origin": FRONTEND,
+            "Access-Control-Request-Method": method,
+            "Access-Control-Request-Headers": "authorization, content-type",
+        },
+    )
+
+    assert response.status_code == 200
+    assert method in response.headers["access-control-allow-methods"]
+
+
 def test_other_origins_are_blocked(client: TestClient) -> None:
     simple = client.get("/api/v1/health", headers={"Origin": "https://evil.example"})
     preflight = client.options(

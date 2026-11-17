@@ -1,15 +1,12 @@
 import assert from "node:assert/strict"
-import { describe, it } from "node:test"
+import { describe, it } from "vitest"
 
 import orders from "../services/mock/orders.json" with { type: "json" }
 import { countOrdersOnIstDay, totalFromStatusCounts } from "./dashboard.ts"
 
 describe("totalFromStatusCounts", () => {
   it("adds up every status", () => {
-    assert.equal(
-      totalFromStatusCounts({ PLACED: 2, CONFIRMED: 2, OUT_FOR_DELIVERY: 1, DELIVERED: 2, CANCELLED: 1 }),
-      8,
-    )
+    assert.equal(totalFromStatusCounts({ PLACED: 2, CONFIRMED: 2, OUT_FOR_DELIVERY: 1, DELIVERED: 2, CANCELLED: 1 }), 8)
   })
 })
 

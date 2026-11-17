@@ -39,10 +39,10 @@ Not built yet. Built only with free, open-source tools (ADR-018). Privacy rules:
 | # | Capability | Issue |
 |---|---|---|
 | C10 | Drop a map pin on a saved address; orders and subscriptions keep a copy of it | #108 |
-| C11 | Track an order that is out for delivery on a map, with distance and estimated arrival time | #112 |
-| D1 | Delivery boys log in on a phone web page and see today's deliveries for their areas | #109 |
-| D2 | Delivery boys share their location only while a delivery round is started | #110 |
-| A12 | Admin live map of delivery boys on a round | #111 |
+| C11 | Track an order that is out for delivery on a map, with distance and estimated arrival time *(built: #112)* | #112 |
+| D1 | Delivery boys log in on a phone web page and see today's deliveries for their areas; they mark orders out for delivery / delivered *(built: #109)* | #109 |
+| D2 | Delivery boys share their location only while a delivery round is started *(built: #110)* | #110 |
+| A12 | Admin live map of delivery boys on a round *(built: #111, Admin → Live map)* | #111 |
 
 ## Out of scope
 
@@ -60,7 +60,7 @@ Not built yet. Built only with free, open-source tools (ADR-018). Privacy rules:
 
 ## Simplifying assumptions
 
-1. **Login only for accounts and the admin area (#89).** People can sign up (full name, email, username, password) and log in; the admin area needs an ADMIN account. **Ordering needs an account too (#90):** the cart works without login, but checkout, "My orders" and order details need a logged-in user. Name and phone at checkout are the delivery contact. **This is acceptable only because the POC holds no real data and is not public.** OTP login, password reset and email confirmation remain out of scope.
+1. **Login only for accounts and the admin area (#89).** People can sign up (full name, mobile number, password; #121) and log in with their mobile number and password; the admin area needs an ADMIN account. **Ordering needs an account too (#90):** the cart works without login, but checkout, "My orders" and order details need a logged-in user. Name and phone at checkout are the delivery contact. **This is acceptable only because the POC holds no real data and is not public.** OTP login (the planned way to log in for a real launch, ADR-019) and password reset remain out of scope.
 2. **Single dairy, single city.** The catalogue starts with four seeded products; admins can add, edit and delete products from the admin Products page (A6, added by #86). A product that was already ordered cannot be deleted, only marked unavailable.
 3. **Cash on delivery** is assumed. No payments are recorded.
 4. **Quantity per line** is 1–20 units.

@@ -5,12 +5,12 @@
 import { api } from "@/services/apiClient"
 import type { LoginRequest, LoginResponse, RegisterRequest, User } from "@/types/auth"
 
-/** POST /api/v1/auth/register → the new USER account (201). 409 if email/username is taken. */
+/** POST /api/v1/auth/register → the new USER account (201). 409 if the mobile number is taken. */
 export function register(request: RegisterRequest): Promise<User> {
   return api.post("/auth/register", request)
 }
 
-/** POST /api/v1/auth/login → token + user. 401 "Invalid username/email or password." */
+/** POST /api/v1/auth/login → token + user. 401 "Invalid mobile number or password." */
 export function login(request: LoginRequest): Promise<LoginResponse> {
   return api.post("/auth/login", request)
 }

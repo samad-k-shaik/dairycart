@@ -71,13 +71,7 @@ function ProductDetails({ product }: { product: Product }) {
   return (
     <article className="grid gap-6 md:grid-cols-2 md:gap-10">
       <div className="aspect-square overflow-hidden rounded-2xl bg-primary-soft shadow-card">
-        <img
-          src={getProductImage(product)}
-          alt={label}
-          width={400}
-          height={400}
-          className="size-full object-cover"
-        />
+        <img src={getProductImage(product)} alt={label} width={400} height={400} className="size-full object-cover" />
       </div>
 
       <div className="photo-panel flex flex-col gap-4 p-4 md:p-5">
@@ -92,11 +86,7 @@ function ProductDetails({ product }: { product: Product }) {
           <>
             <div className="space-y-2">
               <p className="font-semibold">Quantity</p>
-              <QuantitySelector
-                value={quantity}
-                onChange={setQuantity}
-                label={`Quantity of ${label}`}
-              />
+              <QuantitySelector value={quantity} onChange={setQuantity} label={`Quantity of ${label}`} />
               <p className="text-small text-muted-foreground">You can order 1 to 20 at a time.</p>
             </div>
 
@@ -108,7 +98,9 @@ function ProductDetails({ product }: { product: Product }) {
           </>
         ) : (
           <p className="rounded-xl bg-red-50 p-3 font-semibold text-danger" role="status">
-            {product.is_available ? "Out of stock. Please check again later." : "This product is currently unavailable."}
+            {product.is_available
+              ? "Out of stock. Please check again later."
+              : "This product is currently unavailable."}
           </p>
         )}
       </div>

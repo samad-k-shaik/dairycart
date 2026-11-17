@@ -26,7 +26,7 @@ BCRYPT_ROUNDS = 12
 
 # A real hash of a random password. Checking against it when the user does NOT exist
 # makes "unknown user" take as long as "wrong password", so response times do not
-# reveal which usernames exist.
+# reveal which mobile numbers have an account.
 _DUMMY_HASH = bcrypt.hashpw(b"no-such-user-password", bcrypt.gensalt(BCRYPT_ROUNDS))
 
 
