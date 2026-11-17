@@ -2,19 +2,33 @@
 
 An MVP/POC for learning the full software development lifecycle, built by a group of friends learning to build production-level AI applications.
 
-A **learning-first** full-stack web application for a local dairy business. Customers browse milk products, add them to a cart, place orders and view their order history. An administrator views orders and updates their status.
+A **learning-first** full-stack web application for a local dairy business. Customers order milk once or by subscription, the admin runs orders, stock, delivery areas and income, and delivery boys see their day's deliveries on a phone, with live tracking on a map.
 
 > This is a proof of concept for learning the complete software development lifecycle with AI coding assistants (such as Codex). It is **not** a commercial marketplace.
 
 ## Status
 
-**Milestone M0 – Project Foundation.** Only the repository, documentation, standards and GitHub project setup exist. No application features have been implemented yet. Source folders contain `.gitkeep` placeholders; real files (`App.tsx`, `main.tsx`, `app/main.py`, …) are created by the M1/M2 issues.
+**Built and running locally (Docker): M0–M5, M8, M11 and M12.** Not started: **M6** (GCP deployment) and **M7** (final demonstration). Still open in M4: backend test issues #46–#48.
+
+### What the app does
+
+| Who | Features | Milestone |
+|---|---|---|
+| Customer | Sign up and log in with mobile number and password; browse products; cart and checkout (cash on delivery, totals calculated by the backend); order history | M2, M3, M11 |
+| Customer | One-time order or a 7/15/30-day subscription delivered every 1, 2 or 3 days, in a chosen delivery time slot; cancel any time | M8 |
+| Customer | Saved delivery addresses with an optional map pin; track an out-for-delivery order on a map with an ETA | M8, M12 |
+| Admin | Dashboard; one Orders board (filter by day, delivery boy or unassigned) with status updates; products with stock; users and their order history; subscriptions; delivery time slots | M3, M8, M11 |
+| Admin | Delivery boys with areas by PIN code (an order goes to the active delivery boy covering its PIN code); give a delivery boy a login; Income tab with charts | M8, M12 |
+| Admin | Live map of delivery boys on a round, updated instantly (SSE) | M12 |
+| Delivery boy | Phone web page with today's deliveries in his areas; Call and **Navigate** (Google Maps directions) buttons; Start delivery → Mark delivered; share location only during a round | M12 |
+
+Each feature's full specification is its issue in [`docs/github-issues/`](docs/github-issues/README.md), grouped by milestone.
 
 ## Technology stack
 
 | Layer | Technology |
 |---|---|
-| Frontend | React, Vite, TypeScript, Tailwind CSS, shadcn/ui, Lucide React, TanStack Query |
+| Frontend | React, Vite, TypeScript, Tailwind CSS, shadcn/ui, Lucide React, TanStack Query, Recharts, Leaflet + OpenStreetMap |
 | Backend | Python, FastAPI, Pydantic, SQLAlchemy, Alembic |
 | Database | PostgreSQL |
 | DevOps | Git, GitHub (Issues, Projects, Actions), Docker, Docker Compose, Codex |
@@ -31,7 +45,7 @@ flowchart TD
     API -->|SQLAlchemy| DB[(PostgreSQL)]
 ```
 
-A **modular monolith**: one frontend app (customer + admin routes), one backend service, one database.
+A **modular monolith**: one frontend app (customer, admin and delivery boy routes), one backend service, one database.
 
 ## Repository layout
 
@@ -52,16 +66,21 @@ milk-delivery-poc/
 
 ## Milestones
 
-| Milestone | Goal |
-|---|---|
-| M0 – Project Foundation | Repo, docs, standards, board |
-| M1 – Backend Foundation | FastAPI skeleton, DB models, migrations, product APIs |
-| M2 – Frontend Foundation | UI screens with **mock JSON** data |
-| M3 – Order Management | Cart, orders, admin status updates, frontend ↔ backend integration |
-| M4 – Testing and Quality | Unit, API and UI tests; linting |
-| M5 – Docker and CI | Containers, Compose, GitHub Actions |
-| M6 – GCP Deployment | Cloud Run, Cloud SQL, secrets, logging |
-| M7 – Final Demonstration | Demo, retrospective, learning review |
+| Milestone | Goal | Status |
+|---|---|---|
+| M0 – Project Foundation | Repo, docs, standards, board | Done |
+| M1 – Backend Foundation | FastAPI skeleton, DB models, migrations, product APIs | Done |
+| M2 – Frontend Foundation | UI screens with **mock JSON** data | Done |
+| M3 – Order Management | Cart, orders, admin status updates, frontend ↔ backend integration | Done |
+| M4 – Testing and Quality | Unit, API and UI tests; linting | Mostly done (#46–#48 open) |
+| M5 – Docker and CI | Containers, Compose, GitHub Actions | Done |
+| M6 – GCP Deployment | Cloud Run, Cloud SQL, secrets, logging | Not started |
+| M7 – Final Demonstration | Demo, retrospective, learning review | Not started |
+| M8 – Ordering, Subscriptions and Delivery Operations | Admin products, shop look, subscriptions, delivery slots, addresses, delivery boys and areas, Orders board, Income | Done |
+| M11 – User Authentication and Admin Management | Accounts and roles, login to order, stock, login by mobile number | Done |
+| M12 – Maps and Live Delivery Tracking | Map pins, delivery boy page, live location, admin live map, customer tracking, SSE, Navigate button | Done |
+
+There is no M9 or M10. Milestone descriptions: [`docs/github-issues/milestones.md`](docs/github-issues/milestones.md).
 
 ## One-time GitHub setup (maintainer)
 

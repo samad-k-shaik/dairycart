@@ -87,7 +87,7 @@ sequenceDiagram
 | Docker Hub | Base images |
 | Google Fonts | Manrope typeface (or self-hosted via `@fontsource/manrope`); Fraunces for customer headings, self-hosted via `@fontsource-variable/fraunces` (ADR-014) |
 | GitHub | Code, CI/CD |
-| OpenStreetMap tile server | Map images for the Leaflet maps (planned M12, ADR-018). Loaded by the browser, never through our backend; replaceable through `VITE_MAP_TILE_URL` |
+| OpenStreetMap tile server | Map images for the Leaflet maps (M12, ADR-018). Loaded by the browser, never through our backend; replaceable through `VITE_MAP_TILE_URL` |
 | GCP | Hosting (M6) |
 
 ## 7. Local development architecture
@@ -134,9 +134,9 @@ Authentication from GitHub Actions to GCP will use **Workload Identity Federatio
 
 Future features plug in as new backend modules and frontend route trees without changing the core design: `auth` (OTP), `payments`, `deliveries`, `notifications`. (`subscriptions` was added this way in #97, ADR-015.) Status changes go through one service method, which becomes the hook for notifications. Maps and live delivery tracking (M12, ADR-018) are planned the same way: a `tracking` module in the backend and a `/delivery` route tree in the frontend (section 10).
 
-## 10. Planned: maps and live delivery tracking (M12, ADR-018)
+## 10. Maps and live delivery tracking (M12, ADR-018)
 
-**Not built yet.** Approved by #106; built by #107–#113. Live tracking has two separate paths:
+**Built.** Approved by #106; built by #107–#113, plus the Navigate button (#134, ADR-021). Live tracking has two separate paths:
 
 ```mermaid
 flowchart LR

@@ -73,7 +73,7 @@ For every task, follow these steps in order.
 
 ## Out of scope (do not implement)
 
-OTP authentication, payment gateway, prepaid or weekday-picking subscriptions (basic subscriptions with every 1/2/3 days are in scope since #97/#99), multi-vendor, a native delivery partner app (a delivery boy web page with login is planned in M12 since #106), Google Maps or other paid map APIs (free maps and live tracking with Leaflet + OpenStreetMap are planned in M12 since #106, ADR-018; a plain Google Maps directions link for the delivery boy's "Navigate" button is allowed since #134, ADR-021), WhatsApp notifications, AI chatbot, agentic AI, demand forecasting, advanced analytics (a basic admin income report is in scope since #105). If an issue seems to need one of these, stop and ask.
+OTP authentication, payment gateway, prepaid or weekday-picking subscriptions (basic subscriptions with every 1/2/3 days are in scope since #97/#99), multi-vendor, a native delivery partner app (a delivery boy web page with login was built in M12, #106/#109), Google Maps or other paid map APIs (free maps and live tracking with Leaflet + OpenStreetMap were built in M12, #106–#113, ADR-018; a plain Google Maps directions link for the delivery boy's "Navigate" button is allowed since #134, ADR-021), WhatsApp notifications, AI chatbot, agentic AI, demand forecasting, advanced analytics (a basic admin income report is in scope since #105). If an issue seems to need one of these, stop and ask.
 
 ## Do not
 
