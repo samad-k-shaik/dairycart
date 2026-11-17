@@ -1,6 +1,6 @@
 # Milestones
 
-Descriptions below are also used as the GitHub milestone descriptions. Implementation issues for every milestone are in this folder (`1xx` = M1 … `7xx` = M7) and on GitHub. The candidate lists below are the original summaries.
+Descriptions below are also used as the GitHub milestone descriptions. Implementation issues for every milestone are in this folder (`1xx` = M1 … `8xx` = M8, `11xx` = M11, `12xx` = M12; there is no M9 or M10) and on GitHub. The candidate lists below are the original summaries.
 
 ## M0 – Project Foundation
 Repository, documentation, architecture, API contract, ERD, GitHub board, labels, Git and AI-assistant standards. No application code.
@@ -28,5 +28,11 @@ Artifact Registry, Cloud SQL, Secret Manager, Cloud Run (backend + frontend), Wo
 ## M7 – Final Demonstration
 End-to-end demo, documentation review, retrospective, individual learning reflections, backlog of future features.
 
+## M8 – Ordering, Subscriptions and Delivery Operations
+Built after M3 on top of the order flow: admin product management, the customer pages look (dairy-farm background, own product illustrations, Fraunces headings), ordering options (one-time order or a 7/15/30-day subscription, delivered every 1, 2 or 3 days) with automatic daily orders, delivery time slots, saved delivery addresses, delivery boys with PIN code areas, one admin Orders board, per-user order history and the admin Income tab. Issues: `8xx`.
+
+## M11 – User Authentication and Admin Management
+Accounts and roles: sign-up, login and an admin area; login required to order, with "My orders" per account; a separate login per browser tab; admin-only product stock reduced by orders; then login by mobile number and password instead of email or username (ADR-019). Issues: `11xx`.
+
 ## M12 – Future: Maps and Live Delivery Tracking
-Future enhancement, needs the scope change in M12-01 first. Free and open source only: Leaflet + OpenStreetMap maps, a map pin on saved addresses, delivery boy login, live location from the phone browser (Geolocation API), admin live map and customer order tracking with a straight-line ETA (polling), then push updates with SSE and PostgreSQL LISTEN/NOTIFY. No Google Maps, Redis, Kafka or native apps. Issues: `12xx`.
+Future enhancement, needs the scope change in M12-01 first. Free and open source only: Leaflet + OpenStreetMap maps, a map pin on saved addresses, delivery boy login, live location from the phone browser (Geolocation API), admin live map and customer order tracking with a straight-line ETA (polling), then push updates with SSE and PostgreSQL LISTEN/NOTIFY. Ends with a "Navigate" button that opens Google Maps directions as a plain link (ADR-021). No embedded Google Maps, Redis, Kafka or native apps. Issues: `12xx`.

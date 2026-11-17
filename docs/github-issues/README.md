@@ -6,7 +6,7 @@ Issue IDs like `M3-04` are used for prerequisites so they stay valid regardless 
 
 Milestone summaries: [milestones.md](milestones.md).
 
-## M0 – Project Foundation (8)
+## M0 – Project Foundation (9)
 
 | Spec | Title | Labels |
 |---|---|---|
@@ -18,6 +18,7 @@ Milestone summaries: [milestones.md](milestones.md).
 | [006](006-github-project-board-and-labels.md) | [M0] Configure GitHub Project board, milestones and labels | devops, documentation |
 | [007](007-git-branching-and-pr-standards.md) | [M0] Define Git branching strategy and pull request standards | devops, documentation, security |
 | [008](008-codex-contribution-guidelines.md) | [M0] Prepare Codex / AI assistant contribution guidelines (AGENTS.md) | documentation, good-first-issue |
+| [009](009-bring-milestone-docs-issue-specs-and-readme-up-to-date.md) | Bring milestone docs, issue specs and README up to date (M8, M11, M12) (#137) | documentation |
 
 ## M1 – Backend Foundation (11)
 
@@ -128,7 +129,37 @@ Milestone summaries: [milestones.md](milestones.md).
 | [707](707-create-the-future-feature-backlog.md) | [M7-07] Create the future feature backlog | epic, documentation |
 | [708](708-decide-and-execute-the-gcp-clean-up-or-continuation-plan.md) | [M7-08] Decide and execute the GCP clean-up or continuation plan | devops |
 
-## M12 – Future: Maps and Live Delivery Tracking (8)
+## M8 – Ordering, Subscriptions and Delivery Operations (13)
+
+These issues were written before IDs like `M8-01` were used; the GitHub issue number is in brackets.
+
+| Spec | Title | Labels |
+|---|---|---|
+| [801](801-feature-admin-product-management.md) | Feature - Admin product management (#86) | feature |
+| [802](802-customer-pages-dairy-farm-background-image.md) | Customer pages: dairy-farm background image (#93) |  |
+| [803](803-customer-pages-brighter-background-new-milk-bottle-paneer-an.md) | Customer pages: brighter background, new milk bottle, paneer and ghee images (#94) |  |
+| [804](804-customer-pages-farm-fresh-serif-headings-fraunces.md) | Customer pages: farm-fresh serif headings (Fraunces) (#95) |  |
+| [805](805-customer-pages-remove-the-footer-admin-link.md) | Customer pages: remove the footer Admin link (#96) |  |
+| [806](806-ordering-options-one-time-daily-order-and-subscriptions-7-15.md) | Ordering options: one-time daily order and subscriptions (7/15/30 days) with cancel (#97) |  |
+| [807](807-subscriptions-automatic-daily-orders-and-every-2-3-days-deli.md) | Subscriptions: automatic daily orders and every 2 / 3 days delivery (#99) |  |
+| [808](808-subscriptions-delivery-time-slots-managed-by-the-admin.md) | Subscriptions: delivery time slots managed by the admin (#100) |  |
+| [809](809-admin-daily-deliveries-page-and-per-user-order-history.md) | Admin: daily deliveries page and per-user order history (#101) |  |
+| [810](810-delivery-addresses-saved-on-the-account-required-for-orders.md) | Delivery addresses: saved on the account, required for orders and subscriptions (#102) |  |
+| [811](811-admin-delivery-boys-with-area-pin-code-allocation.md) | Admin: delivery boys with area (PIN code) allocation (#103) |  |
+| [812](812-admin-one-orders-board-combine-orders-and-deliveries-in-a-ca.md) | Admin: one Orders board (combine Orders and Deliveries) in a card layout (#104) |  |
+| [813](813-admin-income-tab-income-overview-with-charts.md) | Admin: Income tab (income overview with charts) (#105) |  |
+
+## M11 – User Authentication and Admin Management (5)
+
+| Spec | Title | Labels |
+|---|---|---|
+| [1101](1101-sign-up-page-login-page-and-admin-page.md) | [M11-01] Sign-up page, login page and admin page (#89) |  |
+| [1102](1102-require-login-to-place-orders-and-show-my-orders-by-account.md) | [M11-02] Require login to place orders and show My orders by account (#90) | feature |
+| [1103](1103-separate-login-per-browser-tab-user-and-admin-side-by-side.md) | [M11-03] Separate login per browser tab (user and admin side by side) (#91) | bug |
+| [1104](1104-admin-only-product-stock-quantity-reduced-by-orders.md) | [M11-04] Admin-only product stock quantity, reduced by orders (#92) | feature |
+| [1105](1105-sign-up-and-log-in-with-mobile-number-and-password-remove-em.md) | [M11-05] Sign up and log in with mobile number and password (remove email and username) (#121) | feature, backend, frontend, database |
+
+## M12 – Future: Maps and Live Delivery Tracking (9)
 
 | Spec | Title | Labels |
 |---|---|---|
@@ -140,3 +171,4 @@ Milestone summaries: [milestones.md](milestones.md).
 | [1206](1206-show-delivery-boys-on-a-live-admin-map.md) | [M12-06] Show delivery boys on a live admin map | feature, backend, frontend |
 | [1207](1207-let-customers-track-their-order-on-a-map-with-an-eta.md) | [M12-07] Let customers track their order on a map with an ETA | feature, backend, frontend, security |
 | [1208](1208-push-location-updates-with-sse-and-postgresql-listen-notify.md) | [M12-08] Push location updates with SSE and PostgreSQL LISTEN/NOTIFY | feature, backend, frontend, architecture |
+| [1209](1209-add-a-navigate-button-that-opens-directions-to-the-customer.md) | [M12-09] Add a "Navigate" button that opens turn-by-turn directions to the customer | feature, frontend, architecture |
