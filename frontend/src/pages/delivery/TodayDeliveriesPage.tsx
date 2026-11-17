@@ -2,12 +2,13 @@
  * TodayDeliveriesPage (#109): the delivery boy's list for today, at /delivery.
  *
  * Only orders in his areas (the backend decides, by PIN code). Each card has what he needs
- * at the door: the address, a "Call" link, the items, the amount to collect, an "Open map"
- * link when the customer saved a pin (#108), and ONE button for the next step
+ * at the door: the address, a "Call" link, the items, the amount to collect, a "Navigate"
+ * link that opens directions in the maps app (#134: the pin from #108, or the address
+ * text when there is no pin), and ONE button for the next step
  * (Start delivery → Mark delivered). The list refreshes every minute.
  * #110: the RoundPanel on top starts / stops sharing his location.
  */
-import { Loader2, MapPinned, PackageCheck, Phone } from "lucide-react"
+import { Loader2, Navigation, PackageCheck, Phone } from "lucide-react"
 import { toast } from "sonner"
 
 import { EmptyState } from "@/components/common/EmptyState"
@@ -16,7 +17,7 @@ import { ErrorState } from "@/components/common/ErrorState"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { Button } from "@/components/ui/button"
 import { useDeliveryMe, useMyDeliveries, useUpdateDeliveryStatus } from "@/hooks/useDelivery"
-import { mapLink, nextDeliveryAction, summarize, waitingNote } from "@/lib/delivery"
+import { navigationLink, nextDeliveryAction, summarize, waitingNote } from "@/lib/delivery"
 import { formatCurrency } from "@/lib/format"
 import { ServiceError } from "@/services/serviceError"
 import type { DeliveryOrder } from "@/types/delivery"
@@ -82,7 +83,7 @@ function DeliveryCard({ order }: { order: DeliveryOrder }) {
   const update = useUpdateDeliveryStatus()
   const action = nextDeliveryAction(order.status)
   const note = waitingNote(order.status)
-  const map = mapLink(order)
+  const directions = navigationLink(order)
 
   function act() {
     if (!action) return
@@ -129,11 +130,11 @@ function DeliveryCard({ order }: { order: DeliveryOrder }) {
             Call<span className="sr-only"> {order.customer_name}</span>
           </a>
         </Button>
-        {map && (
+        {directions && (
           <Button asChild variant="outline" className="h-11">
-            <a href={map} target="_blank" rel="noreferrer">
-              <MapPinned aria-hidden="true" />
-              Open map
+            <a href={directions} target="_blank" rel="noreferrer">
+              <Navigation aria-hidden="true" />
+              Navigate<span className="sr-only"> to {order.customer_name} (opens Google Maps)</span>
             </a>
           </Button>
         )}

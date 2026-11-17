@@ -31,12 +31,36 @@ export function summarize(orders: DeliveryOrder[]): DeliverySummary {
   return { total: orders.length, left: orders.length - delivered, delivered }
 }
 
+type NavigationTarget = Pick<
+  DeliveryOrder,
+  "delivery_latitude" | "delivery_longitude" | "delivery_address" | "delivery_pincode"
+>
+
 /**
- * A link that opens the customer's pin in OpenStreetMap (works in any phone browser and
- * hands over to a maps app if one is installed). Null when the address has no pin.
+ * #134: a Google Maps directions link to the customer, for the "Navigate" button.
+ *
+ * It is a plain URL (no API key, no billing, no script in our app — ADR-018 amendment).
+ * On a phone it opens the Google Maps app with directions ready; on a laptop, a browser tab.
+ *
+ * - map pin set → the exact pin (most accurate, #108)
+ * - no pin      → the address text; the PIN code is added if the text does not have it
+ * - neither     → null, so the page shows no button
+ *
+ * URLSearchParams encodes spaces, commas, "/" and "#" so an address cannot break the link.
  */
-export function mapLink(order: Pick<DeliveryOrder, "delivery_latitude" | "delivery_longitude">): string | null {
-  const { delivery_latitude: lat, delivery_longitude: lng } = order
-  if (lat === null || lng === null) return null
-  return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=18/${lat}/${lng}`
+export function navigationLink(order: NavigationTarget): string | null {
+  const { delivery_latitude: lat, delivery_longitude: lng, delivery_pincode: pincode } = order
+  const address = order.delivery_address?.trim() ?? ""
+
+  let destination: string
+  if (lat !== null && lng !== null) {
+    destination = `${lat},${lng}`
+  } else if (address) {
+    destination = pincode && !address.includes(pincode) ? `${address}, ${pincode}` : address
+  } else {
+    return null
+  }
+
+  const params = new URLSearchParams({ api: "1", destination })
+  return `https://www.google.com/maps/dir/?${params.toString()}`
 }

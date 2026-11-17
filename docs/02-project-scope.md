@@ -53,7 +53,7 @@ Not built yet. Built only with free, open-source tools (ADR-018). Privacy rules:
 | Pausing/skipping single days, choosing weekdays, editing a running subscription, prepaid plans *(basic subscriptions moved in scope by #97/#99)* | More rules and payments | The same `subscriptions` module and `generate_orders_for(day)` service can be extended |
 | Multi-vendor marketplace | Major domain change | Products can gain a `vendor_id` later |
 | Native delivery partner app (Android / iOS) | A separate app to build, publish and maintain | A delivery boy **web page** with login is planned in M12 (#106, #109); it uses the same backend |
-| Google Maps (and other paid map APIs) | External API, cost, billing account | Free, open-source maps (Leaflet + OpenStreetMap) and live tracking are planned instead in M12 (#106, ADR-018) |
+| Google Maps (and other paid map APIs) | External API, cost, billing account | Free, open-source maps (Leaflet + OpenStreetMap) and live tracking are planned instead in M12 (#106, ADR-018). Exception: a plain Google Maps **directions link** (no API, key or billing) for the delivery boy's "Navigate" button (#134, ADR-021) |
 | WhatsApp notifications | External API | Status changes go through one service function, a natural hook point |
 | AI chatbot / Agentic AI | Not needed to prove the POC | API-first design makes it possible to add later |
 | Demand forecasting / advanced analytics *(a basic income report is in scope since #105)* | Needs historical data | Orders are stored in normalized tables, ready for analysis |

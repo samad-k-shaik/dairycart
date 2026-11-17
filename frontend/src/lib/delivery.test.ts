@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { describe, it } from "vitest"
 
-import { mapLink, nextDeliveryAction, summarize, waitingNote } from "./delivery.ts"
+import { navigationLink, nextDeliveryAction, summarize, waitingNote } from "./delivery.ts"
 import type { DeliveryOrder } from "../types/delivery.ts"
 
 function order(id: number, status: DeliveryOrder["status"]): DeliveryOrder {
@@ -43,12 +43,36 @@ describe("delivery boy actions (#109)", () => {
     assert.deepEqual(summarize(orders), { total: 3, left: 2, delivered: 1 })
     assert.deepEqual(summarize([]), { total: 0, left: 0, delivered: 0 })
   })
+})
 
-  it("links to the map pin only when there is one", () => {
-    assert.equal(mapLink(order(1, "CONFIRMED")), null)
+describe("navigate to the customer (#134)", () => {
+  it("uses the map pin when the order has one", () => {
+    const pinned = { ...order(1, "CONFIRMED"), delivery_latitude: 17.4375, delivery_longitude: 78.4483 }
+    assert.equal(navigationLink(pinned), "https://www.google.com/maps/dir/?api=1&destination=17.4375%2C78.4483")
+  })
+
+  it("falls back to the address text without a pin, and does not repeat the PIN code", () => {
     assert.equal(
-      mapLink({ delivery_latitude: 17.4375, delivery_longitude: 78.4483 }),
-      "https://www.openstreetmap.org/?mlat=17.4375&mlon=78.4483#map=18/17.4375/78.4483",
+      navigationLink(order(1, "CONFIRMED")),
+      "https://www.google.com/maps/dir/?api=1&destination=12-3+Sai+Residency%2C+Hyderabad+-+500016",
     )
+  })
+
+  it("adds the PIN code when the address text does not have it", () => {
+    const typed = { ...order(1, "CONFIRMED"), delivery_address: "Near temple, Ameerpet" }
+    const url = new URL(navigationLink(typed) ?? "")
+    assert.equal(url.searchParams.get("destination"), "Near temple, Ameerpet, 500016")
+  })
+
+  it("encodes characters that would otherwise break the link", () => {
+    const tricky = { ...order(1, "CONFIRMED"), delivery_address: "Flat #4 & 5, 6/685 Road?" }
+    const link = navigationLink(tricky) ?? ""
+    assert.ok(!link.includes("#"), "a raw # would cut the link short")
+    assert.equal(new URL(link).searchParams.get("destination"), "Flat #4 & 5, 6/685 Road?, 500016")
+  })
+
+  it("has no link without a pin or an address", () => {
+    assert.equal(navigationLink({ ...order(1, "CONFIRMED"), delivery_address: null }), null)
+    assert.equal(navigationLink({ ...order(1, "CONFIRMED"), delivery_address: "   " }), null)
   })
 })
