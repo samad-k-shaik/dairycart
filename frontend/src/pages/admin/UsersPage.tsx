@@ -9,7 +9,7 @@ import { Users } from "lucide-react"
 
 import { EmptyState } from "@/components/common/EmptyState"
 import { ErrorState } from "@/components/common/ErrorState"
-import { Badge } from "@/components/ui/badge"
+import { RoleBadge } from "@/components/common/RoleBadge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatDate } from "@/lib/format"
@@ -18,7 +18,14 @@ import { getUsers } from "@/services/authService"
 const adminUserKeys = { all: ["admin", "users"] as const }
 
 function UsersPage() {
-  const { data: users, isPending, isError, error, refetch, isFetching } = useQuery({
+  const {
+    data: users,
+    isPending,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useQuery({
     queryKey: adminUserKeys.all,
     queryFn: getUsers,
   })
@@ -47,7 +54,7 @@ function UsersPage() {
               <TableRow>
                 <TableHead className="hidden sm:table-cell">ID</TableHead>
                 <TableHead>User</TableHead>
-                <TableHead className="hidden md:table-cell">Email</TableHead>
+                <TableHead className="hidden md:table-cell">Mobile</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead className="hidden sm:table-cell">Joined</TableHead>
               </TableRow>
@@ -64,19 +71,16 @@ function UsersPage() {
                     >
                       {user.full_name}
                     </Link>
-                    <p className="text-small text-muted-foreground">@{user.username}</p>
-                    {/* Phones: the email moves under the name. */}
-                    <p className="text-small break-all text-muted-foreground md:hidden">{user.email}</p>
+                    {/* Phones: the mobile number moves under the name. */}
+                    <p className="text-small text-muted-foreground md:hidden">{user.phone}</p>
                   </TableCell>
-                  <TableCell className="hidden break-all md:table-cell">{user.email}</TableCell>
+                  <TableCell className="hidden md:table-cell">{user.phone}</TableCell>
                   <TableCell>
-                    {user.role === "ADMIN" ? (
-                      <Badge className="bg-primary-soft font-semibold text-primary">Admin</Badge>
-                    ) : (
-                      <Badge className="bg-muted font-semibold text-muted-foreground">User</Badge>
-                    )}
+                    <RoleBadge role={user.role} />
                   </TableCell>
-                  <TableCell className="hidden text-muted-foreground sm:table-cell">{formatDate(user.created_at)}</TableCell>
+                  <TableCell className="hidden text-muted-foreground sm:table-cell">
+                    {formatDate(user.created_at)}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

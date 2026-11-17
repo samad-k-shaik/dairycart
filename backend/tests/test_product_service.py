@@ -34,9 +34,7 @@ def test_list_products_filters_and_orders(db_session: Session) -> None:
     last = factories.make_product(db_session)
 
     assert list(product_service.list_products(db_session)) == [first, last]
-    assert list(
-        product_service.list_products(db_session, include_unavailable=True)
-    ) == [
+    assert list(product_service.list_products(db_session, include_unavailable=True)) == [
         first,
         hidden,
         last,
@@ -67,9 +65,7 @@ def test_create_product_rejects_a_duplicate(db_session: Session) -> None:
 def test_update_product_changes_only_sent_fields(db_session: Session) -> None:
     product = factories.make_product(db_session, size="1 Litre", price="60.00")
 
-    product_service.update_product(
-        db_session, product.product_id, ProductUpdate(price="65.00")
-    )
+    product_service.update_product(db_session, product.product_id, ProductUpdate(price="65.00"))
 
     assert (product.size, product.price) == ("1 Litre", Decimal("65.00"))
 
@@ -97,9 +93,7 @@ def test_duplicate_that_slips_past_the_check_still_gives_409(
 ) -> None:
     factories.make_product(db_session, name="Toned Milk", size="500 ml")
     # Pretend another request inserted it just after our check ran.
-    monkeypatch.setattr(
-        ProductRepository, "find_by_name_and_size", lambda *args, **kwargs: None
-    )
+    monkeypatch.setattr(ProductRepository, "find_by_name_and_size", lambda *args, **kwargs: None)
 
     with pytest.raises(ProductAlreadyExistsError):
         product_service.create_product(

@@ -42,8 +42,7 @@ export function getProduct(productId: number): Promise<Product> {
 // ---- Admin product management (issue #86) ----
 // The mock follows the same rules as the backend, so the page behaves the same in M3.
 
-const IN_USE_MESSAGE =
-  "This product has already been ordered, so it cannot be deleted. Mark it unavailable instead."
+const IN_USE_MESSAGE = "This product has already been ordered, so it cannot be deleted. Mark it unavailable instead."
 
 /** Field checks like the backend's 422: only the fields that are present. */
 function validationDetails(input: ProductUpdate): ApiErrorDetail[] {

@@ -1,0 +1,11 @@
+{
+  /* #49: the tests (Vitest + React Testing Library) see the same code as the app, plus
+     Node and the test matchers. Type-checked by `npm run typecheck` (tsc -b). */
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
+    "types": ["vite/client", "node"]
+  },
+  "include": ["src"],
+  "exclude": []
+}

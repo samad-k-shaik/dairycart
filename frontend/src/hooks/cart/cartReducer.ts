@@ -42,9 +42,7 @@ export function cartReducer(state: CartState, action: CartAction): CartState {
         // Same product again → merge into one line (BR-4), never above 20.
         const quantity = Math.min(MAX_QUANTITY, existing.quantity + clampQuantity(action.quantity))
         return {
-          lines: state.lines.map((line) =>
-            line.product_id === product.product_id ? { ...line, quantity } : line,
-          ),
+          lines: state.lines.map((line) => (line.product_id === product.product_id ? { ...line, quantity } : line)),
         }
       }
       const line: CartLine = {
@@ -59,9 +57,7 @@ export function cartReducer(state: CartState, action: CartAction): CartState {
     case "setQuantity":
       return {
         lines: state.lines.map((line) =>
-          line.product_id === action.productId
-            ? { ...line, quantity: clampQuantity(action.quantity) }
-            : line,
+          line.product_id === action.productId ? { ...line, quantity: clampQuantity(action.quantity) } : line,
         ),
       }
     case "remove":
@@ -134,10 +130,12 @@ export function parseStoredCart(raw: string | null): CartState {
   if (!Array.isArray(lines)) return emptyCart
 
   // Rebuild through the reducer so the normal rules apply (merge duplicates, 1–20).
-  return lines.filter(isValidLine).reduce<CartState>(
-    (state, line) => cartReducer(state, { type: "add", product: line, quantity: line.quantity }),
-    emptyCart,
-  )
+  return lines
+    .filter(isValidLine)
+    .reduce<CartState>(
+      (state, line) => cartReducer(state, { type: "add", product: line, quantity: line.quantity }),
+      emptyCart,
+    )
 }
 
 export function serializeCart(state: CartState): string {

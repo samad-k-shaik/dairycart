@@ -43,8 +43,9 @@ export function ProductCard({ product, onAdd }: ProductCardProps) {
           >
             {product.name}
             {/* Size is shown visually below; include it in the link name so screen readers
-                can tell "Cow Milk 500 ml" from "Cow Milk 1 Litre". */}
-            <span className="sr-only"> {product.size}</span>
+                can tell "Cow Milk 500 ml" from "Cow Milk 1 Litre". The space sits OUTSIDE the span, so
+                every screen reader keeps it ("Cow Milk 1 Litre", not "Cow Milk1 Litre"). */}{" "}
+            <span className="sr-only">{product.size}</span>
           </Link>
         </h3>
         <p className="text-small text-muted-foreground">{product.size}</p>
@@ -58,14 +59,14 @@ export function ProductCard({ product, onAdd }: ProductCardProps) {
             Out of stock
           </span>
         ) : (
-        <button
-          type="button"
-          onClick={() => onAdd(product)}
-          aria-label={`Add ${label} to cart`}
-          className="relative z-10 flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
-        >
-          <Plus className="size-5" aria-hidden="true" />
-        </button>
+          <button
+            type="button"
+            onClick={() => onAdd(product)}
+            aria-label={`Add ${label} to cart`}
+            className="relative z-10 flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+          >
+            <Plus className="size-5" aria-hidden="true" />
+          </button>
         )}
       </div>
     </article>

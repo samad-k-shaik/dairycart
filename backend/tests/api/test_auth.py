@@ -1,4 +1,4 @@
-"""API tests for sign-up, login, /me and admin-only access (#89)."""
+"""API tests for sign-up, login, /me and admin-only access (#89; mobile number login: #121)."""
 
 import pytest
 from fastapi.testclient import TestClient
@@ -14,8 +14,7 @@ LOGIN = "/api/v1/auth/login"
 ME = "/api/v1/auth/me"
 NEW_USER = {
     "full_name": "Ravi Kumar",
-    "email": "Ravi.Kumar@Example.com",
-    "username": "Ravi_K",
+    "phone": "9876543210",
     "password": "milk1234",
 }
 
@@ -38,135 +37,149 @@ def test_register_saves_a_user_with_a_hashed_password(
 
     assert response.status_code == 201
     body = response.json()
-    assert body["username"] == "ravi_k"  # stored in lower case
-    assert body["email"] == "ravi.kumar@example.com"
+    assert body["full_name"] == "Ravi Kumar"
+    assert body["phone"] == "9876543210"
     assert body["role"] == "USER"  # always USER
-    assert set(body) == {
-        "user_id",
-        "full_name",
-        "email",
-        "username",
-        "role",
-        "created_at",
-    }
+    # #121: no email or username any more.
+    assert set(body) == {"user_id", "full_name", "phone", "role", "created_at"}
     saved = db_session.scalars(select(User)).one()
     assert saved.password_hash != "milk1234"  # never the plain password
     assert saved.password_hash.startswith("$2b$")  # a bcrypt hash
     assert security.verify_password("milk1234", saved.password_hash)
 
 
-def test_register_cannot_choose_the_admin_role(client: TestClient) -> None:
-    response = client.post(REGISTER, json=NEW_USER | {"role": "ADMIN"})
+@pytest.mark.parametrize(
+    "typed",
+    [
+        "9876543210",
+        " 98765 43210 ",
+        "+91 98765 43210",
+        "+919876543210",
+        "09876543210",
+        "98765-43210",
+    ],
+)
+def test_register_saves_the_mobile_number_as_10_digits(client: TestClient, typed: str) -> None:
+    response = client.post(REGISTER, json=NEW_USER | {"phone": typed})
 
-    assert response.status_code == 422  # unknown field "role" is refused
+    assert response.status_code == 201
+    assert response.json()["phone"] == "9876543210"
+
+
+@pytest.mark.parametrize("extra", [{"role": "ADMIN"}, {"email": "a@b.com"}, {"username": "ravi"}])
+def test_register_refuses_unknown_fields(client: TestClient, extra: dict) -> None:
+    response = client.post(REGISTER, json=NEW_USER | extra)
+
+    # "role" can never be chosen; email/username are gone since #121.
+    assert response.status_code == 422
 
 
 @pytest.mark.parametrize(
     ("change", "field"),
     [
         ({"full_name": "A"}, "full_name"),
-        ({"email": "not-an-email"}, "email"),
-        ({"email": "a@b"}, "email"),
-        ({"username": "ab"}, "username"),
-        ({"username": "has space"}, "username"),
-        ({"username": "x" * 31}, "username"),
+        ({"full_name": "   "}, "full_name"),
+        ({"phone": "987654321"}, "phone"),  # 9 digits
+        ({"phone": "98765432101"}, "phone"),  # 11 digits, no leading 0
+        ({"phone": "5876543210"}, "phone"),  # Indian mobiles start with 6-9
+        ({"phone": "98765abcde"}, "phone"),
+        ({"phone": "+44 7911 123456"}, "phone"),  # not an Indian number
+        ({"phone": 9876543210}, "phone"),  # a JSON number, not text
         ({"password": "short1"}, "password"),
         ({"password": "onlyletters"}, "password"),
         ({"password": "12345678"}, "password"),
         ({"password": "a1" + "é" * 40}, "password"),  # 82 bytes > bcrypt's 72
     ],
 )
-def test_register_validates_fields(
-    client: TestClient, change: dict, field: str
-) -> None:
+def test_register_validates_fields(client: TestClient, change: dict, field: str) -> None:
     response = client.post(REGISTER, json=NEW_USER | change)
 
     assert response.status_code == 422
     assert field in fields(response)
 
 
-@pytest.mark.parametrize("missing", ["full_name", "email", "username", "password"])
+@pytest.mark.parametrize("missing", ["full_name", "phone", "password"])
 def test_register_requires_every_field(client: TestClient, missing: str) -> None:
     body = {k: v for k, v in NEW_USER.items() if k != missing}
 
-    assert client.post(REGISTER, json=body).status_code == 422
+    response = client.post(REGISTER, json=body)
+
+    assert response.status_code == 422
+    assert missing in fields(response)
 
 
-@pytest.mark.parametrize(
-    ("change", "field"),
-    [
-        ({"username": "someone_else"}, "email"),  # same email, other username
-        ({"email": "other@example.com"}, "username"),  # same username, other email
-    ],
-)
-def test_duplicate_email_or_username_is_409(
-    client: TestClient, db_session: Session, change: dict, field: str
+@pytest.mark.parametrize("same_number", ["9876543210", "+91 98765 43210"])
+def test_duplicate_mobile_number_is_409(
+    client: TestClient, db_session: Session, same_number: str
 ) -> None:
     client.post(REGISTER, json=NEW_USER)
 
-    response = client.post(REGISTER, json=NEW_USER | change)
-
-    assert response.status_code == 409
-    assert code(response) == "USER_ALREADY_EXISTS"
-    assert fields(response) == {field}
-    assert len(db_session.scalars(select(User)).all()) == 1
-
-
-def test_duplicates_ignore_letter_case(client: TestClient) -> None:
-    client.post(REGISTER, json=NEW_USER)
-
     response = client.post(
-        REGISTER,
-        json=NEW_USER | {"email": "RAVI.kumar@example.COM", "username": "RAVI_K"},
+        REGISTER, json=NEW_USER | {"full_name": "Someone Else", "phone": same_number}
     )
 
     assert response.status_code == 409
-    assert fields(response) == {"email", "username"}
+    assert code(response) == "USER_ALREADY_EXISTS"
+    assert fields(response) == {"phone"}
+    assert len(db_session.scalars(select(User)).all()) == 1
+
+
+def test_same_name_with_another_number_is_a_new_account(client: TestClient) -> None:
+    client.post(REGISTER, json=NEW_USER)
+
+    response = client.post(REGISTER, json=NEW_USER | {"phone": "9876500000"})
+
+    assert response.status_code == 201  # names are not unique, numbers are
 
 
 # ---- login ----
 
 
-@pytest.mark.parametrize("login", ["ravi_k", "RAVI_K", "ravi.kumar@example.com"])
-def test_new_user_can_log_in_with_username_or_email(
-    client: TestClient, login: str
-) -> None:
+@pytest.mark.parametrize("typed", ["9876543210", "+91 98765 43210", "09876543210"])
+def test_new_user_can_log_in_with_the_mobile_number(client: TestClient, typed: str) -> None:
     client.post(REGISTER, json=NEW_USER)
 
-    response = client.post(LOGIN, json={"login": login, "password": "milk1234"})
+    response = client.post(LOGIN, json={"phone": typed, "password": "milk1234"})
 
     assert response.status_code == 200
     body = response.json()
     assert body["token_type"] == "bearer"
     assert body["expires_in"] == 60 * 60
-    assert body["user"]["username"] == "ravi_k"
+    assert body["user"]["phone"] == "9876543210"
     me = client.get(ME, headers={"Authorization": f"Bearer {body['access_token']}"})
-    assert me.json()["username"] == "ravi_k"
+    assert me.json()["full_name"] == "Ravi Kumar"
 
 
 @pytest.mark.parametrize(
     "credentials",
     [
-        {"login": "ravi_k", "password": "wrong1234"},  # wrong password
-        {"login": "nobody", "password": "milk1234"},  # unknown user
+        {"phone": "9876543210", "password": "wrong1234"},  # wrong password
+        {"phone": "9000099999", "password": "milk1234"},  # number without an account
     ],
 )
-def test_invalid_credentials_get_the_same_401(
-    client: TestClient, credentials: dict
-) -> None:
+def test_invalid_credentials_get_the_same_401(client: TestClient, credentials: dict) -> None:
     client.post(REGISTER, json=NEW_USER)
 
     response = client.post(LOGIN, json=credentials)
 
     assert response.status_code == 401
     assert code(response) == "UNAUTHORIZED"
-    # Same message either way, so nobody can find out which usernames exist.
-    assert response.json()["error"]["message"] == "Invalid username/email or password."
+    # Same message either way, so nobody can find out which numbers have an account.
+    assert response.json()["error"]["message"] == "Invalid mobile number or password."
     assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
-def test_login_needs_both_fields(client: TestClient) -> None:
-    assert client.post(LOGIN, json={"login": "ravi_k"}).status_code == 422
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"phone": "9876543210"},  # no password
+        {"password": "milk1234"},  # no phone
+        {"phone": "12345", "password": "milk1234"},  # not a mobile number
+        {"login": "ravi_k", "password": "milk1234"},  # the old (#89) login field
+    ],
+)
+def test_login_needs_a_mobile_number_and_a_password(client: TestClient, body: dict) -> None:
+    assert client.post(LOGIN, json=body).status_code == 422
 
 
 # ---- /me and tokens ----
@@ -187,9 +200,7 @@ def test_me_with_a_bad_token_is_401(client: TestClient, header: str) -> None:
     assert client.get(ME, headers={"Authorization": header}).status_code == 401
 
 
-def test_token_of_a_deleted_user_is_401(
-    client: TestClient, db_session: Session
-) -> None:
+def test_token_of_a_deleted_user_is_401(client: TestClient, db_session: Session) -> None:
     user = factories.make_user(db_session)
     headers = factories.auth_header(user)
     db_session.delete(user)
@@ -211,9 +222,7 @@ ADMIN_CALLS = [
 
 
 @pytest.mark.parametrize(("method", "url"), ADMIN_CALLS)
-def test_admin_apis_refuse_anonymous_requests(
-    client: TestClient, method: str, url: str
-) -> None:
+def test_admin_apis_refuse_anonymous_requests(client: TestClient, method: str, url: str) -> None:
     response = client.request(method, url, json={})
 
     assert response.status_code == 401
@@ -223,9 +232,7 @@ def test_admin_apis_refuse_anonymous_requests(
 def test_admin_apis_refuse_normal_users(
     client: TestClient, normal_user: User, method: str, url: str
 ) -> None:
-    response = client.request(
-        method, url, json={}, headers=factories.auth_header(normal_user)
-    )
+    response = client.request(method, url, json={}, headers=factories.auth_header(normal_user))
 
     assert response.status_code == 403
     assert code(response) == "FORBIDDEN"
@@ -235,9 +242,7 @@ def test_admin_apis_refuse_normal_users(
 def test_admin_sees_all_users_without_password_hashes(
     client: TestClient, admin_user: User, normal_user: User
 ) -> None:
-    response = client.get(
-        "/api/v1/admin/users", headers=factories.auth_header(admin_user)
-    )
+    response = client.get("/api/v1/admin/users", headers=factories.auth_header(admin_user))
 
     assert response.status_code == 200
     users = response.json()

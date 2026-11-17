@@ -11,6 +11,7 @@
 
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Self
 
 from sqlalchemy.orm import Session
 
@@ -45,8 +46,7 @@ def create_address(db: Session, user_id: int, data: AddressCreate) -> Address:
         existing = repository.lock_user_addresses(user_id)
         if len(existing) >= MAX_ADDRESSES_PER_USER:
             raise AddressLimitReachedError(
-                f"You can save up to {MAX_ADDRESSES_PER_USER} addresses. "
-                "Delete one to add another."
+                f"You can save up to {MAX_ADDRESSES_PER_USER} addresses. Delete one to add another."
             )
         address = repository.add(Address(user_id=user_id, **data.values()))
         if data.is_default or not existing:
@@ -58,9 +58,7 @@ def create_address(db: Session, user_id: int, data: AddressCreate) -> Address:
     return address
 
 
-def update_address(
-    db: Session, user_id: int, address_id: int, data: AddressUpdate
-) -> Address:
+def update_address(db: Session, user_id: int, address_id: int, data: AddressUpdate) -> Address:
     """Orders already placed keep their own copy of the old text."""
     address = AddressRepository(db).get_for_user(address_id, user_id)
     if address is None:
@@ -111,16 +109,21 @@ def delete_address(db: Session, user_id: int, address_id: int) -> None:
 
 @dataclass(frozen=True)
 class DeliveryAddressCopy:
-    """What an order or subscription keeps of an address: the one-line text, and the
-    PIN code on its own (#103: to match the delivery boy who covers that area)."""
+    """What an order or subscription keeps of an address: the one-line text, the
+    PIN code on its own (#103: to match the delivery boy who covers that area) and the
+    map pin (#108: None when the customer did not drop one)."""
 
     text: str
     pincode: str
+    latitude: float | None = None
+    longitude: float | None = None
+
+    @classmethod
+    def of(cls, address: Address) -> Self:
+        return cls(address.full_text, address.pincode, address.latitude, address.longitude)
 
 
-def delivery_copy_for(
-    db: Session, user_id: int, address_id: int | None
-) -> DeliveryAddressCopy:
+def delivery_copy_for(db: Session, user_id: int, address_id: int | None) -> DeliveryAddressCopy:
     """The address to copy onto an order or subscription.
 
     `address_id` given → that address, which must be the user's own. Not given → the
@@ -134,11 +137,11 @@ def delivery_copy_for(
                 "This address is not available. Please choose another one.",
                 details=[ErrorDetail(field="address_id", issue="not available")],
             )
-        return DeliveryAddressCopy(address.full_text, address.pincode)
+        return DeliveryAddressCopy.of(address)
     default = repository.get_default(user_id)
     if default is None:
         raise InvalidFieldError(
             "Please add a delivery address first.",
             details=[ErrorDetail(field="address_id", issue="required")],
         )
-    return DeliveryAddressCopy(default.full_text, default.pincode)
+    return DeliveryAddressCopy.of(default)

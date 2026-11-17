@@ -60,12 +60,7 @@ export function AddressPicker({
     // The whole block takes focus when the user must fix the choice (no address yet).
     <div ref={groupRef} tabIndex={-1} className="space-y-2 outline-none">
       {addresses.length > 0 && (
-        <div
-          className="grid gap-2"
-          role="radiogroup"
-          aria-labelledby={labelId}
-          aria-describedby={errorId}
-        >
+        <div className="grid gap-2" role="radiogroup" aria-labelledby={labelId} aria-describedby={errorId}>
           {addresses.map((address) => {
             const checked = chosenId === address.address_id
             return (
@@ -84,7 +79,9 @@ export function AddressPicker({
                 <span className="min-w-0">
                   <span className="block font-semibold">
                     {address.label}
-                    {address.is_default && <span className="ml-2 text-small font-normal text-muted-foreground">Default</span>}
+                    {address.is_default && (
+                      <span className="ml-2 text-small font-normal text-muted-foreground">Default</span>
+                    )}
                   </span>
                   <span className="block text-small break-words text-muted-foreground">{address.full_text}</span>
                 </span>

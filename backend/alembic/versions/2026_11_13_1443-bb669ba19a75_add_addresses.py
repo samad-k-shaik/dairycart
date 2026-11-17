@@ -33,18 +33,14 @@ def upgrade() -> None:
         sa.Column("landmark", sa.String(length=100), nullable=True),
         sa.Column("city", sa.String(length=50), nullable=False),
         sa.Column("pincode", sa.String(length=6), nullable=False),
-        sa.Column(
-            "is_default", sa.Boolean(), server_default=sa.text("false"), nullable=False
-        ),
+        sa.Column("is_default", sa.Boolean(), server_default=sa.text("false"), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.CheckConstraint(
-            "pincode ~ '^[1-9][0-9]{5}$'", name=op.f("ck_addresses_pincode_format")
-        ),
+        sa.CheckConstraint("pincode ~ '^[1-9][0-9]{5}$'", name=op.f("ck_addresses_pincode_format")),
         sa.ForeignKeyConstraint(
             ["user_id"],
             ["users.user_id"],
@@ -61,9 +57,7 @@ def upgrade() -> None:
         unique=True,
         postgresql_where=sa.text("is_default"),
     )
-    op.add_column(
-        "orders", sa.Column("delivery_address", sa.String(length=500), nullable=True)
-    )
+    op.add_column("orders", sa.Column("delivery_address", sa.String(length=500), nullable=True))
     op.add_column(
         "subscriptions",
         sa.Column("delivery_address", sa.String(length=500), nullable=True),

@@ -52,6 +52,7 @@ Every setting the app reads (#59). Copy `backend/.env.example` → `backend/.env
 | `JWT_EXPIRE_MINUTES` | | `60` | How long a login stays valid (5–1440) |
 | `SUBSCRIPTION_AUTO_ORDERS` | | `true` | Create subscription delivery orders automatically |
 | `SUBSCRIPTION_ORDERS_INTERVAL_MINUTES` | | `15` | How often (1–1440) |
+| `LIVE_UPDATES` | | `true` | #113: one PostgreSQL `LISTEN` connection per backend process, so live maps (SSE) update at once; `false` = streams re-check every 15 s |
 | `LOG_LEVEL` | | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` |
 | `APP_ENV` | | `local` | `local`, `test` or `production` |
 | `TEST_DATABASE_URL` | | `…/milk_delivery_test` | Test database for `pytest`; the name must end in `_test` |
@@ -89,7 +90,7 @@ docker compose down -v         # stop and DELETE all data (fresh start)
 
 **Start order.** `db` becomes healthy → `backend` runs `alembic upgrade head`, the product seed and `create_admin` (on later starts the admin already exists; this is logged and ignored), then starts and becomes healthy → `frontend` starts.
 
-**Logins (local only).** Website admin `admin` / `admin_local_only_123` (customers register on the website). pgAdmin `admin@example.com` / `admin123`. PostgreSQL `milk_user` / `milk_password_local_only`.
+**Logins (local only).** Website admin: mobile `9000000001` / `admin_local_only_123` (customers register on the website). pgAdmin `admin@example.com` / `admin123`. PostgreSQL `milk_user` / `milk_password_local_only`.
 
 **Settings.** Local-only defaults are in `docker-compose.yml`. To override the JWT secret or admin password, create a git-ignored `.env` file in the repository root:
 

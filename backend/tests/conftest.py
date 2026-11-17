@@ -23,7 +23,9 @@ from pathlib import Path
 import pytest
 from sqlalchemy import make_url
 
-DEFAULT_TEST_DATABASE_URL = "postgresql+psycopg://milk_user:milk_password_local_only@localhost:5432/milk_delivery_test"
+DEFAULT_TEST_DATABASE_URL = (
+    "postgresql+psycopg://milk_user:milk_password_local_only@localhost:5432/milk_delivery_test"
+)
 TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", DEFAULT_TEST_DATABASE_URL)
 
 # Safety guard: refuse to run the test suite against anything but a *_test database.
@@ -39,6 +41,8 @@ os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 os.environ["APP_ENV"] = "test"
 # #99: tests call the order service themselves; no background job against the test DB.
 os.environ["SUBSCRIPTION_AUTO_ORDERS"] = "false"
+# #113: no LISTEN thread in tests (tests/test_live_updates.py starts one on purpose).
+os.environ["LIVE_UPDATES"] = "false"
 # A fixed secret for tests only (#89), so tokens can be created and checked.
 os.environ.setdefault("JWT_SECRET_KEY", "test-only-secret-key-that-is-long-enough-123")
 

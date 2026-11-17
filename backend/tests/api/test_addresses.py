@@ -5,6 +5,7 @@ from datetime import date, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models import Order, Product, SubscriptionPlan, User, UserRole
@@ -88,16 +89,11 @@ def test_default_rules(client: TestClient, as_fresh) -> None:
 
     made = client.post(f"{URL}/{first['address_id']}/default", headers=as_fresh)
     assert made.status_code == 200
-    defaults = [
-        a["label"] for a in client.get(URL, headers=as_fresh).json() if a["is_default"]
-    ]
+    defaults = [a["label"] for a in client.get(URL, headers=as_fresh).json() if a["is_default"]]
     assert defaults == ["Home"]
 
     # Deleting the default makes the oldest remaining one (Office) the default.
-    assert (
-        client.delete(f"{URL}/{first['address_id']}", headers=as_fresh).status_code
-        == 204
-    )
+    assert client.delete(f"{URL}/{first['address_id']}", headers=as_fresh).status_code == 204
     left = client.get(URL, headers=as_fresh).json()
     assert [(a["label"], a["is_default"]) for a in left] == [
         ("Office", True),
@@ -116,10 +112,7 @@ def test_edit_and_remove_the_landmark(client: TestClient, as_fresh) -> None:
 
     assert edited.status_code == 200
     assert (edited.json()["street"], edited.json()["landmark"]) == ("Madhapur", None)
-    assert (
-        edited.json()["full_text"]
-        == "Plot 5, Cyber Towers, Madhapur, Hyderabad - 500081"
-    )
+    assert edited.json()["full_text"] == "Plot 5, Cyber Towers, Madhapur, Hyderabad - 500081"
 
 
 @pytest.mark.parametrize(
@@ -155,9 +148,7 @@ def test_at_most_ten_addresses(client: TestClient, as_fresh) -> None:
     assert response.json()["error"]["code"] == "ADDRESS_LIMIT_REACHED"
 
 
-def test_someone_elses_address_is_404(
-    client: TestClient, db_session: Session, as_fresh
-) -> None:
+def test_someone_elses_address_is_404(client: TestClient, db_session: Session, as_fresh) -> None:
     other = factories.make_user(db_session)  # has a default address
     [theirs] = client.get(URL, headers=factories.auth_header(other)).json()
     url = f"{URL}/{theirs['address_id']}"
@@ -178,17 +169,13 @@ def test_ordering_without_any_address_is_refused(
     response = client.post(ORDERS, json=order_body(milk), headers=as_fresh)
 
     assert response.status_code == 422
-    assert response.json()["error"]["details"] == [
-        {"field": "address_id", "issue": "required"}
-    ]
+    assert response.json()["error"]["details"] == [{"field": "address_id", "issue": "required"}]
 
 
 def test_order_uses_the_default_or_the_chosen_address(
     client: TestClient, milk: Product, as_fresh
 ) -> None:
-    home = add(
-        client, as_fresh, label="Home", house="12-3 Sai Residency", street="MG Road"
-    )
+    home = add(client, as_fresh, label="Home", house="12-3 Sai Residency", street="MG Road")
     office = add(client, as_fresh)
 
     by_default = client.post(ORDERS, json=order_body(milk), headers=as_fresh).json()
@@ -220,9 +207,7 @@ def test_order_with_someone_elses_address_is_refused(
     other = factories.make_user(db_session)
     [theirs] = client.get(URL, headers=factories.auth_header(other)).json()
 
-    response = client.post(
-        ORDERS, json=order_body(milk, theirs["address_id"]), headers=as_fresh
-    )
+    response = client.post(ORDERS, json=order_body(milk, theirs["address_id"]), headers=as_fresh)
 
     assert response.status_code == 422
     assert response.json()["error"]["details"] == [
@@ -248,17 +233,12 @@ def test_subscription_copies_the_address_onto_every_delivery(
             "items": [{"product_id": milk.product_id, "quantity": 1}],
         }
     )
-    subscription = subscription_service.create_subscription(
-        db_session, data, user, today=today
-    )
+    subscription = subscription_service.create_subscription(db_session, data, user, today=today)
     assert (
-        subscription.delivery_address
-        == "12-3 Sai Residency, MG Road, Ameerpet, Hyderabad - 500016"
+        subscription.delivery_address == "12-3 Sai Residency, MG Road, Ameerpet, Hyderabad - 500016"
     )
 
-    [(_, order_id)] = subscription_service.generate_orders_for(
-        db_session, start
-    ).created
+    [(_, order_id)] = subscription_service.generate_orders_for(db_session, start).created
 
     order = db_session.get(Order, order_id)
     assert order is not None and order.delivery_address == subscription.delivery_address
@@ -283,9 +263,7 @@ def test_change_subscription_address(
     ).json()
     url = f"{SUBSCRIPTIONS}/{created['subscription_id']}/address"
 
-    changed = client.patch(
-        url, json={"address_id": office["address_id"]}, headers=headers
-    )
+    changed = client.patch(url, json={"address_id": office["address_id"]}, headers=headers)
 
     assert changed.status_code == 200
     assert changed.json()["delivery_address"] == office["full_text"]
@@ -297,3 +275,149 @@ def test_change_subscription_address(
         headers=factories.auth_header(admin),
     )
     assert other.status_code == 404
+
+
+# ---- map pin (#108) ----
+
+PIN = {"latitude": 17.4375, "longitude": 78.4483}
+
+
+def test_address_with_and_without_a_map_pin(client: TestClient, as_fresh) -> None:
+    pinned = add(client, as_fresh, **PIN)
+    plain = add(client, as_fresh)
+
+    assert (pinned["latitude"], pinned["longitude"]) == (17.4375, 78.4483)  # JSON numbers
+    assert (plain["latitude"], plain["longitude"]) == (None, None)  # the pin is optional
+
+
+def test_map_pin_is_rounded_to_six_decimals(client: TestClient, as_fresh) -> None:
+    pinned = add(client, as_fresh, latitude=17.43751234, longitude=78.44839876)
+    assert (pinned["latitude"], pinned["longitude"]) == (17.437512, 78.448399)
+
+
+@pytest.mark.parametrize(
+    "pin",
+    [
+        {"latitude": 17.4375},  # half a pin
+        {"longitude": 78.4483},
+        {"latitude": 17.4375, "longitude": None},
+        {"latitude": 91, "longitude": 78.4483},  # out of range
+        {"latitude": 17.4375, "longitude": -181},
+        {"latitude": "north", "longitude": 78.4483},  # not a number
+    ],
+)
+def test_invalid_map_pins_are_refused(client: TestClient, as_fresh, pin: dict) -> None:
+    response = client.post(URL, json={**NEW, **pin}, headers=as_fresh)
+    assert response.status_code == 422
+
+
+def test_add_move_and_remove_the_map_pin(client: TestClient, as_fresh) -> None:
+    created = add(client, as_fresh)
+    url = f"{URL}/{created['address_id']}"
+
+    added = client.patch(url, json=PIN, headers=as_fresh).json()
+    assert (added["latitude"], added["longitude"]) == (17.4375, 78.4483)
+
+    # Changing other fields keeps the pin.
+    renamed = client.patch(url, json={"label": "Home"}, headers=as_fresh).json()
+    assert (renamed["latitude"], renamed["longitude"]) == (17.4375, 78.4483)
+
+    moved = client.patch(url, json={"latitude": 17.44, "longitude": 78.45}, headers=as_fresh)
+    assert (moved.json()["latitude"], moved.json()["longitude"]) == (17.44, 78.45)
+
+    removed = client.patch(url, json={"latitude": None, "longitude": None}, headers=as_fresh)
+    assert (removed.json()["latitude"], removed.json()["longitude"]) == (None, None)
+
+
+def test_the_pin_changes_only_as_a_pair(client: TestClient, as_fresh) -> None:
+    created = add(client, as_fresh, **PIN)
+    url = f"{URL}/{created['address_id']}"
+
+    assert client.patch(url, json={"latitude": 17.5}, headers=as_fresh).status_code == 422
+    assert client.patch(url, json={"longitude": None}, headers=as_fresh).status_code == 422
+    still = client.get(URL, headers=as_fresh).json()[0]
+    assert (still["latitude"], still["longitude"]) == (17.4375, 78.4483)  # unchanged
+
+
+def test_the_database_refuses_half_a_pin(db_session: Session, fresh: User) -> None:
+    """The CHECK constraint protects the data even if the API rules were bypassed."""
+    address = factories.make_address(db_session, fresh)
+    address.latitude = 17.4375  # longitude stays NULL
+
+    with pytest.raises(IntegrityError, match="ck_addresses_map_pin_complete"):
+        db_session.flush()
+
+
+def test_order_keeps_a_copy_of_the_map_pin(client: TestClient, milk: Product, as_fresh) -> None:
+    home = add(client, as_fresh, **PIN)
+    order = client.post(ORDERS, json=order_body(milk), headers=as_fresh).json()
+    assert (order["delivery_latitude"], order["delivery_longitude"]) == (17.4375, 78.4483)
+
+    # Moving and then deleting the saved address does not move the past order.
+    url = f"{URL}/{home['address_id']}"
+    client.patch(url, json={"latitude": 17.0, "longitude": 78.0}, headers=as_fresh)
+    client.delete(url, headers=as_fresh)
+
+    again = client.get(f"{ORDERS}/{order['order_id']}", headers=as_fresh).json()
+    assert (again["delivery_latitude"], again["delivery_longitude"]) == (17.4375, 78.4483)
+
+
+def test_order_from_an_address_without_a_pin_has_no_pin(
+    client: TestClient, milk: Product, as_fresh
+) -> None:
+    add(client, as_fresh)
+    order = client.post(ORDERS, json=order_body(milk), headers=as_fresh).json()
+    assert (order["delivery_latitude"], order["delivery_longitude"]) == (None, None)
+
+
+def test_subscription_copies_the_map_pin_onto_every_delivery(
+    client: TestClient, db_session: Session, milk: Product, fresh: User, as_fresh
+) -> None:
+    add(client, as_fresh, **PIN)
+    today = date(2026, 11, 20)
+    start = today + timedelta(days=1)
+    data = SubscriptionCreate.model_validate(
+        {
+            "plan": SubscriptionPlan.WEEK,
+            "start_date": start,
+            "delivery_slot_id": factories.standard_slot(db_session).delivery_slot_id,
+            "customer": {"name": "Ravi Kumar", "phone": "9876543210"},
+            "items": [{"product_id": milk.product_id, "quantity": 1}],
+        }
+    )
+    subscription = subscription_service.create_subscription(db_session, data, fresh, today=today)
+    assert (subscription.delivery_latitude, subscription.delivery_longitude) == (17.4375, 78.4483)
+
+    [(_, order_id)] = subscription_service.generate_orders_for(db_session, start).created
+
+    order = db_session.get(Order, order_id)
+    assert order is not None
+    assert (order.delivery_latitude, order.delivery_longitude) == (17.4375, 78.4483)
+
+
+def test_changing_the_subscription_address_also_changes_the_pin(
+    client: TestClient, db_session: Session, milk: Product, normal_user: User
+) -> None:
+    headers = factories.auth_header(normal_user)  # has a default address WITHOUT a pin
+    pinned = add(client, headers, **PIN)
+    start = subscription_service.today_ist() + timedelta(days=1)
+    created = client.post(
+        SUBSCRIPTIONS,
+        json={
+            "plan": "WEEK",
+            "start_date": start.isoformat(),
+            "delivery_slot_id": factories.standard_slot(db_session).delivery_slot_id,
+            "customer": {"name": "Ravi Kumar", "phone": "9876543210"},
+            "items": [{"product_id": milk.product_id, "quantity": 1}],
+        },
+        headers=headers,
+    ).json()
+    assert (created["delivery_latitude"], created["delivery_longitude"]) == (None, None)
+
+    changed = client.patch(
+        f"{SUBSCRIPTIONS}/{created['subscription_id']}/address",
+        json={"address_id": pinned["address_id"]},
+        headers=headers,
+    ).json()
+
+    assert (changed["delivery_latitude"], changed["delivery_longitude"]) == (17.4375, 78.4483)

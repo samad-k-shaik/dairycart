@@ -30,15 +30,11 @@ def list_products(
     db: DbSession,
     include_unavailable: Annotated[
         bool,
-        Query(
-            description="Admin view: also return products that are not available (ADR-006)"
-        ),
+        Query(description="Admin view: also return products that are not available (ADR-006)"),
     ] = False,
 ) -> list[ProductRead]:
     """Products ordered by `product_id`. Returns `[]` (not 404) when there are none."""
-    products = product_service.list_products(
-        db, include_unavailable=include_unavailable
-    )
+    products = product_service.list_products(db, include_unavailable=include_unavailable)
     return [ProductRead.model_validate(product) for product in products]
 
 

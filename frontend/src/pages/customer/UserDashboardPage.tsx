@@ -5,7 +5,7 @@
  * (?tab=addresses) so checkout can link straight to the addresses.
  */
 import { Link, useNavigate, useSearchParams } from "react-router"
-import { LayoutDashboard, LogOut, MapPin, ReceiptText, Repeat, ShoppingBag, UserRound } from "lucide-react"
+import { Bike, LayoutDashboard, LogOut, MapPin, ReceiptText, Repeat, ShoppingBag, UserRound } from "lucide-react"
 
 import { AddressesPanel } from "@/components/address/AddressesPanel"
 
@@ -35,8 +35,7 @@ function UserDashboardPage() {
 
   const details: [string, string][] = [
     ["Full name", user.full_name],
-    ["Username", user.username],
-    ["Email", user.email],
+    ["Mobile number", user.phone],
     ["Member since", formatDate(user.created_at)],
   ]
 
@@ -89,7 +88,13 @@ function UserDashboardPage() {
               <h2 id="account-details" className="text-h2 font-bold">
                 Account details
               </h2>
-              <Badge className={isAdmin ? "ml-auto bg-primary-soft font-semibold text-primary" : "ml-auto bg-muted font-semibold text-muted-foreground"}>
+              <Badge
+                className={
+                  isAdmin
+                    ? "ml-auto bg-primary-soft font-semibold text-primary"
+                    : "ml-auto bg-muted font-semibold text-muted-foreground"
+                }
+              >
                 {isAdmin ? "Admin" : "User"}
               </Badge>
             </div>
@@ -122,6 +127,14 @@ function UserDashboardPage() {
                 My subscriptions
               </Link>
             </Button>
+            {user?.role === "DELIVERY_BOY" && (
+              <Button asChild className="h-12 justify-start sm:col-span-2">
+                <Link to="/delivery">
+                  <Bike aria-hidden="true" />
+                  Open my deliveries
+                </Link>
+              </Button>
+            )}
             {isAdmin && (
               <Button asChild className="h-12 justify-start sm:col-span-2">
                 <Link to="/admin">

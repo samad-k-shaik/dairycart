@@ -79,9 +79,7 @@ def as_admin(admin_user: User) -> dict[str, str]:
 
 @pytest.fixture
 def milk(db_session: Session) -> Product:
-    return factories.make_product(
-        db_session, name="Cow Milk", size="1 Litre", price="60.00"
-    )
+    return factories.make_product(db_session, name="Cow Milk", size="1 Litre", price="60.00")
 
 
 # ---- subscribe ----
@@ -94,9 +92,7 @@ def test_subscribe_returns_the_plan_with_backend_totals(
 
     assert response.status_code == 201
     created = response.json()
-    assert response.headers["Location"] == (
-        f"/api/v1/subscriptions/{created['subscription_id']}"
-    )
+    assert response.headers["Location"] == (f"/api/v1/subscriptions/{created['subscription_id']}")
     assert created["status"] == "ACTIVE"
     assert (created["plan"], created["days"]) == ("WEEK", 7)
     # No every_n_days sent → every day: 7 deliveries (#99).
@@ -125,12 +121,8 @@ def test_subscribe_returns_the_plan_with_backend_totals(
 
 
 @pytest.mark.parametrize(("plan", "days"), [("HALF_MONTH", 15), ("MONTH", 30)])
-def test_longer_plans(
-    client: TestClient, milk: Product, as_user, plan: str, days: int
-) -> None:
-    created = client.post(
-        SUBSCRIPTIONS, json=body((milk, 1), plan=plan), headers=as_user
-    ).json()
+def test_longer_plans(client: TestClient, milk: Product, as_user, plan: str, days: int) -> None:
+    created = client.post(SUBSCRIPTIONS, json=body((milk, 1), plan=plan), headers=as_user).json()
 
     assert created["days"] == days
     assert created["plan_total"] == f"{60 * days}.00"
@@ -183,9 +175,7 @@ def test_subscribing_needs_login(client: TestClient, milk: Product) -> None:
     assert client.post(SUBSCRIPTIONS, json=body((milk, 1))).status_code == 401
 
 
-def test_prices_sent_by_the_client_are_refused(
-    client: TestClient, milk: Product, as_user
-) -> None:
+def test_prices_sent_by_the_client_are_refused(client: TestClient, milk: Product, as_user) -> None:
     sent = body((milk, 1))
     sent["items"][0]["unit_price"] = "1.00"
 
@@ -195,21 +185,15 @@ def test_prices_sent_by_the_client_are_refused(
 
 
 @pytest.mark.parametrize("plan", ["DAILY", "YEAR", ""])
-def test_unknown_plan_is_refused(
-    client: TestClient, milk: Product, as_user, plan: str
-) -> None:
-    response = client.post(
-        SUBSCRIPTIONS, json=body((milk, 1), plan=plan), headers=as_user
-    )
+def test_unknown_plan_is_refused(client: TestClient, milk: Product, as_user, plan: str) -> None:
+    response = client.post(SUBSCRIPTIONS, json=body((milk, 1), plan=plan), headers=as_user)
     assert response.status_code == 422
 
 
 def test_start_date_today_is_refused_under_the_field(
     client: TestClient, milk: Product, as_user
 ) -> None:
-    response = client.post(
-        SUBSCRIPTIONS, json=body((milk, 1), days_ahead=0), headers=as_user
-    )
+    response = client.post(SUBSCRIPTIONS, json=body((milk, 1), days_ahead=0), headers=as_user)
 
     assert response.status_code == 422
     error = response.json()["error"]
@@ -229,9 +213,7 @@ def test_second_active_subscription_is_refused(
     assert response.json()["error"]["code"] == "SUBSCRIPTION_ALREADY_ACTIVE"
 
 
-def test_more_than_the_stock_is_refused(
-    client: TestClient, db_session: Session, as_user
-) -> None:
+def test_more_than_the_stock_is_refused(client: TestClient, db_session: Session, as_user) -> None:
     low = factories.make_product(db_session, stock_quantity=1)
     db_session.commit()
 
@@ -248,9 +230,7 @@ def test_my_subscriptions_shows_only_mine(
     client: TestClient, db_session: Session, milk: Product, as_user
 ) -> None:
     other = factories.make_user(db_session)
-    client.post(
-        SUBSCRIPTIONS, json=body((milk, 1)), headers=factories.auth_header(other)
-    )
+    client.post(SUBSCRIPTIONS, json=body((milk, 1)), headers=factories.auth_header(other))
     mine = client.post(SUBSCRIPTIONS, json=body((milk, 3)), headers=as_user).json()
 
     listed = client.get(f"{SUBSCRIPTIONS}/mine", headers=as_user).json()
@@ -327,7 +307,7 @@ def test_admin_list_with_status_filter(
     cancelled = client.get(ADMIN, params={"status": "CANCELLED"}, headers=as_admin)
 
     row = next(r for r in active if r["subscription_id"] == created["subscription_id"])
-    assert row["username"] == normal_user.username
+    assert row["account_name"] == normal_user.full_name  # #121
     assert (row["customer_name"], row["customer_phone"]) == ("Ravi Kumar", "9876543210")
     assert (row["plan"], row["daily_total"], row["orders_created"]) == (
         "WEEK",
@@ -336,9 +316,7 @@ def test_admin_list_with_status_filter(
     )
     assert row["every_n_days"] == 1  # #99
     assert row["delivery_slot"] == "Morning, 8:00 AM – 9:00 AM"  # #100
-    assert created["subscription_id"] not in [
-        r["subscription_id"] for r in cancelled.json()
-    ]
+    assert created["subscription_id"] not in [r["subscription_id"] for r in cancelled.json()]
 
 
 def test_automatic_run_creates_todays_orders_once(
@@ -350,7 +328,9 @@ def test_automatic_run_creates_todays_orders_once(
 ) -> None:
     """#99: the background job's single run, given the test's own session."""
     subscription_id = starting_today(db_session, normal_user, milk)
-    same_session = lambda: nullcontext(db_session)
+
+    def same_session():
+        return nullcontext(db_session)
 
     first = run_subscription_orders_once(same_session)
     second = run_subscription_orders_once(same_session)
@@ -362,9 +342,7 @@ def test_automatic_run_creates_todays_orders_once(
 
     # The order is a normal order: in "My orders", marked with its subscription.
     mine = client.get("/api/v1/orders/mine", headers=as_user).json()
-    assert [(o["order_id"], o["subscription_id"]) for o in mine] == [
-        (order_id, subscription_id)
-    ]
+    assert [(o["order_id"], o["subscription_id"]) for o in mine] == [(order_id, subscription_id)]
     order = client.get(f"/api/v1/orders/{order_id}", headers=as_user).json()
     assert order["delivery_date"] == subscription_service.today_ist().isoformat()
     assert order["total_amount"] == "120.00"
@@ -373,9 +351,7 @@ def test_automatic_run_creates_todays_orders_once(
     assert detail["orders_created"] == 1
 
 
-def test_one_time_orders_have_no_subscription(
-    client: TestClient, milk: Product, as_user
-) -> None:
+def test_one_time_orders_have_no_subscription(client: TestClient, milk: Product, as_user) -> None:
     order = client.post(
         "/api/v1/orders",
         json={
@@ -395,9 +371,7 @@ def test_product_in_a_subscription_cannot_be_deleted(
     client.post(SUBSCRIPTIONS, json=body((milk, 1)), headers=as_user)
     db_session.commit()
 
-    response = client.delete(
-        f"/api/v1/admin/products/{milk.product_id}", headers=as_admin
-    )
+    response = client.delete(f"/api/v1/admin/products/{milk.product_id}", headers=as_admin)
 
     assert response.status_code == 409
     assert response.json()["error"]["code"] == "PRODUCT_IN_USE"

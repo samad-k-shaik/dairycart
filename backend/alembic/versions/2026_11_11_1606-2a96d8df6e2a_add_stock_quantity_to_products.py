@@ -48,7 +48,5 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_constraint(
-        op.f("ck_products_stock_quantity_non_negative"), "products", type_="check"
-    )
+    op.drop_constraint(op.f("ck_products_stock_quantity_non_negative"), "products", type_="check")
     op.drop_column("products", "stock_quantity")

@@ -89,9 +89,7 @@ def test_unsigned_none_algorithm_token_is_rejected() -> None:
     "claims", [{"sub": "1"}, {"exp": 9999999999}, {"sub": "x", "exp": 9999999999}]
 )
 def test_token_without_expiry_or_valid_subject_is_rejected(claims: dict) -> None:
-    token = jwt.encode(
-        claims, get_settings().jwt_secret_key.get_secret_value(), algorithm="HS256"
-    )
+    token = jwt.encode(claims, get_settings().jwt_secret_key.get_secret_value(), algorithm="HS256")
 
     assert security.read_access_token(token) is None
 
@@ -100,40 +98,33 @@ def test_token_without_expiry_or_valid_subject_is_rejected(claims: dict) -> None
 
 
 def test_create_admin_makes_an_admin(db_session: Session) -> None:
-    data = RegisterRequest(
-        full_name="Dairy Admin",
-        email="admin@dairycart.local",
-        username="admin",
-        password="secret123",
-    )
+    data = RegisterRequest(full_name="Dairy Admin", phone="9000000001", password="secret123")
 
     user = create_admin(db_session, data)
 
     assert user.role == UserRole.ADMIN
+    assert user.phone == "9000000001"
     assert security.verify_password("secret123", user.password_hash)
 
 
-def test_create_admin_refuses_an_existing_username(db_session: Session) -> None:
-    factories.make_user(db_session, username="admin")
-    data = RegisterRequest(
-        full_name="Dairy Admin",
-        email="new@x.com",
-        username="admin",
-        password="secret123",
-    )
+def test_create_admin_refuses_an_existing_mobile_number(db_session: Session) -> None:
+    factories.make_user(db_session, phone="9000000001")
+    data = RegisterRequest(full_name="Dairy Admin", phone="9000000001", password="secret123")
 
     with pytest.raises(ValueError, match="--promote"):
         create_admin(db_session, data)
 
 
-def test_promote_existing_user(db_session: Session) -> None:
-    user = factories.make_user(db_session, username="ravi")
+@pytest.mark.parametrize("typed", ["9876543210", "+91 98765 43210"])
+def test_promote_existing_user_by_mobile_number(db_session: Session, typed: str) -> None:
+    user = factories.make_user(db_session, phone="9876543210")
 
-    promote(db_session, "RAVI")
+    promote(db_session, typed)
 
     assert UserRepository(db_session).get(user.user_id).role == UserRole.ADMIN
 
 
-def test_promote_unknown_user(db_session: Session) -> None:
+@pytest.mark.parametrize("phone", ["9000099999", "not-a-number"])
+def test_promote_unknown_or_invalid_number(db_session: Session, phone: str) -> None:
     with pytest.raises(LookupError):
-        promote(db_session, "nobody")
+        promote(db_session, phone)

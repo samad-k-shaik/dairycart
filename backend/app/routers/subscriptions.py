@@ -67,9 +67,7 @@ def create_subscription(
     """Send only the plan, start date, delivery slot, contact and product ids +
     quantities. The backend locks today's prices and calculates the totals."""
     subscription = subscription_service.create_subscription(db, data, user)
-    response.headers["Location"] = (
-        f"/api/v1/subscriptions/{subscription.subscription_id}"
-    )
+    response.headers["Location"] = f"/api/v1/subscriptions/{subscription.subscription_id}"
     return _read(db, subscription)
 
 
@@ -152,7 +150,5 @@ def change_address(
     user: CurrentUser,
 ) -> SubscriptionRead:
     """#102: owner only. Orders already created keep their address."""
-    subscription = subscription_service.change_address(
-        db, subscription_id, data.address_id, user
-    )
+    subscription = subscription_service.change_address(db, subscription_id, data.address_id, user)
     return _read(db, subscription)

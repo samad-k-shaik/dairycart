@@ -71,11 +71,7 @@ function HomePage() {
           // 2 columns on phones, 3 from 768px (md), 4 from 1024px (lg): design system breakpoints.
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4">
             {visible.map((product) => (
-              <ProductCard
-                key={product.product_id}
-                product={product}
-                onAdd={(p) => addToCart(p, 1)}
-              />
+              <ProductCard key={product.product_id} product={product} onAdd={(p) => addToCart(p, 1)} />
             ))}
           </div>
         )}

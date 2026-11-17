@@ -18,6 +18,18 @@ export function validateName(value: string): string | null {
   return null
 }
 
+/**
+ * #121: the mobile number of an account, as people type it ("+91 98765 43210",
+ * "098765-43210") → 10 digits. The same steps as the backend (schemas/common.py →
+ * MobileNumber): remove spaces and dashes, then a "+91" or a leading "0".
+ */
+export function normaliseMobile(value: string): string {
+  const digits = value.replace(/[\s-]/g, "")
+  if (digits.startsWith("+91")) return digits.slice(3)
+  if (digits.length === 11 && digits.startsWith("0")) return digits.slice(1)
+  return digits
+}
+
 export function validatePhone(value: string): string | null {
   if (value.length === 0) return "Please enter your mobile number."
   if (!PHONE_PATTERN.test(value)) {

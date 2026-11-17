@@ -9,13 +9,7 @@ import type { Money } from "./product.ts"
  * All order statuses, in lifecycle order.
  * `as const` makes this a fixed, read-only list of these exact strings.
  */
-export const ORDER_STATUSES = [
-  "PLACED",
-  "CONFIRMED",
-  "OUT_FOR_DELIVERY",
-  "DELIVERED",
-  "CANCELLED",
-] as const
+export const ORDER_STATUSES = ["PLACED", "CONFIRMED", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED"] as const
 
 /**
  * A "union type": OrderStatus can only be one of the five strings above.
@@ -57,6 +51,9 @@ export type Order = {
   delivery_slot?: string | null
   /** #102: where to deliver (copy of the address; null for orders before #102). */
   delivery_address?: string | null
+  /** #108: copy of the address's map pin (null when it had none). */
+  delivery_latitude?: number | null
+  delivery_longitude?: number | null
   /** #97: the day ("2026-11-21") a subscription order is for; null for one-time orders. */
   delivery_date?: string | null
 }
@@ -99,7 +96,8 @@ export type AdminOrderSummary = {
   delivery_slot?: string | null
   /** #104: card details (optional: the offline M2 mocks do not send them). */
   user_id?: number | null
-  username?: string | null
+  /** #121: the account holder's full name (was `username`). */
+  account_name?: string | null
   delivery_date?: string | null
   delivery_pincode?: string | null
   delivery_boy?: { delivery_boy_id: number; name: string; phone: string } | null

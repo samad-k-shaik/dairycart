@@ -10,6 +10,7 @@ import { useState, type FormEvent } from "react"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
+import { MapPinField } from "@/components/address/MapPinField"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -93,7 +94,7 @@ function AddressForm({
       if (field) fieldErrors[field] = detail.issue
     }
     if (Object.keys(fieldErrors).length > 0) setErrors(fieldErrors)
-    else setFormError(error.message)
+    else setFormError(error.message) // e.g. a refused map pin (#108)
   }
 
   function done(saved: Address, message: string) {
@@ -158,6 +159,14 @@ function AddressForm({
             </div>
           )
         })}
+
+        <MapPinField
+          value={values.pin}
+          onChange={(pin) => {
+            setValues((current) => ({ ...current, pin }))
+            setFormError("")
+          }}
+        />
 
         {!isEdit && (
           <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border p-3">

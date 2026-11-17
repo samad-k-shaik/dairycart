@@ -34,10 +34,7 @@ NOT_FOUND = {404: {"model": ErrorResponse, "description": "Not one of your addre
 
 @router.get("", response_model=list[AddressRead], summary="My addresses")
 def list_addresses(db: DbSession, user: CurrentUser) -> list[AddressRead]:
-    return [
-        AddressRead.model_validate(a)
-        for a in address_service.list_addresses(db, user.user_id)
-    ]
+    return [AddressRead.model_validate(a) for a in address_service.list_addresses(db, user.user_id)]
 
 
 @router.post(
@@ -50,13 +47,9 @@ def list_addresses(db: DbSession, user: CurrentUser) -> list[AddressRead]:
         422: {"model": ErrorResponse, "description": "Invalid fields"},
     },
 )
-def create_address(
-    data: AddressCreate, db: DbSession, user: CurrentUser
-) -> AddressRead:
+def create_address(data: AddressCreate, db: DbSession, user: CurrentUser) -> AddressRead:
     """The first address becomes the default; `is_default: true` makes this one it."""
-    return AddressRead.model_validate(
-        address_service.create_address(db, user.user_id, data)
-    )
+    return AddressRead.model_validate(address_service.create_address(db, user.user_id, data))
 
 
 @router.patch(
@@ -81,9 +74,7 @@ def update_address(
     responses=NOT_FOUND,
 )
 def set_default(address_id: AddressId, db: DbSession, user: CurrentUser) -> AddressRead:
-    return AddressRead.model_validate(
-        address_service.set_default(db, user.user_id, address_id)
-    )
+    return AddressRead.model_validate(address_service.set_default(db, user.user_id, address_id))
 
 
 @router.delete(

@@ -1,4 +1,4 @@
-"""Sign-up, login and user schemas (#89)."""
+"""Sign-up, login and user schemas (#89; mobile number instead of email/username: #121)."""
 
 from typing import Annotated
 
@@ -11,7 +11,7 @@ from pydantic import (
 )
 
 from app.models import UserRole
-from app.schemas.common import Money, UtcDateTime
+from app.schemas.common import MobileNumber, Money, UtcDateTime
 
 PASSWORD_MIN = 8
 PASSWORD_MAX_BYTES = 72  # bcrypt ignores everything after 72 bytes
@@ -25,36 +25,9 @@ def _password_rules(value: str) -> str:
     return value
 
 
-FullName = Annotated[
-    str, StringConstraints(strip_whitespace=True, min_length=2, max_length=100)
-]
-# Simple shape check (something@something.something); the real proof that an email
-# works would be a confirmation email, which is out of scope for the POC.
-Email = Annotated[
-    str,
-    StringConstraints(
-        strip_whitespace=True,
-        to_lower=True,
-        max_length=254,
-        pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$",
-    ),
-]
-Username = Annotated[
-    str,
-    StringConstraints(
-        strip_whitespace=True,
-        to_lower=True,
-        min_length=3,
-        max_length=30,
-        # Capitals allowed here: pydantic checks the pattern BEFORE to_lower, and the
-        # value is then stored in lower case ("Ravi_K" → "ravi_k").
-        pattern=r"^[A-Za-z0-9._-]+$",
-    ),
-]
+FullName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=100)]
 # Not stripped: spaces in a password are allowed and count.
-Password = Annotated[
-    str, Field(min_length=PASSWORD_MIN), AfterValidator(_password_rules)
-]
+Password = Annotated[str, Field(min_length=PASSWORD_MIN), AfterValidator(_password_rules)]
 
 
 class RegisterRequest(BaseModel):
@@ -64,17 +37,20 @@ class RegisterRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     full_name: FullName
-    email: Email
-    username: Username
+    # The login of the account (#121). Saved as 10 digits ("+91 98765 43210" → "9876543210").
+    phone: MobileNumber
     password: Password
 
 
 class LoginRequest(BaseModel):
-    """POST /auth/login. `login` is the username OR the email address."""
+    """POST /auth/login: the mobile number used at sign-up + the password (#121).
+
+    A badly typed number is a 422 here (it can never match an account), which tells the
+    caller nothing about which numbers are registered."""
 
     model_config = ConfigDict(extra="forbid")
 
-    login: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    phone: MobileNumber
     password: Annotated[str, Field(min_length=1)]
 
 
@@ -85,8 +61,7 @@ class UserRead(BaseModel):
 
     user_id: int
     full_name: str
-    email: str
-    username: str
+    phone: str
     role: UserRole
     created_at: UtcDateTime
 

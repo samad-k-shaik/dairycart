@@ -23,9 +23,7 @@ config = context.config
 
 # Alembic's own console logging (configured in alembic.ini). Tests turn it off
 # (config.attributes["configure_logger"] = False) so it does not replace pytest's logging.
-if config.config_file_name is not None and config.attributes.get(
-    "configure_logger", True
-):
+if config.config_file_name is not None and config.attributes.get("configure_logger", True):
     fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
@@ -66,9 +64,7 @@ def run_migrations_online() -> None:
 
 
 def _run(connection: Connection) -> None:
-    context.configure(
-        connection=connection, target_metadata=target_metadata, **COMPARE_OPTIONS
-    )
+    context.configure(connection=connection, target_metadata=target_metadata, **COMPARE_OPTIONS)
     with context.begin_transaction():
         context.run_migrations()
 

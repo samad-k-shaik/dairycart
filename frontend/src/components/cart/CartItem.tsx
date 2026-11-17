@@ -49,11 +49,7 @@ export function CartItem({ line, onQuantityChange, onRemove }: CartItemProps) {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <QuantitySelector
-            value={line.quantity}
-            onChange={onQuantityChange}
-            label={`Quantity of ${label}`}
-          />
+          <QuantitySelector value={line.quantity} onChange={onQuantityChange} label={`Quantity of ${label}`} />
           {/* Derived: calculated from price × quantity on every render, never stored. */}
           <p className="text-price font-extrabold" aria-label={`Subtotal ${formatCurrency(lineSubtotal(line))}`}>
             {formatCurrency(lineSubtotal(line))}

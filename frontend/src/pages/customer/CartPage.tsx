@@ -40,18 +40,23 @@ function CartPage() {
         {lines.length === 0 ? (
           <EmptyCart />
         ) : (
-          <ul className="space-y-3" aria-label="Cart items">
-            {/* key = product_id: stable and unique per line, so React keeps the right
-                row when lines are removed or reordered. */}
-            {lines.map((line, index) => (
-              <CartItem
-                key={line.product_id}
-                line={line}
-                onQuantityChange={(quantity) => setQuantity(line.product_id, quantity)}
-                onRemove={() => handleRemove(line, index)}
-              />
-            ))}
-          </ul>
+          <div>
+            {/* #55: headings must not skip a level (h1 → h3 in each item). This h2 is for
+                screen-reader users, who jump from heading to heading; it is not shown. */}
+            <h2 className="sr-only">Items in your cart</h2>
+            <ul className="space-y-3" aria-label="Cart items">
+              {/* key = product_id: stable and unique per line, so React keeps the right
+                  row when lines are removed or reordered. */}
+              {lines.map((line, index) => (
+                <CartItem
+                  key={line.product_id}
+                  line={line}
+                  onQuantityChange={(quantity) => setQuantity(line.product_id, quantity)}
+                  onRemove={() => handleRemove(line, index)}
+                />
+              ))}
+            </ul>
+          </div>
         )}
 
         <div className="lg:sticky lg:top-24">

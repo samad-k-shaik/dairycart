@@ -2,13 +2,13 @@
 
 Every image in this folder must be owned by the project, created by us, or licensed for reuse (see `docs/06-ui-ux/design-system.md` → Imagery). Record each file here.
 
-| File | Source | Licence | Added in |
-|---|---|---|---|
-| `products/cow-milk.svg` | Original illustration drawn as SVG code for DairyCart (glass bottle, green label, cow outline; redrawn in #94) | Project-owned | M2-05 (#24), #94 |
-| `products/buffalo-milk.svg` | Original illustration drawn as SVG code for DairyCart (glass bottle, blue label, buffalo outline; redrawn in #94) | Project-owned | M2-05 (#24), #94 |
-| `products/paneer.svg` | Original illustration drawn as SVG code for DairyCart (paneer cubes on a plate) | Project-owned | #94 |
-| `products/ghee.svg` | Original illustration drawn as SVG code for DairyCart (jar of ghee with a spoon) | Project-owned | #94 |
-| `backgrounds/dairy-barn.webp` | "Cows feeding in a long barn aisle" by Ahmad Nasihin, https://unsplash.com/photos/cows-feeding-in-a-long-barn-aisle-um6edL4FaW4 (cropped to 1600×900, WebP) | [Unsplash License](https://unsplash.com/license) (free to use, no attribution required; credited anyway) | #93 |
+| File                          | Source                                                                                                                                                      | Licence                                                                                                  | Added in         |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------- |
+| `products/cow-milk.svg`       | Original illustration drawn as SVG code for DairyCart (glass bottle, green label, cow outline; redrawn in #94)                                              | Project-owned                                                                                            | M2-05 (#24), #94 |
+| `products/buffalo-milk.svg`   | Original illustration drawn as SVG code for DairyCart (glass bottle, blue label, buffalo outline; redrawn in #94)                                           | Project-owned                                                                                            | M2-05 (#24), #94 |
+| `products/paneer.svg`         | Original illustration drawn as SVG code for DairyCart (paneer cubes on a plate)                                                                             | Project-owned                                                                                            | #94              |
+| `products/ghee.svg`           | Original illustration drawn as SVG code for DairyCart (jar of ghee with a spoon)                                                                            | Project-owned                                                                                            | #94              |
+| `backgrounds/dairy-barn.webp` | "Cows feeding in a long barn aisle" by Ahmad Nasihin, https://unsplash.com/photos/cows-feeding-in-a-long-barn-aisle-um6edL4FaW4 (cropped to 1600×900, WebP) | [Unsplash License](https://unsplash.com/license) (free to use, no attribution required; credited anyway) | #93              |
 
 Notes:
 

@@ -1,16 +1,23 @@
 /**
- * Route: `/signup` (#89). Full name, email, username, password and confirm password.
- * On success the new USER is sent to the login page to log in with the new account.
+ * Route: `/signup` (#89). Full name, mobile number, password and confirm password (#121:
+ * the mobile number is the login; no email or username).
+ * On success the new USER is sent to the login page, with the number already filled in.
  */
 import { useState, type FormEvent } from "react"
 import { Link, Navigate, useNavigate } from "react-router"
 import { AlertCircle, Loader2, UserPlus } from "lucide-react"
 
-import { userFacingMessage } from "@/components/common/ErrorState"
+import { userFacingMessage } from "@/services/serviceError"
 import { FormField } from "@/components/common/FormField"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/useAuth"
-import { EMPTY_SIGN_UP, toRegisterRequest, validateSignUp, type SignUpErrors, type SignUpValues } from "@/lib/authValidation"
+import {
+  EMPTY_SIGN_UP,
+  toRegisterRequest,
+  validateSignUp,
+  type SignUpErrors,
+  type SignUpValues,
+} from "@/lib/authValidation"
 import { register } from "@/services/authService"
 import { ServiceError } from "@/services/serviceError"
 
@@ -42,20 +49,16 @@ function SignUpPage() {
     setSaving(true)
     try {
       const created = await register(toRegisterRequest(values))
-      navigate(`/login?registered=1&username=${encodeURIComponent(created.username)}`, { replace: true })
+      navigate(`/login?registered=1&phone=${encodeURIComponent(created.phone)}`, { replace: true })
     } catch (error) {
       // 409 (taken) and 422 (invalid) name the fields: show each message at its field.
       const details = error instanceof ServiceError ? (error.body.error.details ?? []) : []
       const taken = error instanceof ServiceError && error.status === 409
       const messages: SignUpErrors = taken
-        ? {
-            email: "This email is already registered. Try logging in.",
-            username: "This username is taken. Please choose another.",
-          }
+        ? { phone: "This mobile number is already registered. Try logging in." }
         : {
             full_name: "Name must be 2–100 characters.",
-            email: "Enter a valid email address.",
-            username: "Use 3–30 letters, numbers, dots, dashes or underscores.",
+            phone: "Enter a 10-digit mobile number starting with 6, 7, 8 or 9.",
             password: "Use 8+ characters with at least one letter and one number.",
           }
       const fieldErrors: SignUpErrors = {}
@@ -81,11 +84,47 @@ function SignUpPage() {
       </div>
 
       <form onSubmit={handleSubmit} noValidate className="space-y-4 rounded-2xl bg-surface p-5 shadow-card">
-        <FormField id="signup-full_name" label="Full name" autoComplete="name" value={values.full_name} error={errors.full_name} onChange={(v) => setField("full_name", v)} placeholder="e.g. Ravi Kumar" />
-        <FormField id="signup-email" label="Email" type="email" autoComplete="email" value={values.email} error={errors.email} onChange={(v) => setField("email", v)} placeholder="ravi@example.com" />
-        <FormField id="signup-username" label="Username" autoComplete="username" value={values.username} error={errors.username} hint="3–30 letters, numbers, dots, dashes or underscores." onChange={(v) => setField("username", v)} />
-        <FormField id="signup-password" label="Password" type="password" autoComplete="new-password" value={values.password} error={errors.password} hint="At least 8 characters, with a letter and a number." onChange={(v) => setField("password", v)} />
-        <FormField id="signup-confirm_password" label="Confirm password" type="password" autoComplete="new-password" value={values.confirm_password} error={errors.confirm_password} onChange={(v) => setField("confirm_password", v)} />
+        <FormField
+          id="signup-full_name"
+          label="Full name"
+          autoComplete="name"
+          value={values.full_name}
+          error={errors.full_name}
+          onChange={(v) => setField("full_name", v)}
+          placeholder="e.g. Ravi Kumar"
+        />
+        <FormField
+          id="signup-phone"
+          label="Mobile number"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel-national"
+          leadingText="+91"
+          value={values.phone}
+          error={errors.phone}
+          hint="You will log in with this number."
+          onChange={(v) => setField("phone", v)}
+          placeholder="98765 43210"
+        />
+        <FormField
+          id="signup-password"
+          label="Password"
+          type="password"
+          autoComplete="new-password"
+          value={values.password}
+          error={errors.password}
+          hint="At least 8 characters, with a letter and a number."
+          onChange={(v) => setField("password", v)}
+        />
+        <FormField
+          id="signup-confirm_password"
+          label="Confirm password"
+          type="password"
+          autoComplete="new-password"
+          value={values.confirm_password}
+          error={errors.confirm_password}
+          onChange={(v) => setField("confirm_password", v)}
+        />
 
         {submitError && (
           <p role="alert" className="flex gap-2 rounded-xl bg-red-50 p-3 text-small text-danger">

@@ -25,16 +25,12 @@ def milk(db_session: Session) -> Product:
 
 
 def add_boy(client: TestClient, headers: dict, name: str, phone: str, **extra) -> dict:
-    response = client.post(
-        URL, json={"name": name, "phone": phone, **extra}, headers=headers
-    )
+    response = client.post(URL, json={"name": name, "phone": phone, **extra}, headers=headers)
     assert response.status_code == 201, response.text
     return response.json()
 
 
-def add_area(
-    client: TestClient, headers: dict, boy: dict, pincode: str, name: str | None = None
-):
+def add_area(client: TestClient, headers: dict, boy: dict, pincode: str, name: str | None = None):
     return client.post(
         f"{URL}/{boy['delivery_boy_id']}/areas",
         json={"pincode": pincode, "area_name": name},
@@ -66,9 +62,7 @@ def order_in(client: TestClient, db: Session, product: Product, pincode: str) ->
     ("method", "path"),
     [("GET", URL), ("POST", URL), ("PATCH", f"{URL}/1"), ("DELETE", f"{URL}/1")],
 )
-def test_admin_only(
-    client: TestClient, normal_user: User, method: str, path: str
-) -> None:
+def test_admin_only(client: TestClient, normal_user: User, method: str, path: str) -> None:
     assert client.request(method, path, json={}).status_code == 401
     user = factories.auth_header(normal_user)
     assert client.request(method, path, json={}, headers=user).status_code == 403
@@ -83,16 +77,12 @@ def test_add_edit_and_delete_a_delivery_boy(client: TestClient, as_admin) -> Non
     assert (boy["is_active"], boy["areas"], boy["today_orders"]) == (True, [], 0)
 
     url = f"{URL}/{boy['delivery_boy_id']}"
-    edited = client.patch(
-        url, json={"is_active": False, "name": "Ravi K"}, headers=as_admin
-    )
+    edited = client.patch(url, json={"is_active": False, "name": "Ravi K"}, headers=as_admin)
     assert edited.status_code == 200
     assert (edited.json()["name"], edited.json()["is_active"]) == ("Ravi K", False)
 
     assert client.delete(url, headers=as_admin).status_code == 204
-    assert (
-        client.patch(url, json={"name": "Ghost"}, headers=as_admin).status_code == 404
-    )
+    assert client.patch(url, json={"name": "Ghost"}, headers=as_admin).status_code == 404
 
 
 @pytest.mark.parametrize(
@@ -110,9 +100,7 @@ def test_invalid_delivery_boys(client: TestClient, as_admin, body: dict) -> None
 
 def test_phone_must_be_unique(client: TestClient, as_admin) -> None:
     add_boy(client, as_admin, "Ravi", "9876500001")
-    response = client.post(
-        URL, json={"name": "Other", "phone": "9876500001"}, headers=as_admin
-    )
+    response = client.post(URL, json={"name": "Other", "phone": "9876500001"}, headers=as_admin)
     assert response.status_code == 409
     assert response.json()["error"]["code"] == "DELIVERY_BOY_ALREADY_EXISTS"
 
@@ -134,14 +122,10 @@ def test_allocate_and_remove_areas(client: TestClient, as_admin) -> None:
         {"pincode": "500034", "area_name": "Banjara Hills"},
     ]
 
-    removed = client.delete(
-        f"{URL}/{boy['delivery_boy_id']}/areas/500016", headers=as_admin
-    )
+    removed = client.delete(f"{URL}/{boy['delivery_boy_id']}/areas/500016", headers=as_admin)
     assert removed.status_code == 200
     assert [a["pincode"] for a in removed.json()["areas"]] == ["500034"]
-    again = client.delete(
-        f"{URL}/{boy['delivery_boy_id']}/areas/500016", headers=as_admin
-    )
+    again = client.delete(f"{URL}/{boy['delivery_boy_id']}/areas/500016", headers=as_admin)
     assert again.status_code == 404
 
 
@@ -207,9 +191,7 @@ def test_deliveries_are_matched_filtered_and_counted(
     assert only_ravi["status_counts"]["PLACED"] == 2  # chips follow the boy filter
     assert only_ravi["boy_counts"] == day["boy_counts"]  # counts ignore the filter
 
-    unassigned = client.get(
-        ORDERS, params={**today, "boy": "unassigned"}, headers=as_admin
-    ).json()
+    unassigned = client.get(ORDERS, params={**today, "boy": "unassigned"}, headers=as_admin).json()
     assert nobody in {r["order_id"] for r in unassigned["items"]}
     assert r1 not in {r["order_id"] for r in unassigned["items"]}
 
@@ -224,9 +206,7 @@ def test_inactive_delivery_boy_orders_are_not_assigned(
     ravi = add_boy(client, as_admin, "Ravi", "9876500001")
     add_area(client, as_admin, ravi, "500016")
     order_id = order_in(client, db_session, milk, "500016")
-    client.patch(
-        f"{URL}/{ravi['delivery_boy_id']}", json={"is_active": False}, headers=as_admin
-    )
+    client.patch(f"{URL}/{ravi['delivery_boy_id']}", json={"is_active": False}, headers=as_admin)
 
     day = client.get(ORDERS, headers=as_admin).json()
 
@@ -262,7 +242,5 @@ def test_migration_reads_the_pin_code_from_the_address_text(
 ) -> None:
     """The backfill in migration 99af8de2905d uses this expression."""
     sql = text("SELECT substring(:address from '([1-9][0-9]{5})$')")
-    found = db_session.scalar(
-        sql, {"address": "12-3 Sai Residency, MG Road, Hyderabad - 500016"}
-    )
+    found = db_session.scalar(sql, {"address": "12-3 Sai Residency, MG Road, Hyderabad - 500016"})
     assert found == "500016"

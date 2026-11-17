@@ -17,9 +17,7 @@ from app.services.subscription_service import generate_orders_for, today_ist
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="Create the day's subscription orders (#97)."
-    )
+    parser = argparse.ArgumentParser(description="Create the day's subscription orders (#97).")
     parser.add_argument(
         "--date",
         type=date.fromisoformat,

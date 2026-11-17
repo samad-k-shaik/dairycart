@@ -13,14 +13,11 @@ from app.schemas.common import ErrorDetail
 from app.schemas.product import ProductCreate, ProductUpdate
 
 IN_USE_MESSAGE = (
-    "This product has already been ordered, so it cannot be deleted. "
-    "Mark it unavailable instead."
+    "This product has already been ordered, so it cannot be deleted. Mark it unavailable instead."
 )
 
 
-def list_products(
-    db: Session, *, include_unavailable: bool = False
-) -> Sequence[Product]:
+def list_products(db: Session, *, include_unavailable: bool = False) -> Sequence[Product]:
     """Customers see available products only; the admin products page passes
     include_unavailable=True (ADR-006)."""
     return ProductRepository(db).list(include_unavailable=include_unavailable)

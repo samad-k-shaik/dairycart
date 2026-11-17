@@ -45,9 +45,7 @@ def test_an_error_is_logged_and_the_loop_goes_on(
 
 def test_stopping_the_server_stops_the_loop() -> None:
     async def scenario() -> asyncio.Task[None]:
-        async with run_in_background(
-            subscription_orders_loop(60, run_once=lambda: None)
-        ) as task:
+        async with run_in_background(subscription_orders_loop(60, run_once=lambda: None)) as task:
             await asyncio.sleep(0.05)
         return task
 

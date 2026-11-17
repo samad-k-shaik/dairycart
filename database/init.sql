@@ -60,18 +60,18 @@ CREATE INDEX idx_orders_customer_id ON orders(customer_id);
 CREATE INDEX idx_orders_status      ON orders(status);
 CREATE INDEX idx_order_items_order  ON order_items(order_id);
 
--- Accounts (#89, migration add_users_table). Email and username are stored in lower case.
+-- Accounts (#89, migration add_users_table). #121: the login is the mobile number
+-- (migration login_by_mobile_number); email and username were removed.
 CREATE TABLE users (
     user_id        SERIAL        PRIMARY KEY,
     full_name      VARCHAR(100)  NOT NULL,
-    email          VARCHAR(254)  NOT NULL,
-    username       VARCHAR(30)   NOT NULL,
+    phone          VARCHAR(10)   NOT NULL,   -- 10 digits, without +91
     password_hash  VARCHAR(100)  NOT NULL,   -- bcrypt hash, never the password
-    role           VARCHAR(10)   NOT NULL DEFAULT 'USER',
+    role           VARCHAR(20)   NOT NULL DEFAULT 'USER',
     created_at     TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    CONSTRAINT uq_users_email UNIQUE (email),
-    CONSTRAINT uq_users_username UNIQUE (username),
-    CONSTRAINT ck_users_role_allowed CHECK (role IN ('USER','ADMIN'))
+    CONSTRAINT uq_users_phone UNIQUE (phone),
+    CONSTRAINT ck_users_phone_format CHECK (phone ~ '^[6-9][0-9]{9}$'),
+    CONSTRAINT ck_users_role_allowed CHECK (role IN ('USER','ADMIN','DELIVERY_BOY'))  -- DELIVERY_BOY: #109
 );
 
 -- Orders belong to the account that placed them (#90, migration add_user_id_to_orders).
@@ -178,6 +178,10 @@ CREATE TABLE delivery_boys (
     phone           VARCHAR(10) NOT NULL CONSTRAINT ck_delivery_boys_phone_format CHECK (phone ~ '^[6-9][0-9]{9}$'),
     is_active       BOOLEAN NOT NULL DEFAULT TRUE,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+    -- #109: his login account (role DELIVERY_BOY); NULL = no login.
+    user_id         INTEGER REFERENCES users (user_id) ON DELETE SET NULL CONSTRAINT uq_delivery_boys_user_id UNIQUE,
+    -- #110: when he started his round; NULL = not on a round.
+    round_started_at TIMESTAMPTZ,
     CONSTRAINT uq_delivery_boys_phone UNIQUE (phone)
 );
 CREATE TABLE delivery_areas (
@@ -191,3 +195,28 @@ CREATE INDEX idx_delivery_areas_delivery_boy_id ON delivery_areas (delivery_boy_
 -- The address's PIN code on orders and subscriptions, to match the delivery boy.
 ALTER TABLE orders ADD COLUMN delivery_pincode VARCHAR(6);
 ALTER TABLE subscriptions ADD COLUMN delivery_pincode VARCHAR(6);
+
+-- #108: optional map pin on addresses, copied onto orders and subscriptions.
+-- NUMERIC(9,6) = 6 decimals (about 11 cm). Both set or both NULL.
+ALTER TABLE addresses
+    ADD COLUMN latitude  NUMERIC(9,6) CONSTRAINT ck_addresses_latitude_range CHECK (latitude BETWEEN -90 AND 90),
+    ADD COLUMN longitude NUMERIC(9,6) CONSTRAINT ck_addresses_longitude_range CHECK (longitude BETWEEN -180 AND 180),
+    ADD CONSTRAINT ck_addresses_map_pin_complete CHECK ((latitude IS NULL) = (longitude IS NULL));
+ALTER TABLE orders
+    ADD COLUMN delivery_latitude  NUMERIC(9,6) CONSTRAINT ck_orders_delivery_latitude_range CHECK (delivery_latitude BETWEEN -90 AND 90),
+    ADD COLUMN delivery_longitude NUMERIC(9,6) CONSTRAINT ck_orders_delivery_longitude_range CHECK (delivery_longitude BETWEEN -180 AND 180),
+    ADD CONSTRAINT ck_orders_map_pin_complete CHECK ((delivery_latitude IS NULL) = (delivery_longitude IS NULL));
+ALTER TABLE subscriptions
+    ADD COLUMN delivery_latitude  NUMERIC(9,6) CONSTRAINT ck_subscriptions_delivery_latitude_range CHECK (delivery_latitude BETWEEN -90 AND 90),
+    ADD COLUMN delivery_longitude NUMERIC(9,6) CONSTRAINT ck_subscriptions_delivery_longitude_range CHECK (delivery_longitude BETWEEN -180 AND 180),
+    ADD CONSTRAINT ck_subscriptions_map_pin_complete CHECK ((delivery_latitude IS NULL) = (delivery_longitude IS NULL));
+
+-- #110: a delivery boy's LATEST position during a round (one row each, upsert; no history).
+CREATE TABLE delivery_locations (
+    delivery_boy_id INTEGER PRIMARY KEY REFERENCES delivery_boys (delivery_boy_id) ON DELETE CASCADE,
+    latitude        NUMERIC(9,6) NOT NULL CONSTRAINT ck_delivery_locations_latitude_range CHECK (latitude BETWEEN -90 AND 90),
+    longitude       NUMERIC(9,6) NOT NULL CONSTRAINT ck_delivery_locations_longitude_range CHECK (longitude BETWEEN -180 AND 180),
+    accuracy_m      INTEGER CONSTRAINT ck_delivery_locations_accuracy_non_negative CHECK (accuracy_m >= 0),
+    recorded_at     TIMESTAMPTZ NOT NULL,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);

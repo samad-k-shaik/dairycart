@@ -54,12 +54,8 @@ def _money_must_be_a_string(value: Any) -> Any:
 
 # The limits match the database columns: name VARCHAR(100), size VARCHAR(20),
 # price NUMERIC(10,2) with CHECK (price > 0). Spaces around the text are removed first.
-ProductName = Annotated[
-    str, StringConstraints(strip_whitespace=True, min_length=2, max_length=100)
-]
-ProductSize = Annotated[
-    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=20)
-]
+ProductName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=100)]
+ProductSize = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=20)]
 # 0–100 000 bottles (#92).
 StockQuantity = Annotated[int, Field(ge=0, le=100_000)]
 PriceInput = Annotated[

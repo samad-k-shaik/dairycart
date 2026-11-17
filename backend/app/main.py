@@ -9,7 +9,7 @@ database code or business logic. All endpoints live under /api/v1.
 """
 
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +18,7 @@ from app import __version__
 from app.core.background import run_in_background, subscription_orders_loop
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
+from app.core.live_updates import live_updates_listener
 from app.core.logging import RequestIdMiddleware, configure_logging
 from app.routers import (
     addresses,
@@ -29,6 +30,7 @@ from app.routers import (
     admin_subscriptions,
     admin_users,
     auth,
+    delivery,
     delivery_slots,
     health,
     orders,
@@ -52,12 +54,16 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     """Runs once when the server starts (before `yield`) and once when it stops.
 
     #99: starts the job that creates subscription delivery orders automatically.
+    #113: starts the listener that wakes the live map streams (core/live_updates.py).
     """
-    if not settings.subscription_auto_orders:
-        yield
-        return
-    loop = subscription_orders_loop(settings.subscription_orders_interval_minutes * 60)
-    async with run_in_background(loop):
+    async with AsyncExitStack() as stack:
+        if settings.subscription_auto_orders:
+            loop = subscription_orders_loop(settings.subscription_orders_interval_minutes * 60)
+            await stack.enter_async_context(run_in_background(loop))
+        if settings.live_updates:  # #113: PostgreSQL LISTEN for the live maps
+            await stack.enter_async_context(
+                live_updates_listener(settings.database_url.get_secret_value())
+            )
         yield
 
 
@@ -74,7 +80,7 @@ app.add_middleware(RequestIdMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE"],  # PUT: #109
     allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
     expose_headers=["X-Request-ID", "Location"],
 )
@@ -97,3 +103,4 @@ app.include_router(admin_delivery_slots.router, prefix=API_PREFIX)  # #100
 app.include_router(addresses.router, prefix=API_PREFIX)  # #102
 app.include_router(admin_delivery_boys.router, prefix=API_PREFIX)  # #103
 app.include_router(admin_income.router, prefix=API_PREFIX)  # #105
+app.include_router(delivery.router, prefix=API_PREFIX)  # #109

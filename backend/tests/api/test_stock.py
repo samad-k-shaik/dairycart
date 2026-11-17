@@ -38,9 +38,7 @@ def as_admin(admin_user: User) -> dict[str, str]:
 # ---- who sees the number ----
 
 
-def test_admin_list_shows_stock_numbers(
-    client: TestClient, db_session: Session, as_admin
-) -> None:
+def test_admin_list_shows_stock_numbers(client: TestClient, db_session: Session, as_admin) -> None:
     product = factories.make_product(db_session, stock_quantity=7)
 
     rows = client.get(ADMIN_PRODUCTS, headers=as_admin).json()
@@ -49,9 +47,7 @@ def test_admin_list_shows_stock_numbers(
     assert (row["stock_quantity"], row["in_stock"]) == (7, True)
 
 
-def test_public_api_never_returns_the_number(
-    client: TestClient, db_session: Session
-) -> None:
+def test_public_api_never_returns_the_number(client: TestClient, db_session: Session) -> None:
     factories.make_product(db_session, stock_quantity=7)
     empty = factories.make_product(db_session, stock_quantity=0)
 
@@ -115,9 +111,7 @@ def test_order_reduces_the_stock_of_each_product(
     cow = factories.make_product(db_session, stock_quantity=10)
     buffalo = factories.make_product(db_session, stock_quantity=5)
 
-    response = client.post(
-        ORDERS, json=order_body((cow, 3), (buffalo, 5)), headers=as_user
-    )
+    response = client.post(ORDERS, json=order_body((cow, 3), (buffalo, 5)), headers=as_user)
 
     assert response.status_code == 201
     assert (stock_of(db_session, cow), stock_of(db_session, buffalo)) == (7, 0)
@@ -126,9 +120,7 @@ def test_order_reduces_the_stock_of_each_product(
 def test_ordering_more_than_the_stock_is_refused_and_nothing_changes(
     client: TestClient, db_session: Session, as_user
 ) -> None:
-    cow = factories.make_product(
-        db_session, name="Cow Milk", size="1 Litre", stock_quantity=10
-    )
+    cow = factories.make_product(db_session, name="Cow Milk", size="1 Litre", stock_quantity=10)
     buffalo = factories.make_product(
         db_session, name="Buffalo Milk", size="500 ml", stock_quantity=3
     )
@@ -136,20 +128,15 @@ def test_ordering_more_than_the_stock_is_refused_and_nothing_changes(
     # (In tests a commit only releases a savepoint; the test still ends with a rollback.)
     db_session.commit()
 
-    response = client.post(
-        ORDERS, json=order_body((cow, 2), (buffalo, 5)), headers=as_user
-    )
+    response = client.post(ORDERS, json=order_body((cow, 2), (buffalo, 5)), headers=as_user)
 
     assert response.status_code == 409
     error = response.json()["error"]
     assert error["code"] == "INSUFFICIENT_STOCK"
-    assert error["details"] == [
-        {"field": "items[1].quantity", "issue": "more than in stock"}
-    ]
+    assert error["details"] == [{"field": "items[1].quantity", "issue": "more than in stock"}]
     # The exact message: it names the product but never says how many are left.
     assert error["message"] == (
-        "Only a limited quantity of 'Buffalo Milk 500 ml' is left. "
-        "Please reduce the quantity."
+        "Only a limited quantity of 'Buffalo Milk 500 ml' is left. Please reduce the quantity."
     )
     # Nothing saved, and the first product's stock was not reduced either.
     assert db_session.scalar(select(func.count()).select_from(Order)) == 0
@@ -178,9 +165,9 @@ def test_cancelling_restores_the_stock(
     client: TestClient, db_session: Session, as_user, as_admin, from_status
 ) -> None:
     product = factories.make_product(db_session, stock_quantity=10)
-    order_id = client.post(
-        ORDERS, json=order_body((product, 4)), headers=as_user
-    ).json()["order_id"]
+    order_id = client.post(ORDERS, json=order_body((product, 4)), headers=as_user).json()[
+        "order_id"
+    ]
     if from_status == OrderStatus.CONFIRMED:
         client.patch(
             f"/api/v1/admin/orders/{order_id}/status",
@@ -203,9 +190,9 @@ def test_delivering_does_not_change_the_stock(
     client: TestClient, db_session: Session, as_user, as_admin
 ) -> None:
     product = factories.make_product(db_session, stock_quantity=10)
-    order_id = client.post(
-        ORDERS, json=order_body((product, 4)), headers=as_user
-    ).json()["order_id"]
+    order_id = client.post(ORDERS, json=order_body((product, 4)), headers=as_user).json()[
+        "order_id"
+    ]
 
     for status in ["CONFIRMED", "OUT_FOR_DELIVERY", "DELIVERED"]:
         client.patch(

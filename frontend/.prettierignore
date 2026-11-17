@@ -1,0 +1,5 @@
+# Generated or third-party files: never reformatted.
+dist
+coverage
+node_modules
+package-lock.json

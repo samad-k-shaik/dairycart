@@ -3,8 +3,10 @@
 
 Services raise domain exceptions without knowing about HTTP:
 
-    raise ProductUnavailableError("Product 'Buffalo Milk 1 Litre' is currently unavailable.",
-                                  details=[ErrorDetail(field="items[1].product_id", issue="unavailable")])
+    raise ProductUnavailableError(
+        "Product 'Buffalo Milk 1 Litre' is currently unavailable.",
+        details=[ErrorDetail(field="items[1].product_id", issue="unavailable")],
+    )
 
 `register_error_handlers(app)` maps them, FastAPI's validation errors, Starlette's HTTP errors
 (unknown URL, wrong method) and any unexpected crash to:
@@ -91,7 +93,7 @@ class ProductAlreadyExistsError(DomainError):
 
 
 class UserAlreadyExistsError(DomainError):
-    """Sign-up: the email address or the username is already used (#89)."""
+    """Sign-up: the mobile number already has an account (#89, #121)."""
 
     status_code = 409
     code = "USER_ALREADY_EXISTS"
@@ -172,6 +174,13 @@ class AddressLimitReachedError(DomainError):
     code = "ADDRESS_LIMIT_REACHED"
 
 
+class RoundNotStartedError(DomainError):
+    """#110: a location was sent while the delivery boy is not on a round."""
+
+    status_code = 409
+    code = "ROUND_NOT_STARTED"
+
+
 class DeliveryBoyAlreadyExistsError(DomainError):
     """Admin: another delivery boy already has this phone number (#103)."""
 
@@ -226,9 +235,7 @@ def error_response(
             request_id=_request_id(request),
         )
     )
-    return JSONResponse(
-        status_code=status_code, content=body.model_dump(), headers=headers
-    )
+    return JSONResponse(status_code=status_code, content=body.model_dump(), headers=headers)
 
 
 def field_path(location: Sequence[str | int]) -> str:
@@ -268,19 +275,13 @@ async def _domain_error(request: Request, exc: Exception) -> JSONResponse:
 async def _validation_error(request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, RequestValidationError)
     # Only the field path and pydantic's message; never the submitted value (privacy).
-    details = [
-        ErrorDetail(field=field_path(e["loc"]), issue=e["msg"]) for e in exc.errors()
-    ]
-    return error_response(
-        request, 422, "VALIDATION_ERROR", "Request validation failed.", details
-    )
+    details = [ErrorDetail(field=field_path(e["loc"]), issue=e["msg"]) for e in exc.errors()]
+    return error_response(request, 422, "VALIDATION_ERROR", "Request validation failed.", details)
 
 
 async def _http_error(request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, StarletteHTTPException)
-    code, message = _HTTP_ERRORS.get(
-        exc.status_code, ("HTTP_ERROR", "The request failed.")
-    )
+    code, message = _HTTP_ERRORS.get(exc.status_code, ("HTTP_ERROR", "The request failed."))
     # Keep headers such as Allow (405).
     return error_response(request, exc.status_code, code, message, headers=exc.headers)
 
@@ -299,9 +300,7 @@ async def _unhandled_error(request: Request, exc: Exception) -> JSONResponse:
     )
     # This handler runs outside the request-ID middleware, so add the header here.
     headers = {REQUEST_ID_HEADER: request_id} if request_id else None
-    return error_response(
-        request, 500, "INTERNAL_ERROR", INTERNAL_ERROR_MESSAGE, headers=headers
-    )
+    return error_response(request, 500, "INTERNAL_ERROR", INTERNAL_ERROR_MESSAGE, headers=headers)
 
 
 def register_error_handlers(app: FastAPI) -> None:

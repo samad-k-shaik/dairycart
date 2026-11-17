@@ -153,9 +153,7 @@ class OrderRepository:
         )
         return self._rows(query)
 
-    def _admin_query(
-        self, filters: AdminOrderFilters, *, use_boy: bool = True
-    ) -> Select:
+    def _admin_query(self, filters: AdminOrderFilters, *, use_boy: bool = True) -> Select:
         """SELECT orders JOIN customers with the board filters (not the status)."""
         query = select(Order).join(Order.customer)
         if filters.day is not None:
@@ -174,9 +172,7 @@ class OrderRepository:
             else:
                 query = query.where(
                     Order.delivery_pincode.in_(
-                        select(areas.c.pincode).where(
-                            areas.c.delivery_boy_id == filters.boy
-                        )
+                        select(areas.c.pincode).where(areas.c.delivery_boy_id == filters.boy)
                     )
                 )
         return query
@@ -189,23 +185,21 @@ class OrderRepository:
         filters: AdminOrderFilters | None = None,
     ) -> tuple[list[tuple[Order, str | None]], int]:
         """One page of orders (newest first) with customer, items and products loaded
-        eagerly, each with the account's username; plus how many match in total."""
+        eagerly, each with the account holder's full name (#121); plus how many match in total."""
         query = self._admin_query(filters or AdminOrderFilters())
         if status is not None:
             query = query.where(Order.status == status)
 
-        total = self.db.scalar(
-            select(func.count()).select_from(query.order_by(None).subquery())
-        )
+        total = self.db.scalar(select(func.count()).select_from(query.order_by(None).subquery()))
         page_query = _with_details(
-            query.add_columns(User.username)
+            query.add_columns(User.full_name)
             .outerjoin(User, User.user_id == Order.user_id)
             .order_by(Order.order_date.desc(), Order.order_id.desc())
             .limit(page_size)
             .offset((page - 1) * page_size)
         )
         rows = self.db.execute(page_query).unique().all()
-        return [(order, username) for order, username in rows], total or 0
+        return [(order, account_name) for order, account_name in rows], total or 0
 
     def boy_counts(self, filters: AdminOrderFilters) -> tuple[dict[int, int], int]:
         """#104: orders per active delivery boy (by PIN code) and the unassigned ones,
@@ -225,18 +219,16 @@ class OrderRepository:
     def list_for_day(
         self, day: date, starts: datetime, ends: datetime
     ) -> list[tuple[Order, str | None, time | None]]:
-        """#101: the orders to deliver on `day`, each with the account's username and
+        """#101: the orders to deliver on `day`, each with the account holder's name and
         the subscription slot's start time (for sorting; None for one-time orders).
 
         A day = subscription orders FOR that day (delivery_date) + one-time orders
         PLACED in [starts, ends) (the day's midnight-to-midnight in India time, in UTC).
         Customer, items and products are loaded eagerly (no N+1)."""
         query = _with_details(
-            select(Order, User.username, DeliverySlot.start_time)
+            select(Order, User.full_name, DeliverySlot.start_time)
             .outerjoin(User, User.user_id == Order.user_id)
-            .outerjoin(
-                Subscription, Subscription.subscription_id == Order.subscription_id
-            )
+            .outerjoin(Subscription, Subscription.subscription_id == Order.subscription_id)
             .outerjoin(
                 DeliverySlot,
                 DeliverySlot.delivery_slot_id == Subscription.delivery_slot_id,
@@ -256,7 +248,7 @@ class OrderRepository:
             )
         )
         rows = self.db.execute(query).unique().all()
-        return [(order, username, start) for order, username, start in rows]
+        return [(order, account_name, start) for order, account_name, start in rows]
 
     def user_totals(self, user_id: int) -> tuple[int, Decimal]:
         """#101: (number of orders, amount of the orders that are not cancelled)."""
@@ -269,16 +261,12 @@ class OrderRepository:
         ).one()
         return count, total
 
-    def count_by_status(
-        self, filters: AdminOrderFilters | None = None
-    ) -> dict[OrderStatus, int]:
+    def count_by_status(self, filters: AdminOrderFilters | None = None) -> dict[OrderStatus, int]:
         """How many orders have each status; statuses with no orders get 0.
         #104: only the orders matching the board filters (all orders without them)."""
         counts: dict[OrderStatus, int] = dict.fromkeys(OrderStatus, 0)
         base = self._admin_query(filters or AdminOrderFilters()).subquery()
-        rows = self.db.execute(
-            select(base.c.status, func.count()).group_by(base.c.status)
-        ).all()
+        rows = self.db.execute(select(base.c.status, func.count()).group_by(base.c.status)).all()
         for status, count in rows:
             counts[OrderStatus(status)] = count
         return counts

@@ -12,8 +12,7 @@ export function useUpdateOrderStatus() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ orderId, status }: { orderId: number; status: OrderStatus }) =>
-      updateOrderStatus(orderId, status),
+    mutationFn: ({ orderId, status }: { orderId: number; status: OrderStatus }) => updateOrderStatus(orderId, status),
     onSuccess: (order) => {
       queryClient.setQueryData(orderKeys.detail(order.order_id), order)
     },

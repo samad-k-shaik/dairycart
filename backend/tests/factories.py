@@ -102,8 +102,7 @@ TEST_PASSWORD = "milk1234"
 def make_user(
     db: Session,
     *,
-    username: str | None = None,
-    email: str | None = None,
+    phone: str | None = None,
     full_name: str = "Test User",
     password: str = TEST_PASSWORD,
     role: UserRole = UserRole.USER,
@@ -115,8 +114,8 @@ def make_user(
     n = next(_sequence)
     user = User(
         full_name=full_name,
-        email=email or f"user{n}@example.com",
-        username=username or f"user{n}",
+        # #121: the login. 7000000001, 7000000002, … (never clashes with seed/admin numbers).
+        phone=phone or f"7{n:09d}",
         password_hash=hash_password(password),
         role=role,
     )
@@ -183,9 +182,7 @@ def make_slot(
     if start is None:
         n = next(_sequence) % 600
         start = (datetime(2000, 1, 1, 10, 0) + timedelta(minutes=n)).time()
-    end = (
-        datetime.combine(datetime(2000, 1, 1), start) + timedelta(minutes=minutes)
-    ).time()
+    end = (datetime.combine(datetime(2000, 1, 1), start) + timedelta(minutes=minutes)).time()
     slot = DeliverySlot(
         name=name,
         start_time=start,

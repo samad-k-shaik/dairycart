@@ -16,7 +16,7 @@ import { toast } from "sonner"
 
 import { AddressPicker } from "@/components/address/AddressPicker"
 import { EmptyState } from "@/components/common/EmptyState"
-import { userFacingMessage } from "@/components/common/ErrorState"
+import { userFacingMessage } from "@/services/serviceError"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -80,8 +80,7 @@ function CheckoutPage() {
   const addressesQuery = useAddresses()
   const addresses = addressesQuery.data ?? []
   const [addressId, setAddressId] = useState<number | null>(null)
-  const chosenAddress =
-    addresses.find((a) => a.address_id === addressId) ?? preferredAddress(addresses)
+  const chosenAddress = addresses.find((a) => a.address_id === addressId) ?? preferredAddress(addresses)
   const addressRef = useRef<HTMLDivElement>(null)
   // The request that is in use: errors and "pending" come from it.
   const active = subscribing ? createSubscription : createOrder
@@ -89,9 +88,10 @@ function CheckoutPage() {
   const { user } = useAuth()
 
   // Controlled inputs: React state holds what the user typed.
-  // Name starts as the account's name (#90); it is the delivery contact and can be changed.
+  // Name (#90) and phone (#121) start as the account's; they are the delivery contact and
+  // can be changed (e.g. ordering for a parent at another number).
   const [name, setName] = useState(user?.full_name ?? "")
-  const [phone, setPhone] = useState("")
+  const [phone, setPhone] = useState(user?.phone ?? "")
   // Show a field's error only after the user leaves it, or after they try to submit.
   const [touched, setTouched] = useState({ name: false, phone: false })
   const [submitted, setSubmitted] = useState(false)
@@ -117,9 +117,9 @@ function CheckoutPage() {
     ),
   )
   const addressError = addressesQuery.isSuccess && !chosenAddress ? "Please add a delivery address." : ""
-  const showAddressError =
-    (submitted && addressError) || (serverAddressError ? (active.error?.message ?? "") : "")
-  const slotError = subscribing && slotsQuery.isSuccess && !chosenSlot ? "No delivery time has places left right now." : ""
+  const showAddressError = (submitted && addressError) || (serverAddressError ? (active.error?.message ?? "") : "")
+  const slotError =
+    subscribing && slotsQuery.isSuccess && !chosenSlot ? "No delivery time has places left right now." : ""
   // Shown at once: there is nothing the user can do in the form to fix it.
   const showSlotError = slotError || (serverSlotError ? (active.error?.message ?? "") : "")
   const showStartError = (submitted && startError) || (serverStartError ? (active.error?.message ?? "") : "")
@@ -204,8 +204,7 @@ function CheckoutPage() {
             {lines.map((line) => (
               <li key={line.product_id} className="flex justify-between gap-3 py-2.5">
                 <span>
-                  {line.quantity} × {line.name}{" "}
-                  <span className="text-muted-foreground">{line.size}</span>
+                  {line.quantity} × {line.name} <span className="text-muted-foreground">{line.size}</span>
                 </span>
                 <span className="font-semibold">{formatCurrency(lineSubtotal(line))}</span>
               </li>

@@ -1,15 +1,16 @@
 /**
- * Sign-up and login form checks (#89). The same rules as the backend's RegisterRequest:
- * the UI gives fast, friendly feedback; the backend validates again.
+ * Sign-up and login form checks (#89; mobile number instead of email/username: #121).
+ * The same rules as the backend's RegisterRequest: the UI gives fast, friendly feedback;
+ * the backend validates again.
  * Each function returns an error message, or null when the value is valid.
  * (Relative ".ts" imports so Node's test runner can load this file.)
  */
-import type { RegisterRequest } from "../types/auth.ts"
+import type { RegisterRequest, UserRole } from "../types/auth.ts"
+import { normaliseMobile, validateName, validatePhone } from "./validation.ts"
 
 export type SignUpValues = {
   full_name: string
-  email: string
-  username: string
+  phone: string
   password: string
   confirm_password: string
 }
@@ -18,36 +19,19 @@ export type SignUpErrors = Partial<Record<keyof SignUpValues, string>>
 
 export const EMPTY_SIGN_UP: SignUpValues = {
   full_name: "",
-  email: "",
-  username: "",
+  phone: "",
   password: "",
   confirm_password: "",
 }
 
-const EMAIL_PATTERN = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
-const USERNAME_PATTERN = /^[A-Za-z0-9._-]{3,30}$/
-
 export function validateFullName(value: string): string | null {
-  const name = value.trim()
-  if (!name) return "Please enter your full name."
-  if (name.length < 2 || name.length > 100) return "Name must be 2–100 characters."
-  return null
+  if (!value.trim()) return "Please enter your full name."
+  return validateName(value) // same 2–100 characters as checkout
 }
 
-export function validateEmail(value: string): string | null {
-  const email = value.trim()
-  if (!email) return "Please enter your email address."
-  if (email.length > 254 || !EMAIL_PATTERN.test(email)) return "Enter a valid email address, e.g. ravi@example.com."
-  return null
-}
-
-export function validateUsername(value: string): string | null {
-  const username = value.trim()
-  if (!username) return "Please choose a username."
-  if (!USERNAME_PATTERN.test(username)) {
-    return "Use 3–30 letters, numbers, dots, dashes or underscores (no spaces)."
-  }
-  return null
+/** #121: the login. "+91 98765 43210" is fine: it is checked as 10 digits. */
+export function validateMobile(value: string): string | null {
+  return validatePhone(normaliseMobile(value))
 }
 
 export function validatePassword(value: string): string | null {
@@ -62,8 +46,7 @@ export function validateSignUp(values: SignUpValues): SignUpErrors {
   const errors: SignUpErrors = {}
   const checks: [keyof SignUpValues, string | null][] = [
     ["full_name", validateFullName(values.full_name)],
-    ["email", validateEmail(values.email)],
-    ["username", validateUsername(values.username)],
+    ["phone", validateMobile(values.phone)],
     ["password", validatePassword(values.password)],
     [
       "confirm_password",
@@ -78,20 +61,21 @@ export function validateSignUp(values: SignUpValues): SignUpErrors {
   return errors
 }
 
-/** The body for POST /auth/register: trimmed, and WITHOUT confirm_password. */
+/** The body for POST /auth/register: trimmed, 10-digit phone, WITHOUT confirm_password. */
 export function toRegisterRequest(values: SignUpValues): RegisterRequest {
   return {
     full_name: values.full_name.trim(),
-    email: values.email.trim(),
-    username: values.username.trim(),
+    phone: normaliseMobile(values.phone),
     password: values.password,
   }
 }
 
 /** Where to go after login: the `next` page if it is a safe in-app path, else by role. */
-export function pathAfterLogin(role: "USER" | "ADMIN", next: string | null): string {
+export function pathAfterLogin(role: UserRole, next: string | null): string {
   // Only paths inside this app ("/…", not "//evil.com" or "https://…"): an open redirect
   // would let a link send people to another site right after they log in.
   if (next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\")) return next
-  return role === "ADMIN" ? "/admin" : "/account"
+  if (role === "ADMIN") return "/admin"
+  if (role === "DELIVERY_BOY") return "/delivery" // #109
+  return "/account"
 }

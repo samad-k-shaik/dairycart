@@ -33,14 +33,12 @@ const DISPLAY_BY_NAME: Record<string, DisplayInfo> = {
   "cow milk": {
     category: "cow",
     image: "/images/products/cow-milk.svg",
-    description:
-      "Fresh cow milk with a light, mild taste. Good for tea, coffee and everyday drinking.",
+    description: "Fresh cow milk with a light, mild taste. Good for tea, coffee and everyday drinking.",
   },
   "buffalo milk": {
     category: "buffalo",
     image: "/images/products/buffalo-milk.svg",
-    description:
-      "Rich, creamy buffalo milk with a higher fat content. Ideal for curd, paneer and sweets.",
+    description: "Rich, creamy buffalo milk with a higher fat content. Ideal for curd, paneer and sweets.",
   },
   paneer: PANEER,
   // The shop's product was added as "Panner", so that spelling gets the same picture.

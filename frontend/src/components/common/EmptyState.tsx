@@ -19,7 +19,14 @@ type EmptyStateProps = {
   className?: string
 }
 
-export function EmptyState({ icon: Icon, title, description, action, headingLevel = "h2", className }: EmptyStateProps) {
+export function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  action,
+  headingLevel = "h2",
+  className,
+}: EmptyStateProps) {
   const Heading = headingLevel
   return (
     <section

@@ -17,7 +17,8 @@ from sqlalchemy.orm import Session
 from app.core.errors import ForbiddenError, UnauthorizedError
 from app.core.security import read_access_token
 from app.database.session import get_db
-from app.models import User, UserRole
+from app.models import DeliveryBoy, User, UserRole
+from app.repositories.delivery_boy_repository import DeliveryBoyRepository
 from app.repositories.user_repository import UserRepository
 
 # auto_error=False: we raise our own 401 in the project's error format.
@@ -34,9 +35,7 @@ def get_current_user(
     user_id = read_access_token(credentials.credentials)
     user = UserRepository(db).get(user_id) if user_id is not None else None
     if user is None:  # bad signature, expired, or the user no longer exists
-        raise UnauthorizedError(
-            "Your session is invalid or has expired. Please log in again."
-        )
+        raise UnauthorizedError("Your session is invalid or has expired. Please log in again.")
     return user
 
 
@@ -47,3 +46,18 @@ def require_admin(user: CurrentUser) -> User:
     if user.role != UserRole.ADMIN:
         raise ForbiddenError("Only administrators can do this.")
     return user
+
+
+def require_delivery_boy(user: CurrentUser, db: Annotated[Session, Depends(get_db)]) -> DeliveryBoy:
+    """#109: the logged-in DELIVERY BOY (with his areas). 403 for anyone else, and for a
+    delivery boy the admin switched off (checked on every request, like the role, so
+    switching him off takes effect immediately)."""
+    if user.role != UserRole.DELIVERY_BOY:
+        raise ForbiddenError("Only delivery boys can do this.")
+    boy = DeliveryBoyRepository(db).get_by_user(user.user_id)
+    if boy is None or not boy.is_active:
+        raise ForbiddenError("Your delivery account is switched off. Please contact the dairy.")
+    return boy
+
+
+CurrentDeliveryBoy = Annotated[DeliveryBoy, Depends(require_delivery_boy)]

@@ -65,4 +65,3 @@ export function getAdminSubscriptions(
   if (USE_MOCKS) return needsBackend()
   return api.get(`/admin/subscriptions${queryString({ status, user_id: userId })}`)
 }
-

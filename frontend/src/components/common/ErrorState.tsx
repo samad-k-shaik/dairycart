@@ -9,7 +9,7 @@
 import { AlertTriangle, Loader2, RotateCw } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { ServiceError } from "@/services/serviceError"
+import { userFacingMessage } from "@/services/serviceError"
 import { cn } from "@/lib/utils"
 
 type ErrorStateProps = {
@@ -23,16 +23,14 @@ type ErrorStateProps = {
   className?: string
 }
 
-export function userFacingMessage(error: unknown): string {
-  if (error instanceof ServiceError) return error.message
-  return "Please check your connection and try again."
-}
-
 export function ErrorState({ title, error, onRetry, retrying = false, className }: ErrorStateProps) {
   return (
     <section
       role="alert"
-      className={cn("flex flex-col items-center gap-3 rounded-2xl bg-surface px-4 py-10 text-center shadow-card", className)}
+      className={cn(
+        "flex flex-col items-center gap-3 rounded-2xl bg-surface px-4 py-10 text-center shadow-card",
+        className,
+      )}
     >
       <span className="flex size-16 items-center justify-center rounded-full bg-red-50 text-danger">
         <AlertTriangle className="size-8" aria-hidden="true" />

@@ -1,4 +1,6 @@
-"""Application settings, loaded from environment variables (Twelve-Factor: config in the environment).
+"""Application settings, loaded from environment variables.
+
+Twelve-Factor: config lives in the environment, not in the code.
 
 Values come from, in order of priority:
 1. real environment variables (Docker, Cloud Run, CI, your shell);
@@ -34,9 +36,7 @@ class Settings(BaseSettings):
     database_url: SecretStr
 
     # NoDecode: read the raw text so "a,b" works (pydantic-settings would expect JSON).
-    cors_origins: Annotated[list[str], NoDecode] = Field(
-        default=["http://localhost:5173"]
-    )
+    cors_origins: Annotated[list[str], NoDecode] = Field(default=["http://localhost:5173"])
 
     # Signs and checks login tokens (JWT, #89). Anyone who knows it can create a token for
     # ANY user, including an admin, so: long, random, secret, different per environment.
@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     # N minutes). Turned off in tests, which call the service themselves.
     subscription_auto_orders: bool = True
     subscription_orders_interval_minutes: int = Field(default=15, ge=1, le=1440)
+    # #113: listen for PostgreSQL notifications so live maps update at once (SSE).
+    # Off: live streams still re-check every 15 s.
+    live_updates: bool = True
 
     log_level: LogLevel = "INFO"
     app_env: AppEnv = "local"
@@ -57,12 +60,8 @@ class Settings(BaseSettings):
     @classmethod
     def must_be_postgresql(cls, value: SecretStr) -> SecretStr:
         # Message never includes the value (it contains the password).
-        if not value.get_secret_value().startswith(
-            ("postgresql://", "postgresql+psycopg://")
-        ):
-            raise ValueError(
-                "must be a PostgreSQL URL starting with postgresql+psycopg://"
-            )
+        if not value.get_secret_value().startswith(("postgresql://", "postgresql+psycopg://")):
+            raise ValueError("must be a PostgreSQL URL starting with postgresql+psycopg://")
         return value
 
     @field_validator("cors_origins", mode="before")
@@ -78,9 +77,7 @@ class Settings(BaseSettings):
     def no_wildcard_origin(cls, value: list[str]) -> list[str]:
         # "*" would let ANY website call this API from a visitor's browser (M3-08).
         if "*" in value:
-            raise ValueError(
-                'must list the allowed frontend origins; "*" is not allowed'
-            )
+            raise ValueError('must list the allowed frontend origins; "*" is not allowed')
         return value
 
     @field_validator("log_level", mode="before")

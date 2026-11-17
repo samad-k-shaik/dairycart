@@ -42,9 +42,7 @@ def income(
         date | None,
         Query(alias="from", description="First day (default: 1st of this month)"),
     ] = None,
-    end: Annotated[
-        date | None, Query(alias="to", description="Last day (default: today)")
-    ] = None,
+    end: Annotated[date | None, Query(alias="to", description="Last day (default: today)")] = None,
 ) -> IncomeReport:
     """Income = DELIVERED orders. Compared with the previous period of the same length."""
     today = today_ist()

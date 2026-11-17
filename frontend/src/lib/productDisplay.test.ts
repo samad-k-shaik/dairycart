@@ -1,13 +1,8 @@
 import assert from "node:assert/strict"
-import { describe, it } from "node:test"
+import { describe, it } from "vitest"
 
 import products from "../services/mock/products.json" with { type: "json" }
-import {
-  CATEGORIES,
-  getProductDescription,
-  getProductImage,
-  matchesCategory,
-} from "./productDisplay.ts"
+import { CATEGORIES, getProductDescription, getProductImage, matchesCategory } from "./productDisplay.ts"
 
 const names = (category: Parameters<typeof matchesCategory>[1]) =>
   products.filter((p) => matchesCategory(p, category)).map((p) => `${p.name} ${p.size}`)

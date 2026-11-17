@@ -4,7 +4,19 @@
  * Each admin page renders inside <Outlet />.
  */
 import { NavLink, Outlet, useNavigate } from "react-router"
-import { Bike, ClipboardList, Clock, IndianRupee, LayoutDashboard, LogOut, Package, Repeat, Store, Users } from "lucide-react"
+import {
+  Bike,
+  ClipboardList,
+  Clock,
+  IndianRupee,
+  LayoutDashboard,
+  LogOut,
+  MapPinned,
+  Package,
+  Repeat,
+  Store,
+  Users,
+} from "lucide-react"
 
 import { DevCrashProbe } from "@/components/common/DevMockSwitch"
 import { Logo } from "@/components/common/Logo"
@@ -20,6 +32,8 @@ const adminLinks = [
   { to: "/admin/income", label: "Income", Icon: IndianRupee, end: false, phone: false },
   // #103 (#104: in the phone tab bar again, now that Deliveries joined Orders).
   { to: "/admin/delivery-boys", label: "Delivery boys", short: "Boys", Icon: Bike, end: false },
+  // #111. Not in the phone tab bar (full); on phones it is linked from Delivery boys.
+  { to: "/admin/live-map", label: "Live map", Icon: MapPinned, end: false, phone: false },
   { to: "/admin/products", label: "Products", Icon: Package, end: false },
   { to: "/admin/users", label: "Users", Icon: Users, end: false }, // #89
   // #97. `short`: the phone tab bar has room for a short word only.
@@ -48,17 +62,20 @@ function AdminLinks({ compact = false }: { compact?: boolean }) {
       {adminLinks
         .filter((link) => !compact || link.phone !== false)
         .map(({ to, label, short, Icon, end }) => (
-        <NavLink
-          key={to}
-          to={to}
-          end={end}
-          className={compact ? compactLinkClass : linkClass}
-          aria-label={compact && short ? label : undefined}
-        >
-          <Icon className={compact ? "size-4" : "size-5"} aria-hidden="true" />
-          {compact && short ? short : label}
-        </NavLink>
-      ))}
+          <NavLink key={to} to={to} end={end} className={compact ? compactLinkClass : linkClass}>
+            <Icon className={compact ? "size-4" : "size-5"} aria-hidden="true" />
+            {compact && short ? (
+              // #55 (WCAG 2.5.3 "label in name"): the name must CONTAIN the visible word, so
+              // voice control ("click Home") works. Visible "Home", read as "Home, Dashboard".
+              <>
+                {short}
+                <span className="sr-only">, {label}</span>
+              </>
+            ) : (
+              label
+            )}
+          </NavLink>
+        ))}
     </>
   )
 }
@@ -95,7 +112,7 @@ function AdminLayout() {
         </nav>
         <div className="mt-auto space-y-1">
           <p className="truncate px-3 text-small text-muted-foreground">
-            Logged in as <span className="font-semibold text-foreground">{user?.username}</span>
+            Logged in as <span className="font-semibold text-foreground">{user?.full_name}</span>
           </p>
           <button type="button" onClick={handleLogout} className={linkClass({ isActive: false }) + " w-full"}>
             <LogOut className="size-5" aria-hidden="true" />

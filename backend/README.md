@@ -13,7 +13,7 @@ FastAPI application (Python 3.12). Scaffolded in M1-01 (#9): a runnable app with
 | 3 | `source .venv/bin/activate` | `.venv\Scripts\Activate.ps1` |
 | 4 | `pip install -r requirements.txt -r requirements-dev.txt` | same |
 | 5 | `cp .env.example .env`, put your own random `JWT_SECRET_KEY` in it (see *Login and admin accounts*), start PostgreSQL (see *Local database*) | `copy .env.example .env`, same |
-| 6 | `alembic upgrade head` (tables), then `python -m app.scripts.seed` (products), then create an admin: `python -m app.scripts.create_admin --username admin --email admin@example.com --full-name "Dairy Admin"` | same |
+| 6 | `alembic upgrade head` (tables), then `python -m app.scripts.seed` (products), then create an admin: `python -m app.scripts.create_admin --phone 9000000001 --full-name "Dairy Admin"` | same |
 | 7 | `uvicorn app.main:app --reload --port 8000`, then open http://localhost:8000/docs | same |
 | 8 | Run the tests: `pytest` | same |
 
@@ -207,7 +207,7 @@ What makes the order code safe:
 | `GET /api/v1/admin/users/{id}` | User + `order_count` + `total_spent` (not cancelled) | `401`, `403`, `404` |
 | `GET /api/v1/admin/users/{id}/orders` | All of the user's orders, newest first | `401`, `403`, `404` |
 
-- A day = subscription orders with `delivery_date = day` + one-time orders whose `order_date` falls in that India day (`app/core/india_time.india_day_range`: 00:00 IST = 18:30 UTC the day before). The filters are SQL conditions in `OrderRepository._admin_query` (`AdminOrderFilters`); a page loads customer, items and products eagerly plus the username; `count_by_status(filters)` and `boy_counts(filters)` are grouped queries. `GET /admin/deliveries` (#101) was removed in #104.
+- A day = subscription orders with `delivery_date = day` + one-time orders whose `order_date` falls in that India day (`app/core/india_time.india_day_range`: 00:00 IST = 18:30 UTC the day before). The filters are SQL conditions in `OrderRepository._admin_query` (`AdminOrderFilters`); a page loads customer, items and products eagerly plus the account holder's name; `count_by_status(filters)` and `boy_counts(filters)` are grouped queries. `GET /admin/deliveries` (#101) was removed in #104.
 - Rules in `app/services/order_service.list_admin_orders` and `app/services/user_service.py`. Tests: `tests/test_admin_order_board.py`, `tests/api/test_admin_deliveries_and_users.py`.
 
 ## Stock (#92)
@@ -226,7 +226,7 @@ The browser only lets the frontend (`http://localhost:5173`, another origin) cal
 | Endpoint | Does | Errors |
 |---|---|---|
 | `POST /api/v1/auth/register` | Sign up → `201`, always role `USER` | `409 USER_ALREADY_EXISTS`, `422` |
-| `POST /api/v1/auth/login` | Username or email + password → `access_token` (JWT) | `401` (one message for unknown user and wrong password) |
+| `POST /api/v1/auth/login` | Mobile number + password → `access_token` (JWT) (#121) | `401` (one message for unknown user and wrong password) |
 | `GET /api/v1/auth/me` | The logged-in user | `401` |
 | `GET /api/v1/admin/users` | Every user (ADMIN only) | `401`, `403` |
 
@@ -235,9 +235,9 @@ The browser only lets the frontend (`http://localhost:5173`, another origin) cal
 **Create an admin** (the API never gives the ADMIN role):
 
 ```bash
-python -m app.scripts.create_admin --username admin --email admin@example.com --full-name "Dairy Admin"
+python -m app.scripts.create_admin --phone 9000000001 --full-name "Dairy Admin"
 #   asks for the password twice (not shown, not saved in your shell history)
-python -m app.scripts.create_admin --promote ravi_k     # make an existing user an admin
+python -m app.scripts.create_admin --promote 9876543210   # make an existing user an admin
 ```
 
 **`JWT_SECRET_KEY`** (required, at least 32 characters) signs the tokens. Anyone who knows it can create a token for any user, including an admin, so: random, secret, never committed, different per environment. Make one with:
@@ -248,7 +248,7 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 
 How it works (`app/core/security.py`, `app/core/auth.py`):
 
-- **Passwords** are stored as **bcrypt** hashes (salted, deliberately slow, cost 12). Login hashes the typed password and compares. An unknown username still runs one bcrypt check, so response times don't reveal which accounts exist.
+- **Passwords** are stored as **bcrypt** hashes (salted, deliberately slow, cost 12). Login hashes the typed password and compares. A mobile number without an account still runs one bcrypt check, so response times don't reveal which accounts exist.
 - **Tokens** are signed JWTs with the user id (`sub`) and an expiry (`exp`). Changing any character breaks the signature; only HS256 is accepted (so an unsigned `"alg": "none"` token is refused).
 - **`get_current_user`** reads `Authorization: Bearer …`, checks the token, and loads the user **from the database**. **`require_admin`** then checks the role. A demoted admin loses access at once.
 - **Logout** happens in the browser (the token is deleted). The server keeps no sessions, so a copied token stays valid until it expires (`JWT_EXPIRE_MINUTES`, default 60).
@@ -261,7 +261,8 @@ pytest                                # all tests
 pytest -q                             # short output
 pytest tests/api/test_products.py     # one file
 pytest -k products                    # tests whose name contains "products"
-pytest --cov=app                      # with coverage
+pytest --cov                          # with coverage (settings in pyproject.toml, incl. branches)
+coverage report --include="app/services/*" --fail-under=70   # the service-layer gate CI uses
 ```
 
 - **Real PostgreSQL, never the dev database.** Tests use `TEST_DATABASE_URL` (default `postgresql+psycopg://milk_user:…@localhost:5432/milk_delivery_test`). It is forced into `DATABASE_URL` before the app loads, so your `.env` is ignored, and pytest refuses to start unless the database name ends in `_test`. Create the test database once (see *Local database*).
@@ -365,8 +366,12 @@ Note: FastAPI's `TestClient` currently prints a `StarletteDeprecationWarning` su
 |---|---|
 | `uvicorn app.main:app --reload --port 8000` | Start the dev server |
 | `pytest` | Run the tests in `tests/` (configured in `pyproject.toml`) |
-| `ruff check .` | Lint |
-| `ruff format .` | Format |
+| `ruff check .` | Lint: rules E, F, I, B, UP (pyflakes, import order, likely bugs, modern syntax), line length 100 |
+| `ruff check --fix .` | Lint and fix what can be fixed automatically |
+| `ruff format .` | Format all files (`ruff format --check .` only reports; CI uses that) |
+| `pytest --cov` then `coverage report --include="app/services/*" --fail-under=70` | Coverage, and the ≥ 70 % service-layer minimum (NFR-12) that CI enforces |
+
+Ruff and coverage are configured in `pyproject.toml` (#51, #53). CI fails if Ruff reports anything, if a file is not formatted, or if service coverage drops below 70 %.
 
 ## Folder structure
 

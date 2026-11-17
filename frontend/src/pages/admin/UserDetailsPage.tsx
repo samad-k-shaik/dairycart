@@ -10,6 +10,7 @@ import { ArrowLeft, ClipboardList, Repeat } from "lucide-react"
 import { OrderDetailsSheet } from "@/components/admin/OrderDetailsSheet"
 import { EmptyState } from "@/components/common/EmptyState"
 import { ErrorState } from "@/components/common/ErrorState"
+import { RoleBadge } from "@/components/common/RoleBadge"
 import { StatusBadge } from "@/components/common/StatusBadge"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -58,7 +59,12 @@ function UserDetails({ userId }: { userId: number }) {
           <Skeleton className="h-16" />
         </div>
       ) : user.isError ? (
-        <ErrorState title="We could not load this user" error={user.error} onRetry={() => user.refetch()} retrying={user.isFetching} />
+        <ErrorState
+          title="We could not load this user"
+          error={user.error}
+          onRetry={() => user.refetch()}
+          retrying={user.isFetching}
+        />
       ) : (
         <section className="space-y-4 rounded-2xl bg-surface p-4 shadow-card md:p-5" aria-labelledby="user-heading">
           <div className="flex flex-wrap items-start justify-between gap-2">
@@ -67,23 +73,17 @@ function UserDetails({ userId }: { userId: number }) {
                 {user.data.full_name}
               </h1>
               <p className="text-small break-all text-muted-foreground">
-                @{user.data.username} · {user.data.email} · joined {formatDate(user.data.created_at)}
+                {user.data.phone} · joined {formatDate(user.data.created_at)}
               </p>
             </div>
-            {user.data.role === "ADMIN" ? (
-              <Badge className="bg-primary-soft font-semibold text-primary">Admin</Badge>
-            ) : (
-              <Badge className="bg-muted font-semibold text-muted-foreground">User</Badge>
-            )}
+            <RoleBadge role={user.data.role} />
           </div>
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Fact label="Orders" value={String(user.data.order_count)} testId="order-count" />
             <Fact label="Total spent" value={formatCurrency(user.data.total_spent)} testId="total-spent" />
             <Fact
               label="Active plan"
-              value={
-                subscriptions.data ? (subscriptions.data.some((s) => s.status === "ACTIVE") ? "Yes" : "No") : "…"
-              }
+              value={subscriptions.data ? (subscriptions.data.some((s) => s.status === "ACTIVE") ? "Yes" : "No") : "…"}
             />
           </dl>
           <p className="text-small text-muted-foreground">Total spent leaves out cancelled orders.</p>
@@ -109,7 +109,10 @@ function UserDetails({ userId }: { userId: number }) {
         ) : (
           <ul className="space-y-2">
             {subscriptions.data.map((s) => (
-              <li key={s.subscription_id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-surface p-4 shadow-card">
+              <li
+                key={s.subscription_id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-surface p-4 shadow-card"
+              >
                 <div>
                   <p className="flex items-center gap-1.5 font-semibold">
                     <Repeat className="size-4 text-primary" aria-hidden="true" />

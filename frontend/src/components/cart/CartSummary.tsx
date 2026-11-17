@@ -20,10 +20,7 @@ export function CartSummary({ itemCount, estimatedTotal }: CartSummaryProps) {
   const { user } = useAuth()
 
   return (
-    <aside
-      aria-labelledby="cart-summary-heading"
-      className="space-y-4 rounded-2xl bg-surface p-4 shadow-card md:p-5"
-    >
+    <aside aria-labelledby="cart-summary-heading" className="space-y-4 rounded-2xl bg-surface p-4 shadow-card md:p-5">
       <h2 id="cart-summary-heading" className="text-h2 font-bold">
         Order summary
       </h2>
